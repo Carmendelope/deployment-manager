@@ -32,7 +32,7 @@ var RootCmd = &cobra.Command{
     Short: "Local deployment-manager",
     Long: `The deployment manager is a local instance to control...`,
     Run: func(cmd *cobra.Command, args []string) {
-        kubernetes.Run()
+        Run()
     },
 }
 
@@ -88,4 +88,17 @@ func init() {
     // initialization file
     RootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file path")
     RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug mode")
+}
+
+func Run() {
+    client,err := kubernetes.NewKubernetesClient(false)
+
+    if err != nil {
+        log.Panic().Err(err).Msg("impossible to get k8s client")
+        panic(err)
+        os.Exit(1)
+    }
+
+    client.RunDeployment()
+    client.Test()
 }
