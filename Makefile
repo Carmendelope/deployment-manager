@@ -17,7 +17,7 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 
 # Docker configuration
-DOCKER_REPO=nalej
+DOCKER_REPO=juannalej
 VERSION=$(shell cat version)
 
 
@@ -125,8 +125,8 @@ publish-image:
 	    echo DOCKER_USER environment variable was not set!!! ; \
 	    exit 1 ; \
 	fi ; \
-	if [ ""$$DOCKER_USER"" = "" ]; then \
-        echo DOCKER_USER environment variable was not set!!! ; \
+	if [ ""$$DOCKER_PASSWORD"" = "" ]; then \
+        echo DOCKER_PASSWORD environment variable was not set!!! ; \
         exit 1 ; \
     fi ; \
 	$(info >>> Assuming credentials are available in environment variables ...)
