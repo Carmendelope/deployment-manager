@@ -24,16 +24,15 @@ import (
     "path/filepath"
     "strings"
     "os"
-    "github.com/nalej/deployment-manager/pkg/client/kubernetes"
 )
 
 var RootCmd = &cobra.Command{
-    Use: "run",
+    Use: "",
     Short: "Local deployment-manager",
     Long: `The deployment manager is a local instance to control...`,
-    Run: func(cmd *cobra.Command, args []string) {
-        Run()
-    },
+    //Run: func(cmd *cobra.Command, args []string) {
+    //    Run()
+    //},
 }
 
 // Variables
@@ -48,6 +47,9 @@ func Execute() {
         log.Error().Msg(err.Error())
     }
 }
+
+
+
 
 func initConfig() {
     // if --config is passed, attempt to parse the config file
@@ -88,8 +90,17 @@ func init() {
     // initialization file
     RootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file path")
     RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug mode")
+
+    if debug {
+        zerolog.SetGlobalLevel(zerolog.DebugLevel)
+    } else {
+        zerolog.SetGlobalLevel(zerolog.InfoLevel)
+    }
 }
 
+
+/*
+// small example for testing
 func Run() {
     client,err := kubernetes.NewKubernetesClient(false)
 
@@ -99,6 +110,7 @@ func Run() {
         os.Exit(1)
     }
 
-    client.RunDeployment()
+    client.runDeployment()
     client.Test()
 }
+*/

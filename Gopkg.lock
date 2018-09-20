@@ -27,7 +27,7 @@
 
 [[projects]]
   name = "github.com/golang/protobuf"
-  packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
+  packages = ["proto","protoc-gen-go/descriptor","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
   version = "v1.2.0"
 
@@ -59,6 +59,12 @@
   name = "github.com/hashicorp/hcl"
   packages = [".","hcl/ast","hcl/parser","hcl/printer","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
   revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/hpcloud/tail"
+  packages = [".","ratelimiter","util","watch","winfile"]
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
   version = "v1.0.0"
 
 [[projects]]
@@ -102,6 +108,48 @@
   packages = ["."]
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
+
+[[projects]]
+  name = "github.com/nalej/grpc-application-go"
+  packages = ["."]
+  revision = "d7176fef2ae3360ba06d14e708089c94aef3a3ca"
+  version = "v0.0.1"
+
+[[projects]]
+  name = "github.com/nalej/grpc-common-go"
+  packages = ["."]
+  revision = "c5c7d4e388336451cdc0e42cf1c52fab99961419"
+  version = "v0.0.3"
+
+[[projects]]
+  name = "github.com/nalej/grpc-conductor-go"
+  packages = ["."]
+  revision = "5dcc5844f7db1d52ca39baef002af220481bd27a"
+  version = "v0.0.13"
+
+[[projects]]
+  name = "github.com/nalej/grpc-deployment-manager-go"
+  packages = ["."]
+  revision = "8a18840d3424469873c1658e4cc87734b625182b"
+  version = "v0.0.1"
+
+[[projects]]
+  name = "github.com/nalej/grpc-organization-go"
+  packages = ["."]
+  revision = "f4e16aba05d8a37ec1b895da3c1a0eead4b2bd1c"
+  version = "v0.0.4"
+
+[[projects]]
+  name = "github.com/onsi/ginkgo"
+  packages = [".","config","internal/codelocation","internal/containernode","internal/failer","internal/leafnodes","internal/remote","internal/spec","internal/spec_iterator","internal/specrunner","internal/suite","internal/testingtproxy","internal/writer","reporters","reporters/stenographer","reporters/stenographer/support/go-colorable","reporters/stenographer/support/go-isatty","types"]
+  revision = "3774a09d95489ccaa16032e0770d08ea77ba6184"
+  version = "v1.6.0"
+
+[[projects]]
+  name = "github.com/onsi/gomega"
+  packages = [".","format","internal/assertion","internal/asyncassertion","internal/oraclematcher","internal/testingtsupport","matchers","matchers/support/goraph/bipartitegraph","matchers/support/goraph/edge","matchers/support/goraph/node","matchers/support/goraph/util","types"]
+  revision = "7615b9433f86a8bdf29709bf288bc4fd0636a369"
+  version = "v1.4.2"
 
 [[projects]]
   name = "github.com/pelletier/go-toml"
@@ -172,7 +220,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","http/httpguts","http2","http2/hpack","idna"]
+  packages = ["context","html","html/atom","html/charset","http/httpguts","http2","http2/hpack","idna","internal/timeseries","trace"]
   revision = "26e67e76b6c3f6ce91f7c52def5af501b4e0f3a2"
 
 [[projects]]
@@ -183,7 +231,7 @@
 
 [[projects]]
   name = "golang.org/x/text"
-  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  packages = ["collate","collate/build","encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
@@ -194,10 +242,35 @@
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  revision = "c3f76f3b92d1ffa4c58a9ff842a58b8877655e0f"
+
+[[projects]]
+  name = "google.golang.org/grpc"
+  packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","encoding/proto","grpclog","internal","internal/backoff","internal/channelz","internal/envconfig","internal/grpcrand","internal/transport","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","resolver","resolver/dns","resolver/passthrough","stats","status","tap","test/bufconn"]
+  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
+  version = "v1.15.0"
+
+[[projects]]
+  name = "gopkg.in/fsnotify.v1"
+  packages = ["."]
+  revision = "629574ca2a5df945712d3079857300b5e4da0236"
+  source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
+  version = "v1.4.2"
+
+[[projects]]
   name = "gopkg.in/inf.v0"
   packages = ["."]
   revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
   version = "v0.9.1"
+
+[[projects]]
+  branch = "v1"
+  name = "gopkg.in/tomb.v1"
+  packages = ["."]
+  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 
 [[projects]]
   name = "gopkg.in/yaml.v2"
@@ -206,10 +279,10 @@
   version = "v2.2.1"
 
 [[projects]]
-  branch = "master"
+  branch = "release-1.11"
   name = "k8s.io/api"
   packages = ["admissionregistration/v1alpha1","admissionregistration/v1beta1","apps/v1","apps/v1beta1","apps/v1beta2","authentication/v1","authentication/v1beta1","authorization/v1","authorization/v1beta1","autoscaling/v1","autoscaling/v2beta1","batch/v1","batch/v1beta1","batch/v2alpha1","certificates/v1beta1","core/v1","events/v1beta1","extensions/v1beta1","networking/v1","policy/v1beta1","rbac/v1","rbac/v1alpha1","rbac/v1beta1","scheduling/v1alpha1","scheduling/v1beta1","settings/v1alpha1","storage/v1","storage/v1alpha1","storage/v1beta1"]
-  revision = "f456898a08e4bbc5891694118f3819f324de12ff"
+  revision = "4e7be11eab3ffcfc1876898b8272df53785a9504"
 
 [[projects]]
   branch = "release-1.11"
@@ -226,6 +299,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "aed40d2b680f21299e3e2f24a25f2d4f688e613caff68ec0199583ce927b24e0"
+  inputs-digest = "e190ba9b0cdf467ec48049b49dabad74f265dcfac564ee2688d7fd77558c2572"
   solver-name = "gps-cdcl"
   solver-version = 1
