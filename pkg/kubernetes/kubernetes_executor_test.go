@@ -20,12 +20,14 @@ import (
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
     pbApplication "github.com/nalej/grpc-application-go"
+    pbConductor "github.com/nalej/grpc-conductor-go"
 )
 
 
 var _ = Describe("Analysis of kubernetes structures creation", func() {
 
     var executor *KubernetesExecutor
+    var stop chan struct{}
 
     BeforeSuite(func() {
         ex, err := NewKubernetesExecutor(false)
@@ -34,8 +36,23 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         Expect(ex).ToNot(BeNil())
 
         executor = ex.(*KubernetesExecutor)
+
+        // Run the kubernetes controller
+        kontroller := NewKubernetesController(executor)
+
+        // Now let's start the controller
+        stop = make(chan struct{})
+
+        go kontroller.Run(1, stop)
+
     })
 
+    AfterSuite(func() {
+        //time.Sleep(time.Second * 10)
+        // stop kontroller
+        defer close(stop)
+    })
+/*
     Context("run a deployment", func(){
         var serv pbApplication.Service
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
@@ -61,5 +78,58 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
             err := executor.undeployService(&serv)
             Expect(err).ShouldNot(HaveOccurred())
         })
+
+    })
+*/
+
+    Context("run a stage with two services", func(){
+        var serv1 pbApplication.Service
+        var serv2 pbApplication.Service
+        var stage pbConductor.DeploymentStage
+        port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
+        port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
+
+        BeforeEach(func(){
+            serv1 = pbApplication.Service{
+                ServiceId: "service_001",
+                Name: "test-image-1",
+                Image: "nginx:1.12",
+                ExposedPorts: []*pbApplication.Port{&port1, &port2},
+                Labels: map[string]string { "label1":"value1", "label2":"value2"},
+                Specs: &pbApplication.DeploySpecs{Replicas: 1},
+            }
+
+            serv2 = pbApplication.Service{
+                ServiceId: "service_002",
+                Name: "test-image-2",
+                Image: "nginx:1.12",
+                ExposedPorts: []*pbApplication.Port{&port1, &port2},
+                Labels: map[string]string { "label1":"value1"},
+                Specs: &pbApplication.DeploySpecs{Replicas: 2},
+            }
+
+            services :=[]*pbConductor.Service{&serv1,&serv2}
+
+            stage = pbConductor.DeploymentStage{
+                StageId: "stage_001",
+                DeploymentId: "deployment_001",
+                Services: services,
+            }
+
+        })
+
+        It("deploys a stage and waits until completio", func(){
+            err := executor.Execute(&stage)
+            Expect(err).ShouldNot(HaveOccurred())
+        })
+
+
+        AfterEach(func(){
+            err := executor.undeployService(&serv1)
+            Expect(err).ShouldNot(HaveOccurred())
+            err = executor.undeployService(&serv2)
+            Expect(err).ShouldNot(HaveOccurred())
+        })
+
     })
 })

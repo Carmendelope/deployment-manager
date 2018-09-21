@@ -31,13 +31,17 @@ import (
     "flag"
     "path/filepath"
     "errors"
+
+    "time"
 )
 
 // The executor is the main structure in charge of running deployment plans on top of K8s.
 type KubernetesExecutor struct {
     client *kubernetes.Clientset
+    pendingStages *PendingStages
 }
 
+//func NewKubernetesExecutor(internal bool, pendingChecks *PendingChecks) (executor.Executor,error) {
 func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
     var c *kubernetes.Clientset
     var err error
@@ -56,7 +60,8 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
         log.Error().Err(foundError)
         return nil, foundError
     }
-    toReturn := KubernetesExecutor{c}
+    pendingChecks := NewPendingStages()
+    toReturn := KubernetesExecutor{c, pendingChecks}
     return &toReturn, err
 }
 
@@ -65,7 +70,7 @@ func (k *KubernetesExecutor) Execute(stage *pbConductor.DeploymentStage) error {
 
     for _, serv := range stage.Services {
         log.Info().Str("deployment", stage.DeploymentId).Str("stage",stage.StageId).Msgf("deploy service %s", serv.Name)
-        err := k.runDeployment(serv)
+        err := k.runDeployment(serv, stage.StageId)
         if err != nil {
             log.Error().Str("deployment", stage.DeploymentId).Str("stage",stage.StageId).AnErr("deploymentError", err).
                 Msgf("error deploying service %s",serv.Name)
@@ -74,7 +79,7 @@ func (k *KubernetesExecutor) Execute(stage *pbConductor.DeploymentStage) error {
     }
 
     // TODO supervise that the deployment for this stage was correct
-
+    k.checkPendingStage(stage)
     return nil
 }
 
@@ -89,7 +94,7 @@ func (k *KubernetesExecutor) StageRollback(plan *pbConductor.DeploymentPlan, las
 //   serv Service struct to be converted
 //  returns:
 //
-func (k *KubernetesExecutor) runDeployment(serv *pbApplication.Service) error {
+func (k *KubernetesExecutor) runDeployment(serv *pbApplication.Service, stageId string) error {
     deployment := &appsv1.Deployment{
         ObjectMeta: metav1.ObjectMeta{
             Name: serv.Name,
@@ -126,15 +131,33 @@ func (k *KubernetesExecutor) runDeployment(serv *pbApplication.Service) error {
     }
 
     deploymentsClient := k.client.AppsV1().Deployments(apiv1.NamespaceDefault)
-    _, err := deploymentsClient.Create(deployment)
+    returnedDeployment, err := deploymentsClient.Create(deployment)
 
     if err != nil {
         log.Error().Str("service",serv.ServiceId).AnErr("deploymentError",err).Msg("error deploying service")
         return err
     }
 
+    // Add to the list of pending checks
+    k.pendingStages.AddResource(string(returnedDeployment.GetUID()), stageId)
+    //k.pendingStages.AddResource(string(returnedDeployment.GetUID()),returnedDeployment.)
+
     return nil
 }
+
+func(k *KubernetesExecutor) checkPendingStage(stage *pbConductor.DeploymentStage) {
+    for {
+        pending := k.pendingStages.HasPendingChecks(stage.StageId)
+        if !pending {
+            log.Info().Msgf("stage %s has no pending checks", stage.StageId)
+            return
+        }
+        log.Info().Msgf("stage %s has pending checks", stage.StageId)
+        time.Sleep(time.Second * 2000)
+    }
+}
+
+
 
 
 // Undeploy a service if running.
@@ -157,6 +180,8 @@ func(k *KubernetesExecutor) undeployService(serv *pbApplication.Service) error {
 
     return nil
 }
+
+
 
 
 // Create a new kubernetes client using deployment inside the cluster.

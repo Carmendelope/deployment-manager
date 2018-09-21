@@ -24,12 +24,14 @@ import (
     "path/filepath"
     "strings"
     "os"
+    "github.com/nalej/golang-template/version"
 )
 
 var RootCmd = &cobra.Command{
     Use: "",
     Short: "Local deployment-manager",
     Long: `The deployment manager is a local instance to control...`,
+    Version: "unknown-version",
     //Run: func(cmd *cobra.Command, args []string) {
     //    Run()
     //},
@@ -39,10 +41,15 @@ var RootCmd = &cobra.Command{
 // Path of the configuration file
 var configFile string
 // set default values
-var debug bool
+var debugLevel bool
+// set console logging format
+var consoleLogging bool
+
 
 
 func Execute() {
+    SetupLogging()
+    RootCmd.SetVersionTemplate(version.GetVersionInfo())
     if err := RootCmd.Execute(); err != nil {
         log.Error().Msg(err.Error())
     }
@@ -85,19 +92,28 @@ func initConfig() {
 }
 
 func init() {
-    zerolog.TimeFieldFormat = ""
     cobra.OnInitialize(initConfig)
     // initialization file
     RootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file path")
-    RootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug mode")
+    RootCmd.PersistentFlags().BoolVar(&debugLevel, "debugLevel", false, "enable debugLevel mode")
+    RootCmd.PersistentFlags().BoolVar(&consoleLogging, "consoleLogging", false, "Pretty print logging")
 
-    if debug {
-        zerolog.SetGlobalLevel(zerolog.DebugLevel)
-    } else {
-        zerolog.SetGlobalLevel(zerolog.InfoLevel)
-    }
+
 }
 
+
+// SetupLogging sets the debugLevel level and console logging if required.
+func SetupLogging() {
+    zerolog.TimeFieldFormat = ""
+    zerolog.SetGlobalLevel(zerolog.InfoLevel)
+    if debugLevel {
+        zerolog.SetGlobalLevel(zerolog.DebugLevel)
+    }
+
+    if consoleLogging {
+        log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+    }
+}
 
 /*
 // small example for testing

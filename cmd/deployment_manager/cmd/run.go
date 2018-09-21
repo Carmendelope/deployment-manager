@@ -43,7 +43,7 @@ func init() {
     RootCmd.AddCommand(runCmd)
 
     runCmd.Flags().Uint32P("port", "c",5000,"port where conductor listens to")
-    runCmd.Flags().BoolP("local", "l", true, "indicate local k8s instance")
+    runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
     viper.BindPFlags(runCmd.Flags())
 }
 
