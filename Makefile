@@ -1,11 +1,21 @@
 #
-# Copyright (C) 2018 Nalej Group - All Rights Reserved
+#  Copyright 2018 Nalej
 #
-# Makefile for Nalej projects. It provides build, test, and package targets.
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 #
 
 # Name of the target applications to be built
-APPS=deployment_manager
+APPS=deployment_manager deployment_controller
 
 # Target directory to store binaries and results
 TARGET=bin
@@ -18,16 +28,18 @@ GOTEST=$(GOCMD) test
 
 # Docker configuration
 DOCKER_REPO=nalej
-VERSION=$(shell cat version)
+VERSION=$(shell cat .version)
 
 
 
 # Use ldflags to pass commit and branch information
 # TODO: Integrate this into the compilation process
-# LDFLAGS = -ldflags "-X main.VERSION=${VERSION} -X main.COMMIT=${COMMIT} -X main.BRANCH=${BRANCH}"
 # Build information
-#COMMIT=$(shell git rev-parse HEAD)
+COMMIT=$(shell git rev-parse HEAD)
 #BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+# LDFLAGS to setup the version and commit. Notice that because of changes in go 1.10, we target a
+# variable inside the main package that is being built.
+LDFLAGS=-ldflags "-X main.MainVersion=${VERSION} -X main.MainCommit=${COMMIT}"
 
 COVERAGE_FILE=$(TARGET)/coverage.out
 
@@ -84,14 +96,14 @@ build-linux: dep linux
 local:
 	$(info >>> Building ...)
 	for app in $(APPS); do \
-            $(GOBUILD) -o $(TARGET)/"$$app" ./cmd/"$$app" ; \
+            $(GOBUILD) $(LDFLAGS) -o $(TARGET)/"$$app" ./cmd/"$$app" ; \
 	done
 
 # Cross compilation to obtain a linux binary
 linux:
 	$(info >>> Bulding for Linux...)
 	for app in $(APPS); do \
-    	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(TARGET)/linux_amd64/"$$app" ./cmd/"$$app" ; \
+    	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(TARGET)/linux_amd64/"$$app" ./cmd/"$$app" ; \
 	done
 
 # Package all images and components

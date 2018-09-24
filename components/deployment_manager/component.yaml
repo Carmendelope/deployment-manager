@@ -1,0 +1,61 @@
+###
+# Deployment manager configuration
+###
+
+#kubectl create clusterrolebinding nalej --clusterrole=cluster-admin --serviceaccount=nalej:default
+# !!!!!!make any pod running in nalej with cluster admin permission
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: ClusterRoleBinding
+#metadata:
+#  name: nalej
+#roleRef:
+#  apiGroup: rbac.authorization.k8s.io
+#  kind: ClusterRole
+#  name: cluster-admin
+#subjects:
+#- kind: ServiceAccount
+#  name: default
+#  namespace: nalej
+
+###
+# Deployment specifications.
+###
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    app: samurai
+    component: deployment-manager
+  name: deployment-manager
+  namespace: nalej
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: samurai
+      component: deployment-manager
+  template:
+    metadata:
+      labels:
+        app: samurai
+        component: deployment-manager
+    spec:
+      containers:
+      - name: musician
+        image: juannalej/deployment_manager:v0.1.0-alpha
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 2000
+        args:
+          - "run"
+        #  - "--logger-address=http://log-collector.kube-system.svc.cluster.local:8083"
+        #ports:
+        #- name: api-port
+        #  containerPort: 9000
+        # readinessProbe:
+        #  httpGet:
+        #    path: /ping
+        #    port: api-port
+

@@ -12,21 +12,6 @@
     version="v1.2.0"
 
 [[constraint]]
-    name="github.com/prometheus/common"
-
-[[constraint]]
-    name="github.com/beeker1121/goque"
-    version="v2.0.1"
-
-[[constraint]]
-    name="github.com/nalej/grpc-conductor-go"
-    version="v0.0.9"
-
- [[constraint]]
-    name="github.com/grpc/grpc-go"
-    version="v1.15.0"
-
- [[constraint]]
    name="github.com/onsi/ginkgo"
    version="v1.6.0"
 
@@ -34,9 +19,30 @@
     name="github.com/onsi/gomega"
     version="v1.4.2"
 
- [[override]]
+[[override]]
    source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
    name = "gopkg.in/fsnotify.v1"
 
- [[constraint]]
-    name = "github.com/phf/go-queue"
+[[constraint]]
+    name="k8s.io/client-go"
+    version="v8.0.0"
+
+[[constraint]]
+    name = "k8s.io/api"
+    version="kubernetes-1.11.3"
+
+[[constraint]]
+    name = "k8s.io/apimachinery"
+    version="kubernetes-1.11.3"
+
+[[constraint]]
+    name = "github.com/nalej/grpc-conductor-go"
+    version="v0.0.13"
+
+[[constraint]]
+    name = "github.com/nalej/grpc-application-go"
+    version="v0.0.1"
+
+[[constraint]]
+    name = "github.com/nalej/grpc-deployment-manager-go"
+    version="v0.0.1"
