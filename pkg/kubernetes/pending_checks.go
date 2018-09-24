@@ -82,6 +82,14 @@ func(p *PendingStages) RemoveResource(uid string) bool {
     return true
 }
 
+// Return true if the passed uid corresponds to a resource being monitored.
+func (p *PendingStages) IsMonitoredResource(uid string) bool {
+    p.mu.RLock()
+    defer p.mu.RUnlock()
+    _, isthere := p.resourceStage[uid]
+    return isthere
+}
+
 func(p *PendingStages) HasPendingChecks(stage string) bool {
     p.mu.RLock()
     defer p.mu.RUnlock()

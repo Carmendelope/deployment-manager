@@ -30,6 +30,8 @@ import (
     "k8s.io/client-go/tools/cache"
     "k8s.io/client-go/util/workqueue"
 
+    "k8s.io/api/extensions/v1beta1"
+    "github.com/rs/zerolog/log"
 )
 
 type KubernetesController struct {
@@ -42,14 +44,24 @@ type KubernetesController struct {
 func NewKubernetesController(executor *KubernetesExecutor) *KubernetesController {
 
     // create the pod watcher
-    podListWatcher := cache.NewListWatchFromClient(executor.client.CoreV1().RESTClient(), "pods", v1.NamespaceDefault, fields.Everything())
+    //podListWatcher := cache.NewListWatchFromClient(executor.client.CoreV1().RESTClient(), "pods", v1.NamespaceDefault, fields.Everything())
+
+
+    deploymentsListWatcher := cache.NewListWatchFromClient(
+        executor.client.ExtensionsV1beta1().RESTClient(),
+        "deployments", v1.NamespaceAll, fields.Everything())
+
+
     // create the workqueue
     queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
     // Bind the workqueue to a cache with the help of an informer. This way we make sure that
     // whenever the cache is updated, the pod key is added to the workqueue.
     // Note that when we finally process the item from the workqueue, we might see a newer version
     // of the Pod than the version which was responsible for triggering the update.
-    indexer, informer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
+    //indexer, informer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
+    //indexer, informer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
+    indexer, informer := cache.NewIndexerInformer(deploymentsListWatcher, &v1beta1.Deployment{}, 0, cache.ResourceEventHandlerFuncs{
+
         AddFunc: func(obj interface{}) {
             key, err := cache.MetaNamespaceKeyFunc(obj)
             if err == nil {
@@ -93,16 +105,16 @@ func (c *KubernetesController) processNextItem() bool {
     defer c.queue.Done(key)
 
     // Invoke the method containing the business logic
-    err := c.syncToStdout(key.(string))
+    err := c.updatePendingChecks(key.(string))
     // Handle the error if something went wrong during the execution of the business logic
     c.handleErr(err, key)
     return true
 }
 
-// syncToStdout is the business logic of the controller. In this controller it simply prints
+// updatePendingChecks is the business logic of the controller. In this controller it simply prints
 // information about the pod to stdout. In case an error happened, it has to simply return the error.
 // The retry logic should not be part of the business logic.
-func (c *KubernetesController) syncToStdout(key string) error {
+func (c *KubernetesController) updatePendingChecks(key string) error {
     obj, exists, err := c.indexer.GetByKey(key)
     if err != nil {
         glog.Errorf("Fetching object with key %s from store failed with %v", key, err)
@@ -111,17 +123,19 @@ func (c *KubernetesController) syncToStdout(key string) error {
 
     if !exists {
         // Below we will warm up our cache with a Pod, so that we will see a delete for one pod
-        fmt.Printf("Pod %s does not exist anymore\n", key)
+        log.Debug().Msgf("deployment %s does not exist anymore", key)
     } else {
         // Note that you also have to check the uid if you have a local controlled resource, which
         // is dependent on the actual instance, to detect that a Pod was recreated with the same name
-        fmt.Printf("Sync/Add/Update for Pod %s\n", obj.(*v1.Pod).GetName())
-        //fmt.Printf("obj %s\n----------\n", obj.(*v1.Pod).String())
-        fmt.Printf("obj %s\n----------\n", obj.(*v1.Pod).Status.Phase)
-        p := obj.(*v1.Pod)
-        fmt.Printf("Initializers %v\n",p.)
-        // TODO
-        // update the pending stages
+
+        // check if this is one of the pending monitored deployments
+        dep := obj.(*v1beta1.Deployment)
+        log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String() )
+
+        // This deployment is monitored, and all its replicas are available
+        if c.pendingStages.IsMonitoredResource(string(dep.GetUID())) && dep.Status.UnavailableReplicas == 0 {
+            c.pendingStages.RemoveResource(string(dep.GetUID()))
+        }
     }
     return nil
 }

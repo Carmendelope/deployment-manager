@@ -31,8 +31,16 @@ import (
     "flag"
     "path/filepath"
     "errors"
-
+    "fmt"
     "time"
+)
+
+
+const (
+    // Time in seconds we wait for a stage to be finished.
+    StageCheckingTimeout = 30
+    // Time between pending stage checks in seconds
+    CheckingSleepTime = 1
 )
 
 // The executor is the main structure in charge of running deployment plans on top of K8s.
@@ -65,6 +73,10 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
     return &toReturn, err
 }
 
+// Execute a stage of a deployment plan for the kubernetes platform.
+// Every service defined into the stage is translated into k8s and executed. Then, the controller monitors the
+// correct completion of the deployment if the deployment fails, a rollback operation terminating all the services
+// is done.
 func (k *KubernetesExecutor) Execute(stage *pbConductor.DeploymentStage) error {
     log.Info().Str("deployment", stage.DeploymentId).Str("stage",stage.StageId).Msgf("execute stage %s with %d services", stage.StageId, len(stage.Services))
 
@@ -72,19 +84,27 @@ func (k *KubernetesExecutor) Execute(stage *pbConductor.DeploymentStage) error {
         log.Info().Str("deployment", stage.DeploymentId).Str("stage",stage.StageId).Msgf("deploy service %s", serv.Name)
         err := k.runDeployment(serv, stage.StageId)
         if err != nil {
-            log.Error().Str("deployment", stage.DeploymentId).Str("stage",stage.StageId).AnErr("deploymentError", err).
-                Msgf("error deploying service %s",serv.Name)
+            log.Error().Str("deployment", stage.DeploymentId).Str("stage", stage.StageId).AnErr("deploymentError", err).
+                Msgf("error deploying service %s", serv.Name)
             return err
         }
     }
 
     // TODO supervise that the deployment for this stage was correct
-    k.checkPendingStage(stage)
-    return nil
+    stageErr := k.checkPendingStage(stage)
+    return stageErr
 }
 
-func (k *KubernetesExecutor) StageRollback(plan *pbConductor.DeploymentPlan, lastDeployed int) error {
-    //TODO
+
+func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage) error {
+    log.Info().Msgf("running rollback operation for deployment stage %s from deployment plan %s",stage.StageId, stage.DeploymentId)
+    for _, serv := range stage.Services {
+        err := k.UndeployService(serv)
+        if err != nil {
+            log.Error().Err(err).Msgf("error undeploying service %s from stage %s",serv.ServiceId, stage.StageId)
+            return err
+        }
+    }
     return nil
 }
 
@@ -95,6 +115,11 @@ func (k *KubernetesExecutor) StageRollback(plan *pbConductor.DeploymentPlan, las
 //  returns:
 //
 func (k *KubernetesExecutor) runDeployment(serv *pbApplication.Service, stageId string) error {
+    // TODO consider deploy specs
+    // TODO consider namespace
+    // TODO create services accordingly
+    // TODO what about configmaps
+    // TODO what about storage
     deployment := &appsv1.Deployment{
         ObjectMeta: metav1.ObjectMeta{
             Name: serv.Name,
@@ -140,24 +165,32 @@ func (k *KubernetesExecutor) runDeployment(serv *pbApplication.Service, stageId 
 
     // Add to the list of pending checks
     k.pendingStages.AddResource(string(returnedDeployment.GetUID()), stageId)
-    //k.pendingStages.AddResource(string(returnedDeployment.GetUID()),returnedDeployment.)
 
     return nil
 }
 
-func(k *KubernetesExecutor) checkPendingStage(stage *pbConductor.DeploymentStage) {
+// Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
+// If after the maximum expiration time the check is not successful, the execution is considered to be failed.
+func(k *KubernetesExecutor) checkPendingStage(stage *pbConductor.DeploymentStage) error {
+    log.Info().Msgf("stage %s wait until all stages are complete",stage.StageId)
+    timeout := time.After(time.Second * StageCheckingTimeout)
+    tick := time.Tick(time.Second * CheckingSleepTime)
     for {
-        pending := k.pendingStages.HasPendingChecks(stage.StageId)
-        if !pending {
-            log.Info().Msgf("stage %s has no pending checks", stage.StageId)
-            return
+        select {
+        // Got a timeout! Error
+        case <-timeout:
+            log.Error().Msgf("checking pending resources exceeded for stage %s", stage.StageId)
+            return errors.New(fmt.Sprintf("checking pending resources exceeded for stage %s", stage.StageId))
+        // Next check
+        case <-tick:
+            pending := k.pendingStages.HasPendingChecks(stage.StageId)
+            if !pending {
+                log.Info().Msgf("stage %s has no pending checks. Exit checking stage", stage.StageId)
+                return nil
+            }
         }
-        log.Info().Msgf("stage %s has pending checks", stage.StageId)
-        time.Sleep(time.Second * 2000)
     }
 }
-
-
 
 
 // Undeploy a service if running.
@@ -165,17 +198,18 @@ func(k *KubernetesExecutor) checkPendingStage(stage *pbConductor.DeploymentStage
 //   serv service to be removed
 //  return:
 //   error if any
-func(k *KubernetesExecutor) undeployService(serv *pbApplication.Service) error {
+func(k *KubernetesExecutor) UndeployService(serv *pbApplication.Service) error {
     if serv == nil {
         returnError := errors.New("nil service was requested to be undeployed")
         log.Error().Err(returnError).Msg("impossible to undeploy nil instance")
-        return nil
+        return returnError
     }
 
     deploymentsClient := k.client.AppsV1().Deployments(apiv1.NamespaceDefault)
     err := deploymentsClient.Delete(serv.Name, metav1.NewDeleteOptions(2000))
     if err != nil {
         log.Error().Err(err).Msgf("problems deleting service %s", serv.Name)
+        return err
     }
 
     return nil

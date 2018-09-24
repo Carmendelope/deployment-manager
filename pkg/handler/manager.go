@@ -34,24 +34,22 @@ func NewManager(executor *executor.Executor) *Manager {
 func(m *Manager) Execute(request *pbDeploymentMgr.DeployPlanRequest) (*pbConductor.DeploymentResponse, error) {
     log.Debug().Msgf("execute plan with id %s",request.RequestId)
 
-    planNumber := 0
-    for _, stage := range request.Plan.Stages {
+    for stageNumber, stage := range request.Plan.Stages {
         services := stage.Services
-        log.Info().Msgf("plan %d contains %d services to execute",planNumber, len(services))
+        log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
         err := m.executor.Execute(stage)
 
         if err != nil {
-            log.Error().AnErr("error",err).Msgf("error deploying stage")
-            m.StageRollback(request.Plan, planNumber)
+            // TODO what to do if rollback fails
+            log.Error().AnErr("error",err).Msgf("error deploying stage %d out of %d",stageNumber,len(request.Plan.Stages))
+            m.executor.StageRollback(stage)
+            error_response := pbConductor.DeploymentResponse{RequestId: request.RequestId, Status: pbConductor.ApplicationStatus_ERROR}
+            return &error_response, err
         }
-        planNumber = planNumber + 1
+        log.Info().Msgf("executed plan %s stage %d / %d",request.Plan.DeploymentId, stageNumber, len(request.Plan.Stages))
     }
 
-    return nil, nil
+    ok_reponse := pbConductor.DeploymentResponse{RequestId: request.RequestId, Status: pbConductor.ApplicationStatus_RUNNING}
+    return &ok_reponse, nil
 }
 
-
-func(m *Manager) StageRollback(plan *pbConductor.DeploymentPlan, lastDeployed int) error {
-    // TODO
-    return nil
-}
