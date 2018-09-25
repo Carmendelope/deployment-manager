@@ -134,9 +134,9 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
 
 
         AfterEach(func(){
-            err := executor.undeployService(&serv1)
+            err := executor.UndeployService(&serv1)
             Expect(err).ShouldNot(HaveOccurred())
-            err = executor.undeployService(&serv2)
+            err = executor.UndeployService(&serv2)
             Expect(err).ShouldNot(HaveOccurred())
         })
 

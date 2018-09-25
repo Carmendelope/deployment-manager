@@ -15,7 +15,7 @@
 #
 
 # Name of the target applications to be built
-APPS=deployment_manager deployment_controller
+APPS=deployment-manager
 
 # Target directory to store binaries and results
 TARGET=bin

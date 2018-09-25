@@ -17,7 +17,7 @@
 package main
 
 import (
-    "github.com/nalej/deployment-manager/cmd/deployment_manager/cmd"
+    "github.com/nalej/deployment-manager/cmd/deployment-manager/cmd"
     "github.com/nalej/golang-template/version"
 )
 

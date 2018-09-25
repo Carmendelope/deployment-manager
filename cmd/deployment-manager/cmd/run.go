@@ -42,7 +42,7 @@ func init() {
 
     RootCmd.AddCommand(runCmd)
 
-    runCmd.Flags().Uint32P("port", "c",5000,"port where conductor listens to")
+    runCmd.Flags().Uint32P("port", "c",5002,"port where deployment manager listens to")
     runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
     viper.BindPFlags(runCmd.Flags())
 }
@@ -56,13 +56,26 @@ func Run() {
     local = viper.GetBool("local")
     port = uint32(viper.GetInt32("port"))
 
-    log.Info().Msg("launching deployment manager...")
+
 
     exec, err := kubernetes.NewKubernetesExecutor(local)
     if err != nil {
         log.Panic().Err(err)
         panic(err.Error())
     }
+
+    // Run the kubernetes controller
+    // Run the kubernetes controller
+    kontroller := kubernetes.NewKubernetesController(exec.(*kubernetes.KubernetesExecutor))
+
+    // Now let's start the controller
+    var stop chan struct{}
+    stop = make(chan struct{})
+    log.Info().Msg("launching kubernetes controller...")
+    go kontroller.Run(1, stop)
+    defer close(stop)
+
+    log.Info().Msg("launching deployment manager...")
 
     deploymentMgrService, err := service.NewDeploymentManagerService(port, &exec)
     if err != nil {
