@@ -1,17 +1,7 @@
 /*
- * Copyright 2018 Nalej
+ *  Copyright (C) 2018 Nalej Group - All Rights Reserved
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package kubernetes
@@ -56,6 +46,7 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
+        var fragment pbConductor.DeploymentFragment
 
         BeforeEach(func(){
             serv1 = pbApplication.Service{
@@ -78,13 +69,19 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
 
             stage = pbConductor.DeploymentStage{
                 StageId: "error_stage_001",
-                DeploymentId: "error_deployment_001",
                 Services: services,
+            }
+            fragment = pbConductor.DeploymentFragment{
+                FragmentId: "fragment_001",
+                DeploymentId: "deployment_001",
+                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: "test-app-001"},
+                Stages: []*pbConductor.DeploymentStage{&stage},
+
             }
         })
 
         It("deploys a service, second fails and waits until rollback", func(){
-            err := executor.Execute(&stage)
+            err := executor.Execute(&fragment, &stage)
             Expect(err).Should(HaveOccurred())
         })
 
@@ -95,6 +92,8 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
+        var fragment pbConductor.DeploymentFragment
+
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
 
@@ -121,14 +120,19 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
 
             stage = pbConductor.DeploymentStage{
                 StageId: "stage_001",
-                DeploymentId: "deployment_001",
                 Services: services,
+            }
+            fragment = pbConductor.DeploymentFragment{
+                FragmentId: "fragment_001",
+                DeploymentId: "deployment_001",
+                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: "test-app-001"},
+                Stages: []*pbConductor.DeploymentStage{&stage},
             }
 
         })
 
         It("deploys a stage and waits until completion", func(){
-            err := executor.Execute(&stage)
+            err := executor.Execute(&fragment, &stage)
             Expect(err).ShouldNot(HaveOccurred())
         })
 

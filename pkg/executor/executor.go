@@ -1,17 +1,7 @@
 /*
- * Copyright 2018 Nalej
+ *  Copyright (C) 2018 Nalej Group - All Rights Reserved
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package executor
@@ -28,10 +18,11 @@ type Executor interface {
 
     // Execute a deployment stage for the current platform.
     //  params:
-    //   plan to be executed
+    //   fragment to the stage belongs to
+    //   stage to be executed
     //  return:
     //   error if any
-    Execute(plan *pbConductor.DeploymentStage) error
+    Execute(fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) error
 
     // Operation to be run in case a stage deployment fails. The rollback should bring the system to
     // the system status before this stage was executed.
