@@ -10,7 +10,6 @@ import (
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbApplication "github.com/nalej/grpc-application-go"
     "github.com/nalej/deployment-manager/pkg/executor"
-    appsv1 "k8s.io/api/apps/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     apiv1 "k8s.io/api/core/v1"
     "k8s.io/client-go/kubernetes"
@@ -71,94 +70,34 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
 // Every service defined into the stage is translated into k8s and executed. Then, the controller monitors the
 // correct completion of the deployment if the deployment fails, a rollback operation terminating all the services
 // is done.
-func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage) error {
+func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage) (*executor.Deployable,error) {
     log.Info().Str("stage",stage.StageId).Msgf("execute stage %s with %d services", stage.StageId, len(stage.Services))
 
+    targetNamespace := getNamespace(fragment.AppId)
+
+    var resources executor.Deployable
     // Build the structures to be executed. If any of then cannot be built, we have a failure.
-    resources, err := BuildResources(fragment, stage)
+    k8sDeploy := NewDeployableKubernetesStage(k.client, stage, targetNamespace)
+
+
+    err := k8sDeploy.Build()
 
     if err != nil {
-        log.Error().Err(err).Msgf("impossible to create deployables for stage %s in deployment %s", stage.StageId, fragment.FragmentId)
-        return err
-    }
-    // create namespace
-    err = k.createNamespace(stage.StageId,resources.targetNamespace)
-    if err != nil {
-        log.Error().Err(err).Msgf("impossible to create namespace %s for stageId %s", resources.targetNamespace, stage.StageId)
-        return err
-    }
-    // create deployments
-    err = k.createDeployments(stage.StageId,resources.targetNamespace, resources.deployments)
-    if err != nil {
-        log.Error().Err(err).Msgf("impossible to create deployments for stageId %s", stage.StageId)
-        return err
+        log.Error().Err(err).Msgf("impossible to build resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
+        resources = k8sDeploy
+        return &resources,err
     }
 
-    // create services
-    err = k.createServices(stage.StageId, resources.targetNamespace, resources.services)
+    err = k8sDeploy.Deploy()
     if err != nil {
-        log.Error().Err(err).Msgf("impossible to create services for stageId %s", stage.StageId)
-        return err
+        log.Error().Err(err).Msgf("impossible to deploy resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
+        resources = k8sDeploy
+        return &resources,err
     }
 
     // TODO supervise that the deployment for this stage was correct
     stageErr := k.checkPendingStage(stage)
-    return stageErr
-}
-
-
-// Create a new namespace
-//  params:
-//   stageId id this deployment belongs to
-//   namespace string for the name of this namespace
-//  return:
-//   error if any
-func (k *KubernetesExecutor) createNamespace(stageId string, namespace string) error {
-    // TODO check if namespace already exists
-    n := apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-    c := k.client.CoreV1().Namespaces()
-    _, err := c.Create(&n)
-    return err
-}
-
-// Create new deployments
-//  params:
-//   stageId id this deployment belongs to
-//   namespace string for the name of this namespace
-//   deployments list of deployments to run
-//  return:
-//   error if any
-func (k *KubernetesExecutor) createDeployments(stageId string, namespace string, deployments []appsv1.Deployment) error {
-    deploymentsClient := k.client.AppsV1().Deployments(namespace)
-    for _, dep := range deployments {
-        deployed, err := deploymentsClient.Create(&dep)
-        if err != nil {
-            log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
-            return err
-        }
-        // Add to the list of pending checks
-        k.pendingStages.AddResource(string(deployed.GetUID()), stageId)
-    }
-    return nil
-}
-
-// Create new services
-//  params:
-//   stageId id this deployment belongs to
-//   namespace string for the name of this namespace
-//   services list of services to run
-//  return:
-//   error if any
-func (k *KubernetesExecutor) createServices(stageId string, namespace string, services []apiv1.Service) error {
-    servicesClient := k.client.CoreV1().Services(namespace)
-    for _, serv := range services {
-        _, err := servicesClient.Create(&serv)
-        if err != nil {
-            log.Error().Err(err).Msgf("error creating service %s",serv.Name)
-            return err
-        }
-    }
-    return nil
+    return &resources,stageErr
 }
 
 
@@ -174,7 +113,6 @@ func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage) e
     }
     return nil
 }
-
 
 
 // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
@@ -223,7 +161,7 @@ func(k *KubernetesExecutor) UndeployService(serv *pbApplication.Service) error {
     return nil
 }
 
-func(k *KubernetesExecutor) UndeployResources(dep DeployableResources) error {
+func(k *KubernetesExecutor) UndeployResources(dep DeployableKubernetesStage) error {
     //TODO create interface for resources and force every resource to have a create/deploy/undeploy function and how to watch
     return nil
 }
@@ -291,4 +229,6 @@ func homeDir() string {
 
 // Helping function for pointer conversion.
 func int32Ptr(i int32) *int32 { return &i }
+
+func int64Ptr(i int64) *int64 { return &i }
 

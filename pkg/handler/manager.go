@@ -26,7 +26,7 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeployFragmentRequest) error {
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
-        err := m.executor.Execute(request.Fragment, stage)
+        _,err := m.executor.Execute(request.Fragment, stage)
 
         if err != nil {
             // TODO decide what to do if rollback fails

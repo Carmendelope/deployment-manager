@@ -11,12 +11,13 @@ import (
     . "github.com/onsi/gomega"
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
+    "github.com/rs/zerolog/log"
 )
 
 
 var _ = Describe("Analysis of kubernetes structures creation", func() {
 
-    var executor *KubernetesExecutor
+    var k8sExecutor *KubernetesExecutor
     var stop chan struct{}
 
     BeforeSuite(func() {
@@ -25,10 +26,10 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         Expect(err).ShouldNot(HaveOccurred())
         Expect(ex).ToNot(BeNil())
 
-        executor = ex.(*KubernetesExecutor)
+        k8sExecutor = ex.(*KubernetesExecutor)
 
         // Run the kubernetes controller
-        kontroller := NewKubernetesController(executor)
+        kontroller := NewKubernetesController(k8sExecutor)
 
         // Now let's start the controller
         stop = make(chan struct{})
@@ -41,7 +42,7 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         // stop kontroller
         defer close(stop)
     })
-
+/*
     Context("run a stage with a service that is not going to run", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
@@ -81,23 +82,26 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         })
 
         It("deploys a service, second fails and waits until rollback", func(){
-            err := executor.Execute(&fragment, &stage)
+            err := k8sExecutor.Execute(&fragment, &stage)
             Expect(err).Should(HaveOccurred())
         })
 
-    })
 
+    })
+*/
 
     Context("run a stage with two services", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
+        var deployed DeployableKubernetesStage
 
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
 
         BeforeEach(func(){
+
             serv1 = pbApplication.Service{
                 ServiceId: "service_001",
                 Name: "test-image-1",
@@ -132,15 +136,16 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         })
 
         It("deploys a stage and waits until completion", func(){
-            err := executor.Execute(&fragment, &stage)
+            deployed, err := k8sExecutor.Execute(&fragment, &stage)
+            log.Info().Msgf("--2---->%+v",deployed)
             Expect(err).ShouldNot(HaveOccurred())
+            //Expect(deployed).ToNot(BeNil())
         })
 
 
         AfterEach(func(){
-            err := executor.UndeployService(&serv1)
-            Expect(err).ShouldNot(HaveOccurred())
-            err = executor.UndeployService(&serv2)
+            Expect(deployed).ToNot(BeNil())
+            err := deployed.Undeploy()
             Expect(err).ShouldNot(HaveOccurred())
         })
 

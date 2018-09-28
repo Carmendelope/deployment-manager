@@ -21,8 +21,8 @@ type Executor interface {
     //   fragment to the stage belongs to
     //   stage to be executed
     //  return:
-    //   error if any
-    Execute(fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) error
+    //   deployable object or error if any
+    Execute(fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) (*Deployable,error)
 
     // Operation to be run in case a stage deployment fails. The rollback should bring the system to
     // the system status before this stage was executed.
@@ -39,4 +39,18 @@ type Executor interface {
     //  return:
     //
     UndeployService(serv *pbApplication.Service) error
+}
+
+
+// This interface describes functions to be implemented by any deployable element that can be executed on top
+// of an underlying platform.
+type Deployable interface {
+    // Get the unique identifier for this deployable.
+    GetId() string
+    // Build the deployable and construct the corresponding internal structures.
+    Build() error
+    // Deploy this element
+    Deploy() error
+    // Undeploy this element
+    Undeploy() error
 }
