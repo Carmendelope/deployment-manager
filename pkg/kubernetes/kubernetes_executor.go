@@ -39,10 +39,8 @@ const (
 // The executor is the main structure in charge of running deployment plans on top of K8s.
 type KubernetesExecutor struct {
     client *kubernetes.Clientset
-    pendingStages *PendingStages
 }
 
-//func NewKubernetesExecutor(internal bool, pendingChecks *PendingChecks) (executor.Executor,error) {
 func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
     var c *kubernetes.Clientset
     var err error
@@ -61,8 +59,7 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
         log.Error().Err(foundError)
         return nil, foundError
     }
-    pendingChecks := NewPendingStages()
-    toReturn := KubernetesExecutor{c, pendingChecks}
+    toReturn := KubernetesExecutor{c}
     return &toReturn, err
 }
 
@@ -78,25 +75,37 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
     var resources executor.Deployable
     // Build the structures to be executed. If any of then cannot be built, we have a failure.
     k8sDeploy := NewDeployableKubernetesStage(k.client, stage, targetNamespace)
-
+    resources = k8sDeploy
 
     err := k8sDeploy.Build()
 
     if err != nil {
         log.Error().Err(err).Msgf("impossible to build resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
-        resources = k8sDeploy
         return &resources,err
     }
 
-    err = k8sDeploy.Deploy()
+    // Build a controller for this deploy operation
+    checks := executor.NewPendingStages()
+    kontroller := NewKubernetesController(k, checks, targetNamespace)
+
+    // Now let's start the controller
+    //var stop chan struct{}
+    //stop = make(chan struct{})
+    //defer close(stop)
+    var k8sController *KubernetesController
+    k8sController = kontroller.(*KubernetesController)
+    // run the controller
+    k8sController.Run()
+
+    err = k8sDeploy.Deploy(kontroller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
-        resources = k8sDeploy
         return &resources,err
     }
 
     // TODO supervise that the deployment for this stage was correct
-    stageErr := k.checkPendingStage(stage)
+    stageErr := k.checkPendingStage(checks, stage)
+    k8sController.Stop()
     return &resources,stageErr
 }
 
@@ -117,7 +126,7 @@ func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage) e
 
 // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
 // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
-func(k *KubernetesExecutor) checkPendingStage(stage *pbConductor.DeploymentStage) error {
+func(k *KubernetesExecutor) checkPendingStage(checks *executor.PendingStages, stage *pbConductor.DeploymentStage) error {
     log.Info().Msgf("stage %s wait until all stages are complete",stage.StageId)
     timeout := time.After(time.Second * StageCheckingTimeout)
     tick := time.Tick(time.Second * CheckingSleepTime)
@@ -129,7 +138,7 @@ func(k *KubernetesExecutor) checkPendingStage(stage *pbConductor.DeploymentStage
             return errors.New(fmt.Sprintf("checking pending resources exceeded for stage %s", stage.StageId))
         // Next check
         case <-tick:
-            pending := k.pendingStages.HasPendingChecks(stage.StageId)
+            pending := checks.HasPendingChecks(stage.StageId)
             if !pending {
                 log.Info().Msgf("stage %s has no pending checks. Exit checking stage", stage.StageId)
                 return nil

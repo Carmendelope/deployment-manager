@@ -49,8 +49,15 @@ type Deployable interface {
     GetId() string
     // Build the deployable and construct the corresponding internal structures.
     Build() error
-    // Deploy this element
-    Deploy() error
+    // Deploy this element using a deployment controller to check when the operation is fully done.
+    Deploy(controller DeploymentController) error
     // Undeploy this element
     Undeploy() error
+}
+
+// Minimalistic interface to run a controller in charge of overviewing the successful deployment of requested
+// operations.
+type DeploymentController interface {
+    // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
+   AddMonitoredResource(uid string, stageId string)
 }

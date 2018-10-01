@@ -4,7 +4,7 @@
  *
  */
 
-package kubernetes
+package executor
 
 import (
     "sync"

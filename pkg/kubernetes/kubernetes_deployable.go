@@ -19,6 +19,7 @@ import (
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/kubernetes/typed/apps/v1"
 
+    "github.com/nalej/deployment-manager/pkg/executor"
 )
 
 /*
@@ -95,22 +96,22 @@ func (d DeployableKubernetesStage) Build() error {
     return nil
 }
 
-func (d DeployableKubernetesStage) Deploy() error {
+func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
     // Deploy namespace
     log.Debug().Msgf("build namespace for stage %s",d.stage.StageId)
-    err := d.namespace.Deploy()
+    err := d.namespace.Deploy(controller)
     if err != nil {
         return err
     }
     // Deploy deployments
     log.Debug().Msgf("build deployments for stage %s",d.stage.StageId)
-    err = d.deployments.Deploy()
+    err = d.deployments.Deploy(controller)
     if err != nil {
         return err
     }
     // Deploy services
     log.Debug().Msgf("build services for stage %s",d.stage.StageId)
-    err = d.services.Deploy()
+    err = d.services.Deploy(controller)
     if err != nil {
         return err
     }
@@ -204,13 +205,14 @@ func(d *DeployableDeployment) Build() error {
     return nil
 }
 
-func(d *DeployableDeployment) Deploy() error {
+func(d *DeployableDeployment) Deploy(controller executor.DeploymentController) error {
     for _, dep := range d.deployments {
-        _, err := d.client.Create(&dep)
+        deployed, err := d.client.Create(&dep)
         if err != nil {
             log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
             return err
         }
+        controller.AddMonitoredResource(string(deployed.GetUID()), d.stage.StageId)
     }
     return nil
 }
@@ -261,6 +263,11 @@ func(s *DeployableService) Build() error {
     for serviceIndex, service := range s.stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.stage.Services))
         k8sService := apiv1.Service{
+            ObjectMeta: metav1.ObjectMeta{
+                Namespace: s.targetNamespace,
+                Name: service.Name,
+                Labels: service.Labels,
+            },
             Spec: apiv1.ServiceSpec{
                 ExternalName: service.Name,
                 Ports: getServicePorts(service.ExposedPorts),
@@ -268,16 +275,19 @@ func(s *DeployableService) Build() error {
         }
         services = append(services, k8sService)
     }
+    // add the created services
+    s.services = services
     return nil
 }
 
-func(s *DeployableService) Deploy() error {
+func(s *DeployableService) Deploy(controller executor.DeploymentController) error {
     for _, serv := range s.services {
         created, err := s.client.Create(&serv)
         if err != nil {
             log.Error().Err(err).Msgf("error creating service %s",serv.Name)
             return err
         }
+        controller.AddMonitoredResource(string(created.GetUID()), s.stage.StageId)
         s.services = append(s.services, *created)
     }
     return nil
@@ -329,7 +339,7 @@ func(n *DeployableNamespace) Build() error {
     return nil
 }
 
-func(n *DeployableNamespace) Deploy() error {
+func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) error {
     retrieved, err := n.client.Get(n.targetNamespace,metav1.GetOptions{IncludeUninitialized: true})
 
     if retrieved.Name!="" {
@@ -343,7 +353,6 @@ func(n *DeployableNamespace) Deploy() error {
 }
 
 func(n *DeployableNamespace) Undeploy() error {
-    log.Debug().Msgf("the namespace object is %v\n",n)
     err := n.client.Delete(n.targetNamespace, metav1.NewDeleteOptions(DeleteGracePeriod))
     return err
 }
