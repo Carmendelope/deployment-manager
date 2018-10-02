@@ -164,6 +164,12 @@
   version = "v0.0.4"
 
 [[projects]]
+  name = "github.com/nalej/grpc-utils"
+  packages = ["pkg/test"]
+  revision = "5dd4662c03100806b57763212966a72e0c4b85e5"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/onsi/ginkgo"
   packages = [".","config","internal/codelocation","internal/containernode","internal/failer","internal/leafnodes","internal/remote","internal/spec","internal/spec_iterator","internal/specrunner","internal/suite","internal/testingtproxy","internal/writer","reporters","reporters/stenographer","reporters/stenographer/support/go-colorable","reporters/stenographer/support/go-isatty","types"]
   revision = "3774a09d95489ccaa16032e0770d08ea77ba6184"
@@ -323,6 +329,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "662db98c2f2a88e0e046c7cb60cb55de30076cbf01152057c5e332ec92bcb034"
+  inputs-digest = "7599e763d97a33b9dc54b78fe06de09da31f65389cc5bda67d1b342bbe58659f"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -36,7 +36,7 @@ const (
 // Definition of a collection of deployable resources contained by a stage. This object is deployable and it has
 // deployable objects itself. The deploy of this object simply consists on the deployment of the internal objects.
 type DeployableKubernetesStage struct {
-    // kubernetes client
+    // kubernetes Client
     client *kubernetes.Clientset
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
@@ -52,7 +52,7 @@ type DeployableKubernetesStage struct {
 
 // Instantiate a new set of resources for a stage to be deployed.
 //  params:
-//   client k8s api client
+//   Client k8s api Client
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
@@ -119,11 +119,13 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
 }
 
 func (d DeployableKubernetesStage) Undeploy() error {
+    // Deploying the namespace should be enough
     // Deploy namespace
     err := d.namespace.Undeploy()
     if err != nil {
         return err
     }
+    /*
     // Deploy deployments
     err = d.deployments.Undeploy()
     if err != nil {
@@ -134,6 +136,7 @@ func (d DeployableKubernetesStage) Undeploy() error {
     if err != nil {
         return err
     }
+    */
     return nil
 }
 
@@ -141,7 +144,7 @@ func (d DeployableKubernetesStage) Undeploy() error {
 //-----------------------
 
 type DeployableDeployment struct{
-    // kubernetes client
+    // kubernetes Client
     client v1.DeploymentInterface
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
@@ -232,7 +235,7 @@ func(d *DeployableDeployment) Undeploy() error {
 //--------------------
 
 type DeployableService struct {
-    // kubernetes client
+    // kubernetes Client
     client v12.ServiceInterface
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
@@ -262,18 +265,23 @@ func(s *DeployableService) Build() error {
     services := make([]apiv1.Service,0,len(s.stage.Services))
     for serviceIndex, service := range s.stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.stage.Services))
-        k8sService := apiv1.Service{
-            ObjectMeta: metav1.ObjectMeta{
-                Namespace: s.targetNamespace,
-                Name: service.Name,
-                Labels: service.Labels,
-            },
-            Spec: apiv1.ServiceSpec{
-                ExternalName: service.Name,
-                Ports: getServicePorts(service.ExposedPorts),
-            },
+        ports := getServicePorts(service.ExposedPorts)
+        if ports!=nil{
+            k8sService := apiv1.Service{
+                ObjectMeta: metav1.ObjectMeta{
+                    Namespace: s.targetNamespace,
+                    Name: service.Name,
+                    Labels: service.Labels,
+                },
+                Spec: apiv1.ServiceSpec{
+                    ExternalName: service.Name,
+                    Ports: getServicePorts(service.ExposedPorts),
+                },
+            }
+            services = append(services, k8sService)
+        } else {
+            log.Debug().Msgf("No k8s service is generated for %s",service.ServiceId)
         }
-        services = append(services, k8sService)
     }
     // add the created services
     s.services = services
@@ -309,7 +317,7 @@ func(s *DeployableService) Undeploy() error {
 //--------------------
 
 type DeployableNamespace struct {
-    // kubernetes client
+    // kubernetes Client
     client v12.NamespaceInterface
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
@@ -349,6 +357,7 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     }
     created, err := n.client.Create(&n.namespace)
     n.namespace = *created
+    controller.AddMonitoredResource(string(created.GetUID()), n.stage.StageId)
     return err
 }
 
@@ -377,6 +386,9 @@ func getServicePorts(ports []*pbConductor.Port) []apiv1.ServicePort {
         obtained = append(obtained, apiv1.ServicePort{Name: p.Name,
             Port: p.ExposedPort, TargetPort: intstr.IntOrString{IntVal: p.InternalPort}})
     }
+    if len(obtained) == 0 {
+        return nil
+    }
     return obtained
 }
 
@@ -401,7 +413,4 @@ func getEnvVariables(variables map[string]string) []apiv1.EnvVar {
 //   associated namespace
 func getNamespace(appId *pbConductor.AppDescriptorId) string {
     return fmt.Sprintf("%s-%s", appId.OrganizationId, appId.AppDescriptorId)
-    //return fmt.Sprintf("%s", appId.AppDescriptorId)
-    //return fmt.Sprintf("myspace")
-
 }

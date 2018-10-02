@@ -7,8 +7,8 @@
 package handler
 
 import (
-    . "github.com/onsi/gomega"
-    . "github.com/onsi/ginkgo"
+    "github.com/onsi/gomega"
+    "github.com/onsi/ginkgo"
     "google.golang.org/grpc"
     "google.golang.org/grpc/test/bufconn"
     pbDeploymentManager "github.com/nalej/grpc-deployment-manager-go"
@@ -16,14 +16,13 @@ import (
     pbApplication "github.com/nalej/grpc-application-go"
     "github.com/nalej/deployment-manager/tools"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
-
+    "github.com/nalej/grpc-utils/pkg/test"
     "context"
-    executor "github.com/nalej/deployment-manager/pkg/executor"
+
 )
 
-const TestPort = 4000
 
-var _ = Describe("Deployment server API", func() {
+var _ = ginkgo.Describe("Deployment server API", func() {
     // grpc server
     var server *grpc.Server
     // Deployment manager
@@ -32,52 +31,43 @@ var _ = Describe("Deployment server API", func() {
     var listener *bufconn.Listener
     // Deployment manager client
     var client pbDeploymentManager.DeploymentManagerClient
-    // Channel for kubernetes controller
-    var stop chan struct{}
-    // Kubernetes executor
-    var executor executor.Executor
+    // Kubernetes ex
+    var k8sExec *kubernetes.KubernetesExecutor
 
-    BeforeSuite(func(){
-        listener = tools.GetDefaultListener()
+
+
+    ginkgo.BeforeSuite(func(){
+        listener = test.GetDefaultListener()
         server = grpc.NewServer()
         exec, err := kubernetes.NewKubernetesExecutor(false)
-        Expect(err).ShouldNot(HaveOccurred())
-        executor = exec.(*kubernetes.KubernetesExecutor)
-        dm = NewManager(&executor)
+        k8sExec = exec.(*kubernetes.KubernetesExecutor)
+        gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+        dm = NewManager(&exec)
         conn, err := tools.GetConn(*listener)
-        tools.LaunchServer(server, listener)
+        test.LaunchServer(server, listener)
         // Register the service
         pbDeploymentManager.RegisterDeploymentManagerServer(server, NewHandler(dm))
 
-        Expect(err).ShouldNot(HaveOccurred())
+        gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         client = pbDeploymentManager.NewDeploymentManagerClient(conn)
 
-        // Run the kubernetes controller
-        kontroller := kubernetes.NewKubernetesController(executor.(*kubernetes.KubernetesExecutor))
+       })
 
-        // Now let's start the controller
-        stop = make(chan struct{})
-
-        go kontroller.Run(1, stop)
-    })
-
-    AfterSuite(func(){
+    ginkgo.AfterSuite(func(){
         server.Stop()
         listener.Close()
-        // stop kontroller
-        defer close(stop)
     })
 
-    Context("a deployment plan request arrives with a single stage and two services", func(){
-        var request pbDeploymentManager.DeployPlanRequest
-        var plan pbConductor.DeploymentPlan
+    ginkgo.Context("a deployment fragment request arrives with a single stage and two services", func(){
+        var request pbDeploymentManager.DeployFragmentRequest
+        var fragment pbConductor.DeploymentFragment
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
 
-        BeforeEach(func(){
+        ginkgo.BeforeEach(func(){
             serv1 = pbApplication.Service{
                 ServiceId: "service_001",
                 Name: "test-image-1",
@@ -99,29 +89,99 @@ var _ = Describe("Deployment server API", func() {
             services :=[]*pbConductor.Service{&serv1,&serv2}
 
             stage = pbConductor.DeploymentStage{
-                StageId: "stage_001",
-                DeploymentId: "deployment_001",
+                StageId: "stage-001",
+                FragmentId: "fragment-001",
                 Services: services,
             }
 
-            plan = pbConductor.DeploymentPlan{
-                DeploymentId: "plan_001",
+            fragment = pbConductor.DeploymentFragment{
+                DeploymentId: "deployment-001",
+                FragmentId: "fragment-001",
+                AppId: &pbApplication.AppDescriptorId{AppDescriptorId:"app-001",OrganizationId:"org-001"},
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
 
-            request = pbDeploymentManager.DeployPlanRequest{RequestId:"plan_001",Plan: &plan}
+            request = pbDeploymentManager.DeployFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
         })
-        It("the new request is processed and the stages are deployed", func(){
+        ginkgo.It("the new request is processed and the stages are deployed", func(){
             response, err := client.Execute(context.Background(),&request)
-            Expect(err).ShouldNot(HaveOccurred())
-            Expect(response.RequestId).To(Equal(request.RequestId))
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+            gomega.Expect(response.RequestId).To(gomega.Equal(request.RequestId))
         })
 
-        AfterEach(func(){
-            err := executor.UndeployService(&serv1)
-            Expect(err).ShouldNot(HaveOccurred())
-            err = executor.UndeployService(&serv2)
-            Expect(err).ShouldNot(HaveOccurred())
+        ginkgo.AfterEach(func(){
+            // remove the namespace
+            deployedNamespace := kubernetes.NewDeployableNamespace(k8sExec.Client,&stage,"org-001-app-001")
+            err := deployedNamespace.Undeploy()
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+        })
+    })
+
+    ginkgo.Context("a deployment fragment request arrives with a two stages and two services", func(){
+        var request pbDeploymentManager.DeployFragmentRequest
+        var fragment pbConductor.DeploymentFragment
+        var serv1 pbApplication.Service
+        var serv2 pbApplication.Service
+        var stage1 pbConductor.DeploymentStage
+        var stage2 pbConductor.DeploymentStage
+        port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
+        port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
+
+        ginkgo.BeforeEach(func(){
+            serv1 = pbApplication.Service{
+                ServiceId: "service_001",
+                Name: "test-image-1",
+                Image: "nginx:1.12",
+                ExposedPorts: []*pbApplication.Port{&port1, &port2},
+                Labels: map[string]string { "label1":"value1", "label2":"value2"},
+                Specs: &pbApplication.DeploySpecs{Replicas: 1},
+            }
+
+            serv2 = pbApplication.Service{
+                ServiceId: "service_002",
+                Name: "test-image-2",
+                Image: "nginx:1.12",
+                ExposedPorts: []*pbApplication.Port{&port1, &port2},
+                Labels: map[string]string { "label1":"value1"},
+                Specs: &pbApplication.DeploySpecs{Replicas: 2},
+            }
+
+            services1 :=[]*pbConductor.Service{&serv1}
+            services2 :=[]*pbConductor.Service{&serv2}
+
+
+            stage1 = pbConductor.DeploymentStage{
+                StageId: "stage-001",
+                FragmentId: "fragment-001",
+                Services: services1,
+            }
+
+            stage2 = pbConductor.DeploymentStage{
+                StageId: "stage-002",
+                FragmentId: "fragment-001",
+                Services: services2,
+            }
+
+            fragment = pbConductor.DeploymentFragment{
+                DeploymentId: "deployment-001",
+                FragmentId: "fragment-001",
+                AppId: &pbApplication.AppDescriptorId{AppDescriptorId:"app-002",OrganizationId:"org-001"},
+                Stages: []*pbConductor.DeploymentStage{&stage1,&stage2},
+            }
+
+            request = pbDeploymentManager.DeployFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
+        })
+        ginkgo.It("the new request is processed and the stages are deployed", func(){
+            response, err := client.Execute(context.Background(),&request)
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+            gomega.Expect(response.RequestId).To(gomega.Equal(request.RequestId))
+        })
+
+        ginkgo.AfterEach(func(){
+            // remove the namespace
+            deployedNamespace := kubernetes.NewDeployableNamespace(k8sExec.Client,&stage1,"org-001-app-002")
+            err := deployedNamespace.Undeploy()
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         })
     })
 

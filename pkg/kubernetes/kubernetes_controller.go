@@ -33,33 +33,54 @@ type KubernetesController struct {
     deployments *KubernetesObserver
     // Services controller
     services *KubernetesObserver
+    // Namespaces controller
+    namespaces *KubernetesObserver
     // Pending checks to run
     pendingStages *executor.PendingStages
 }
 
 
 // Create a new kubernetes controller for a given namespace.
-func NewKubernetesController(executor *KubernetesExecutor, pendingStages *executor.PendingStages, namespace string) executor.DeploymentController {
+func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages, namespace string) executor.DeploymentController {
 
     // Watch deployments
     deploymentsListWatcher := cache.NewListWatchFromClient(
-        executor.client.ExtensionsV1beta1().RESTClient(),
+        kExecutor.Client.ExtensionsV1beta1().RESTClient(),
         "deployments", namespace, fields.Everything())
-    depObserver := NewKubernetesObserver(deploymentsListWatcher, func() runtime.Object{return &v1beta1.Deployment{}},pendingStages)
+    // Create the observer with the corresponding helping functions.
+    depObserver := NewKubernetesObserver(deploymentsListWatcher,
+        func() runtime.Object{return &v1beta1.Deployment{}}, checkDeployments,
+        pendingStages)
 
 
     // Watch services
     servicesListWatcher := cache.NewListWatchFromClient(
-        executor.client.CoreV1().RESTClient(),
+        kExecutor.Client.CoreV1().RESTClient(),
         "services", namespace, fields.Everything())
-    servObserver := NewKubernetesObserver(servicesListWatcher, func() runtime.Object{return &v1.Service{}},pendingStages)
+    // Create the observer with the corresponding helping functions.
+    servObserver := NewKubernetesObserver(servicesListWatcher,
+        func() runtime.Object{return &v1.Service{}}, checkServicesDeployed,
+        pendingStages)
+
+    // Watch namespaces
+    namespacesListWatcher := cache.NewListWatchFromClient(
+        kExecutor.Client.CoreV1().RESTClient(),
+        "namespaces", v1.NamespaceAll, fields.Everything())
+    // Create the observer with the corresponding helping functions.
+    namespaceObserver := NewKubernetesObserver(namespacesListWatcher,
+        func()runtime.Object{return &v1.Namespace{}}, checkNamespacesDeployed,
+        pendingStages)
+
 
     return &KubernetesController{
         deployments: depObserver,
         services: servObserver,
+        namespaces: namespaceObserver,
         pendingStages: pendingStages,
     }
 }
+
+
 
 // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
 func (c *KubernetesController) AddMonitoredResource(uid string, stageId string) {
@@ -73,11 +94,14 @@ func (c *KubernetesController) Run() {
     go c.services.Run(1)
     // Run deployments controller
     go c.deployments.Run(1)
+    // Run namespaces controller
+    go c.namespaces.Run(1)
 }
 
 func (c *KubernetesController) Stop() {
     defer close(c.deployments.stopCh)
     defer close(c.services.stopCh)
+    defer close(c.namespaces.stopCh)
 }
 
 
@@ -85,6 +109,8 @@ type KubernetesObserver struct {
     indexer  cache.Indexer
     queue    workqueue.RateLimitingInterface
     informer cache.Controller
+    // function to determine how entities have to be checked to be deployed
+    checkingFunc func(interface{},*executor.PendingStages)
     pendingChecks *executor.PendingStages
     // channel to control pod stop
     stopCh chan struct{}
@@ -93,12 +119,13 @@ type KubernetesObserver struct {
 // Build a new kubernetes observer for an available API resource.
 //  params:
 //   watcher containing the api resource name to be queried
-//   targetInterface name of the class which objects we are going to store
+//   targetFunc function to transform elements from the cache into a processable entity
+//   checkingFunc function to indicate how the elements extracted from the queue have to be checked
 //   checks list of pending stages
 //  return:
 //   a pointer to a kubernetes observer
-//func NewKubernetesObserver (watcher *cache.ListWatch, targetObject runtime.Object, checks *executor.PendingStages) *KubernetesObserver {
-func NewKubernetesObserver (watcher *cache.ListWatch, targetFunc func()runtime.Object, checks *executor.PendingStages) *KubernetesObserver {
+func NewKubernetesObserver (watcher *cache.ListWatch, targetFunc func()runtime.Object,
+    checkingFunc func(interface{},*executor.PendingStages), checks *executor.PendingStages) *KubernetesObserver {
 
     // create the workqueue
     queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -134,6 +161,7 @@ func NewKubernetesObserver (watcher *cache.ListWatch, targetFunc func()runtime.O
         informer: informer,
         indexer:  indexer,
         queue:    queue,
+        checkingFunc: checkingFunc,
         pendingChecks: checks,
         stopCh:  make(chan struct{}),
     }
@@ -174,31 +202,7 @@ func (c *KubernetesObserver) updatePendingChecks(key string) error {
     } else {
         // Note that you also have to check the uid if you have a local controlled resource, which
         // is dependent on the actual instance, to detect that a Pod was recreated with the same name
-
-        
-
-        switch v:=obj.(type) {
-        case v1beta1.Deployment:
-            dep := obj.(runtime.Object)
-            kind := dep.GetObjectKind()
-        case v1beta1.Deployment:
-            dep := obj.(*v1beta1.Deployment)
-            log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
-            // This deployment is monitored, and all its replicas are available
-            if c.pendingChecks.IsMonitoredResource(string(dep.GetUID())) && dep.Status.UnavailableReplicas == 0 {
-                c.pendingChecks.RemoveResource(string(dep.GetUID()))
-            }
-        case v1.Service:
-            dep := obj.(*v1.Service)
-            log.Debug().Msgf("service %s status %v", dep.GetName(), dep.Status.String())
-
-            // This deployment is monitored, and all its replicas are available
-            if c.pendingChecks.IsMonitoredResource(string(dep.GetUID())) {
-                c.pendingChecks.RemoveResource(string(dep.GetUID()))
-            }
-        default:
-            log.Error().Msgf("the incoming object has unknown type %s",v)
-        }
+        c.checkingFunc(obj,c.pendingChecks)
 
     }
     return nil
@@ -259,3 +263,58 @@ func (c *KubernetesObserver) runWorker() {
 }
 
 
+// Helping function to check if a deployment is deployed or not. If so, it should
+// update the pending checks by removing it from the list of tasks.
+//  params:
+//   stored object stored in the pipeline.
+//   pending list of pending checks.
+func checkDeployments(stored interface{}, pending *executor.PendingStages){
+    dep := stored.(*v1beta1.Deployment)
+    log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
+    // This deployment is monitored, and all its replicas are available
+    if pending.IsMonitoredResource(string(dep.GetUID())){
+        if dep.Status.UnavailableReplicas == 0 {
+            pending.RemoveResource(string(dep.GetUID()))
+        }
+    } else {
+        log.Info().Msgf("deployment %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
+    }
+}
+
+// Helping function to check if a service is deployed or not. If so, it should
+// update the pending checks by removing it from the list of tasks.
+//  params:
+//   stored object stored in the pipeline.
+//   pending list of pending checks.
+func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
+    // TODO determine what do we expect for a service to be deployed
+    dep := stored.(*v1.Service)
+    log.Debug().Msgf("service %s status %v", dep.GetName(), dep)
+
+    // This deployment is monitored, and all its replicas are available
+    if pending.IsMonitoredResource(string(dep.GetUID())) {
+        pending.RemoveResource(string(dep.GetUID()))
+    } else {
+        log.Warn().Msgf("service %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
+    }
+}
+
+// Helping function to check if a namespace is deployed or not. If so, it should
+// update the pending checks by removing it from the list of tasks.
+//  params:
+//   stored object stored in the pipeline.
+//   pending list of pending checks.
+func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages){
+    // TODO determine what do we expect for a service to be deployed
+    dep := stored.(*v1.Namespace)
+    log.Debug().Msgf("namespace %s status %v", dep.GetName(), dep)
+
+    // This namespace will only be correct if it is active
+    if pending.IsMonitoredResource(string(dep.GetUID())){
+        if dep.Status.Phase == v1.NamespaceActive {
+            pending.RemoveResource(string(dep.GetUID()))
+        }
+    } else {
+        log.Info().Msgf("namespace %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
+    }
+}

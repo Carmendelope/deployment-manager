@@ -34,7 +34,7 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeployFragmentRequest) error {
             m.executor.StageRollback(stage)
             return err
         }
-        log.Info().Msgf("executed fragment %s stage %d / %d",request.Fragment.FragmentId, stageNumber, len(request.Fragment.Stages))
+        log.Info().Msgf("executed fragment %s stage %d / %d",request.Fragment.FragmentId, stageNumber+1, len(request.Fragment.Stages))
     }
     return nil
 }

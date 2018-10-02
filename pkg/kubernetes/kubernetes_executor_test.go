@@ -7,37 +7,37 @@
 package kubernetes
 
 import (
-    . "github.com/onsi/ginkgo"
-    . "github.com/onsi/gomega"
+    "github.com/onsi/ginkgo"
+    "github.com/onsi/gomega"
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
-    //"github.com/nalej/deployment-manager/pkg/executor"
 )
 
 
-var _ = Describe("Analysis of kubernetes structures creation", func() {
+var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
 
     var k8sExecutor *KubernetesExecutor
 
 
-    BeforeSuite(func() {
+    ginkgo.BeforeSuite(func() {
         ex, err := NewKubernetesExecutor(false)
 
-        Expect(err).ShouldNot(HaveOccurred())
-        Expect(ex).ToNot(BeNil())
+        gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+        gomega.Expect(ex).ToNot(gomega.BeNil())
 
         k8sExecutor = ex.(*KubernetesExecutor)
 
     })
 
-/*
-    Context("run a stage with a service that is not going to run", func(){
+
+    ginkgo.Context("run a stage with a service that is not going to run", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
+        appId := "errorapp"
 
-        BeforeEach(func(){
+        ginkgo.BeforeEach(func(){
             serv1 = pbApplication.Service{
                 ServiceId: "service_001",
                 Name: "test-image-1",
@@ -63,22 +63,29 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
                 DeploymentId: "deployment_001",
-                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: "test-app-001"},
+                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: appId},
                 Stages: []*pbConductor.DeploymentStage{&stage},
 
             }
         })
 
-        It("deploys a service, second fails and waits until rollback", func(){
-            err := k8sExecutor.Execute(&fragment, &stage)
-            Expect(err).Should(HaveOccurred())
+        ginkgo.It("deploys a service, second fails and waits until rollback", func(){
+            deployed, err := k8sExecutor.Execute(&fragment, &stage)
+            gomega.Expect(err).NotTo(gomega.BeNil())
+            gomega.Expect(deployed).NotTo(gomega.BeNil())
         })
 
+        ginkgo.AfterEach(func(){
+            // delete the namespace
+            deployedNamespace := NewDeployableNamespace(k8sExecutor.Client,&stage,"test-organization-errorapp")
+            err := deployedNamespace.Undeploy()
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+        })
 
     })
-*/
 
-    Context("run a stage with two services", func(){
+
+    ginkgo.Context("run a stage with two services", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
@@ -88,7 +95,7 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
 
-        BeforeEach(func(){
+        ginkgo.BeforeEach(func(){
 
             serv1 = pbApplication.Service{
                 ServiceId: "service_001",
@@ -122,19 +129,20 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
             }
         })
 
-        It("deploys a stage and waits until completion", func(){
+        ginkgo.It("deploys a stage and waits until completion", func(){
             deployed, err := k8sExecutor.Execute(&fragment, &stage)
-            Expect(err).ShouldNot(HaveOccurred())
-            Expect(deployed).ToNot(BeNil())
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+            gomega.Expect(deployed).ToNot(gomega.BeNil())
         })
 
 
-        AfterEach(func(){
+        ginkgo.AfterEach(func(){
             // delete the namespace
-            deployedNamespace := NewDeployableNamespace(k8sExecutor.client,&stage,"test-organization-test-app-001")
+            deployedNamespace := NewDeployableNamespace(k8sExecutor.Client,&stage,"test-organization-test-app-001")
             err := deployedNamespace.Undeploy()
-            Expect(err).ShouldNot(HaveOccurred())
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         })
 
     })
+
 })

@@ -36,6 +36,11 @@
     version="kubernetes-1.11.3"
 
 [[constraint]]
+    name="github.com/nalej/grpc-utils"
+    version="v1.1.0"
+
+
+[[constraint]]
     name = "github.com/nalej/grpc-conductor-go"
     version="v0.0.18"
 

@@ -8,7 +8,7 @@ package service
 
 import (
     "github.com/nalej/deployment-manager/pkg/handler"
-    "github.com/nalej/deployment-manager/tools"
+    "github.com/nalej/grpc-utils/pkg/tools"
     "github.com/nalej/deployment-manager/pkg/executor"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "google.golang.org/grpc/reflection"

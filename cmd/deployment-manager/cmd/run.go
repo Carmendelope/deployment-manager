@@ -54,17 +54,6 @@ func Run() {
         panic(err.Error())
     }
 
-    // Run the kubernetes controller
-    // Run the kubernetes controller
-    kontroller := kubernetes.NewKubernetesController(exec.(*kubernetes.KubernetesExecutor))
-
-    // Now let's start the controller
-    var stop chan struct{}
-    stop = make(chan struct{})
-    log.Info().Msg("launching kubernetes controller...")
-    go kontroller.Run(1, stop)
-    defer close(stop)
-
     log.Info().Msg("launching deployment manager...")
 
     deploymentMgrService, err := service.NewDeploymentManagerService(port, &exec)

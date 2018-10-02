@@ -38,7 +38,7 @@ const (
 
 // The executor is the main structure in charge of running deployment plans on top of K8s.
 type KubernetesExecutor struct {
-    client *kubernetes.Clientset
+    Client *kubernetes.Clientset
 }
 
 func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
@@ -74,7 +74,7 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
 
     var resources executor.Deployable
     // Build the structures to be executed. If any of then cannot be built, we have a failure.
-    k8sDeploy := NewDeployableKubernetesStage(k.client, stage, targetNamespace)
+    k8sDeploy := NewDeployableKubernetesStage(k.Client, stage, targetNamespace)
     resources = k8sDeploy
 
     err := k8sDeploy.Build()
@@ -88,20 +88,18 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
     checks := executor.NewPendingStages()
     kontroller := NewKubernetesController(k, checks, targetNamespace)
 
-    // Now let's start the controller
-    //var stop chan struct{}
-    //stop = make(chan struct{})
-    //defer close(stop)
     var k8sController *KubernetesController
     k8sController = kontroller.(*KubernetesController)
-    // run the controller
-    k8sController.Run()
 
+    // Deploy everything and then start the controller.
     err = k8sDeploy.Deploy(kontroller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
         return &resources,err
     }
+
+    // run the controller
+    k8sController.Run()
 
     // TODO supervise that the deployment for this stage was correct
     stageErr := k.checkPendingStage(checks, stage)
@@ -160,7 +158,7 @@ func(k *KubernetesExecutor) UndeployService(serv *pbApplication.Service) error {
         return returnError
     }
 
-    deploymentsClient := k.client.AppsV1().Deployments(apiv1.NamespaceDefault)
+    deploymentsClient := k.Client.AppsV1().Deployments(apiv1.NamespaceDefault)
     err := deploymentsClient.Delete(serv.Name, metav1.NewDeleteOptions(2000))
     if err != nil {
         log.Error().Err(err).Msgf("problems deleting service %s", serv.Name)
@@ -176,32 +174,32 @@ func(k *KubernetesExecutor) UndeployResources(dep DeployableKubernetesStage) err
 }
 
 
-// Create a new kubernetes client using deployment inside the cluster.
+// Create a new kubernetes Client using deployment inside the cluster.
 //  params:
-//   internal true if the client is deployed inside the cluster.
+//   internal true if the Client is deployed inside the cluster.
 //  return:
-//   instance for the k8s client or error if any
+//   instance for the k8s Client or error if any
 func getInternalKubernetesClient() (*kubernetes.Clientset,error) {
     config, err := rest.InClusterConfig()
     if err != nil {
-        log.Panic().Err(err).Msg("impossible to get local configuration for internal k8s client")
+        log.Panic().Err(err).Msg("impossible to get local configuration for internal k8s Client")
         return nil, err
     }
     // creates the clientset
     clientset, err := kubernetes.NewForConfig(config)
     if err != nil {
-        log.Panic().Err(err).Msg("impossible to instantiate k8s client")
+        log.Panic().Err(err).Msg("impossible to instantiate k8s Client")
         return nil, err
     }
     return clientset,nil
 }
 
 
-// Create a new kubernetes client using deployment outside the cluster.
+// Create a new kubernetes Client using deployment outside the cluster.
 //  params:
-//   internal true if the client is deployed inside the cluster.
+//   internal true if the Client is deployed inside the cluster.
 //  return:
-//   instance for the k8s client or error if any
+//   instance for the k8s Client or error if any
 func getExternalKubernetesClient() (*kubernetes.Clientset,error) {
     var kubeconfig *string
     if home := homeDir(); home != "" {
