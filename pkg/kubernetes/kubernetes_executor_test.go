@@ -1,63 +1,43 @@
 /*
- * Copyright 2018 Nalej
+ *  Copyright (C) 2018 Nalej Group - All Rights Reserved
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package kubernetes
 
 import (
-    . "github.com/onsi/ginkgo"
-    . "github.com/onsi/gomega"
+    "github.com/onsi/ginkgo"
+    "github.com/onsi/gomega"
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
 )
 
 
-var _ = Describe("Analysis of kubernetes structures creation", func() {
+var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
 
-    var executor *KubernetesExecutor
-    var stop chan struct{}
+    var k8sExecutor *KubernetesExecutor
 
-    BeforeSuite(func() {
+
+    ginkgo.BeforeSuite(func() {
         ex, err := NewKubernetesExecutor(false)
 
-        Expect(err).ShouldNot(HaveOccurred())
-        Expect(ex).ToNot(BeNil())
+        gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+        gomega.Expect(ex).ToNot(gomega.BeNil())
 
-        executor = ex.(*KubernetesExecutor)
-
-        // Run the kubernetes controller
-        kontroller := NewKubernetesController(executor)
-
-        // Now let's start the controller
-        stop = make(chan struct{})
-
-        go kontroller.Run(1, stop)
+        k8sExecutor = ex.(*KubernetesExecutor)
 
     })
 
-    AfterSuite(func() {
-        // stop kontroller
-        defer close(stop)
-    })
 
-    Context("run a stage with a service that is not going to run", func(){
+    ginkgo.Context("run a stage with a service that is not going to run", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
+        var fragment pbConductor.DeploymentFragment
+        appId := "errorapp"
 
-        BeforeEach(func(){
+        ginkgo.BeforeEach(func(){
             serv1 = pbApplication.Service{
                 ServiceId: "service_001",
                 Name: "test-image-1",
@@ -78,27 +58,45 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
 
             stage = pbConductor.DeploymentStage{
                 StageId: "error_stage_001",
-                DeploymentId: "error_deployment_001",
                 Services: services,
+            }
+            fragment = pbConductor.DeploymentFragment{
+                FragmentId: "fragment_001",
+                DeploymentId: "deployment_001",
+                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: appId},
+                Stages: []*pbConductor.DeploymentStage{&stage},
+
             }
         })
 
-        It("deploys a service, second fails and waits until rollback", func(){
-            err := executor.Execute(&stage)
-            Expect(err).Should(HaveOccurred())
+        ginkgo.It("deploys a service, second fails and waits until rollback", func(){
+            deployed, err := k8sExecutor.Execute(&fragment, &stage)
+            gomega.Expect(err).NotTo(gomega.BeNil())
+            gomega.Expect(deployed).NotTo(gomega.BeNil())
+        })
+
+        ginkgo.AfterEach(func(){
+            // delete the namespace
+            deployedNamespace := NewDeployableNamespace(k8sExecutor.Client,&stage,"test-organization-errorapp")
+            err := deployedNamespace.Undeploy()
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         })
 
     })
 
 
-    Context("run a stage with two services", func(){
+    ginkgo.Context("run a stage with two services", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
+        var fragment pbConductor.DeploymentFragment
+        //var deployed *executor.Deployable
+
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
 
-        BeforeEach(func(){
+        ginkgo.BeforeEach(func(){
+
             serv1 = pbApplication.Service{
                 ServiceId: "service_001",
                 Name: "test-image-1",
@@ -121,24 +119,30 @@ var _ = Describe("Analysis of kubernetes structures creation", func() {
 
             stage = pbConductor.DeploymentStage{
                 StageId: "stage_001",
-                DeploymentId: "deployment_001",
                 Services: services,
             }
-
+            fragment = pbConductor.DeploymentFragment{
+                FragmentId: "fragment_001",
+                DeploymentId: "deployment_001",
+                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: "test-app-001"},
+                Stages: []*pbConductor.DeploymentStage{&stage},
+            }
         })
 
-        It("deploys a stage and waits until completion", func(){
-            err := executor.Execute(&stage)
-            Expect(err).ShouldNot(HaveOccurred())
+        ginkgo.It("deploys a stage and waits until completion", func(){
+            deployed, err := k8sExecutor.Execute(&fragment, &stage)
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+            gomega.Expect(deployed).ToNot(gomega.BeNil())
         })
 
 
-        AfterEach(func(){
-            err := executor.UndeployService(&serv1)
-            Expect(err).ShouldNot(HaveOccurred())
-            err = executor.UndeployService(&serv2)
-            Expect(err).ShouldNot(HaveOccurred())
+        ginkgo.AfterEach(func(){
+            // delete the namespace
+            deployedNamespace := NewDeployableNamespace(k8sExecutor.Client,&stage,"test-organization-test-app-001")
+            err := deployedNamespace.Undeploy()
+            gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         })
 
     })
+
 })

@@ -1,17 +1,7 @@
 /*
- * Copyright 2018 Nalej
+ *  Copyright (C) 2018 Nalej Group - All Rights Reserved
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package cmd
@@ -63,17 +53,6 @@ func Run() {
         log.Panic().Err(err)
         panic(err.Error())
     }
-
-    // Run the kubernetes controller
-    // Run the kubernetes controller
-    kontroller := kubernetes.NewKubernetesController(exec.(*kubernetes.KubernetesExecutor))
-
-    // Now let's start the controller
-    var stop chan struct{}
-    stop = make(chan struct{})
-    log.Info().Msg("launching kubernetes controller...")
-    go kontroller.Run(1, stop)
-    defer close(stop)
 
     log.Info().Msg("launching deployment manager...")
 
