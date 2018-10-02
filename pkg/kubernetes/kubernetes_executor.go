@@ -8,10 +8,7 @@ package kubernetes
 
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
-    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/nalej/deployment-manager/pkg/executor"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    apiv1 "k8s.io/api/core/v1"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/rest"
     "k8s.io/client-go/tools/clientcmd"
@@ -109,15 +106,14 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
 
 
 
-func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage) error {
-    log.Info().Msgf("running rollback operation for deployment stage %s from fragment plan %s",stage.StageId, stage.FragmentId)
-    for _, serv := range stage.Services {
-        err := k.UndeployService(serv)
-        if err != nil {
-            log.Error().Err(err).Msgf("error undeploying service %s from stage %s",serv.ServiceId, stage.StageId)
-            return err
-        }
+func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage, deployed executor.Deployable) error {
+    log.Info().Msgf("requested rollback for stage %s",stage.StageId)
+    // Call the undeploy for this deployable
+    err := deployed.Undeploy()
+    if err != nil {
+        return err
     }
+
     return nil
 }
 
@@ -144,35 +140,6 @@ func(k *KubernetesExecutor) checkPendingStage(checks *executor.PendingStages, st
         }
     }
 }
-
-
-// Undeploy a service if running.
-//  params:
-//   serv service to be removed
-//  return:
-//   error if any
-func(k *KubernetesExecutor) UndeployService(serv *pbApplication.Service) error {
-    if serv == nil {
-        returnError := errors.New("nil service was requested to be undeployed")
-        log.Error().Err(returnError).Msg("impossible to undeploy nil instance")
-        return returnError
-    }
-
-    deploymentsClient := k.Client.AppsV1().Deployments(apiv1.NamespaceDefault)
-    err := deploymentsClient.Delete(serv.Name, metav1.NewDeleteOptions(2000))
-    if err != nil {
-        log.Error().Err(err).Msgf("problems deleting service %s", serv.Name)
-        return err
-    }
-
-    return nil
-}
-
-func(k *KubernetesExecutor) UndeployResources(dep DeployableKubernetesStage) error {
-    //TODO create interface for resources and force every resource to have a create/deploy/undeploy function and how to watch
-    return nil
-}
-
 
 // Create a new kubernetes Client using deployment inside the cluster.
 //  params:

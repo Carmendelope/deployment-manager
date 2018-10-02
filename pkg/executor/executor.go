@@ -8,7 +8,6 @@ package executor
 
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
-    pbApplication "github.com/nalej/grpc-application-go"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -27,18 +26,12 @@ type Executor interface {
     // Operation to be run in case a stage deployment fails. The rollback should bring the system to
     // the system status before this stage was executed.
     //  params:
-    //   plan to be executed
-    //   lastDeployed last stage that was deployed
+    //   stage this rollback belongs to
+    //   deployed entries
     //  return:
     //   error if any
-    StageRollback(stage *pbConductor.DeploymentStage) error
+    StageRollback(stage *pbConductor.DeploymentStage, deployed Deployable) error
 
-    // Undeploy a service
-    //  params:
-    //   serv the service to be undeployed
-    //  return:
-    //
-    UndeployService(serv *pbApplication.Service) error
 }
 
 

@@ -14,11 +14,9 @@ import (
     pbDeploymentManager "github.com/nalej/grpc-deployment-manager-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbApplication "github.com/nalej/grpc-application-go"
-    "github.com/nalej/deployment-manager/tools"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/grpc-utils/pkg/test"
     "context"
-
 )
 
 
@@ -43,7 +41,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
         k8sExec = exec.(*kubernetes.KubernetesExecutor)
         gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         dm = NewManager(&exec)
-        conn, err := tools.GetConn(*listener)
+        conn, err := test.GetConn(*listener)
         test.LaunchServer(server, listener)
         // Register the service
         pbDeploymentManager.RegisterDeploymentManagerServer(server, NewHandler(dm))
