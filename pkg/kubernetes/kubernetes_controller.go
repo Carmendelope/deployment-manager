@@ -9,22 +9,17 @@ package kubernetes
 import (
     "fmt"
     "time"
-
-    "github.com/golang/glog"
-
-    //"k8s.io/api/core/v1"
-    //meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
     utilruntime "k8s.io/apimachinery/pkg/util/runtime"
     "k8s.io/apimachinery/pkg/fields"
     "k8s.io/apimachinery/pkg/util/wait"
     "k8s.io/client-go/tools/cache"
     "k8s.io/client-go/util/workqueue"
-
     "k8s.io/api/extensions/v1beta1"
     "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg/executor"
     "k8s.io/api/core/v1"
+    "github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/golang/glog"
 )
 
 // The kubernetes controllers has a set of queues monitoring k8s related operations.
@@ -41,7 +36,8 @@ type KubernetesController struct {
 
 
 // Create a new kubernetes controller for a given namespace.
-func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages, namespace string) executor.DeploymentController {
+func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages,
+    namespace string) executor.DeploymentController {
 
     // Watch deployments
     deploymentsListWatcher := cache.NewListWatchFromClient(
