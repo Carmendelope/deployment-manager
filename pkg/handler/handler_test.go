@@ -40,8 +40,11 @@ var _ = ginkgo.Describe("Deployment server API", func() {
         exec, err := kubernetes.NewKubernetesExecutor(false)
         k8sExec = exec.(*kubernetes.KubernetesExecutor)
         gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-        dm = NewManager(&exec)
+
         conn, err := test.GetConn(*listener)
+
+        dm = NewManager(conn,&exec)
+
         test.LaunchServer(server, listener)
         // Register the service
         pbDeploymentManager.RegisterDeploymentManagerServer(server, NewHandler(dm))

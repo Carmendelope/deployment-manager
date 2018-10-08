@@ -49,7 +49,7 @@ type Deployable interface {
 }
 
 // Minimalistic interface to run a controller in charge of overviewing the successful deployment of requested
-// operations.
+// operations. The system model must be updated accordingly.
 type DeploymentController interface {
     // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
    AddMonitoredResource(uid string, stageId string)

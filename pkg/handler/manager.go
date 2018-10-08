@@ -9,15 +9,20 @@ package handler
 import (
     "github.com/nalej/deployment-manager/pkg/executor"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/rs/zerolog/log"
+    "google.golang.org/grpc"
 )
 
 type Manager struct {
     executor executor.Executor
+    // Applications client
+    appClient *pbApplication.ApplicationsClient
 }
 
-func NewManager(executor *executor.Executor) *Manager {
-    return &Manager{executor: *executor}
+func NewManager(conductorConnection *grpc.ClientConn, executor *executor.Executor) *Manager {
+    appClient := pbApplication.NewApplicationsClient(conductorConnection)
+    return &Manager{executor: *executor, appClient: &appClient}
 }
 
 func(m *Manager) Execute(request *pbDeploymentMgr.DeployFragmentRequest) error {

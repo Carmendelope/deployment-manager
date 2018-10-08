@@ -12,7 +12,6 @@ import (
     "github.com/rs/zerolog"
     "github.com/rs/zerolog/log"
     "github.com/nalej/deployment-manager/pkg/service"
-    "github.com/nalej/deployment-manager/pkg/kubernetes"
 )
 
 var runCmd = &cobra.Command{
@@ -32,31 +31,25 @@ func init() {
 
     RootCmd.AddCommand(runCmd)
 
-    runCmd.Flags().Uint32P("port", "c",5002,"port where deployment manager listens to")
+    runCmd.Flags().Uint32P("port", "p",5200,"port where deployment manager listens to")
     runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
+    runCmd.Flags().StringP("conductor","c", "localhost:5000", "conductor address e.g.: 192.168.1.4:5000")
     viper.BindPFlags(runCmd.Flags())
 }
 
 func Run() {
-    // Local deployment
-    var local bool
-    // Server port
-    var port uint32
-
-    local = viper.GetBool("local")
-    port = uint32(viper.GetInt32("port"))
 
 
-
-    exec, err := kubernetes.NewKubernetesExecutor(local)
-    if err != nil {
-        log.Panic().Err(err)
-        panic(err.Error())
+    config := service.Config{
+        Local: viper.GetBool("local"),
+        Port: uint32(viper.GetInt32("port")),
+        AddressConductor: viper.GetString("conductor"),
     }
+
 
     log.Info().Msg("launching deployment manager...")
 
-    deploymentMgrService, err := service.NewDeploymentManagerService(port, &exec)
+    deploymentMgrService, err := service.NewDeploymentManagerService(&config)
     if err != nil {
         log.Panic().Err(err)
         panic(err.Error())
