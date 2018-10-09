@@ -24,7 +24,7 @@ import (
 
 const (
     // Time in seconds we wait for a stage to be finished.
-    StageCheckingTimeout = 30
+    StageCheckingTimeout = 120
     // Time between pending stage checks in seconds
     CheckingSleepTime = 1
 )
@@ -67,7 +67,7 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
 func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage) (*executor.Deployable,error) {
     log.Info().Str("stage",stage.StageId).Msgf("execute stage %s with %d services", stage.StageId, len(stage.Services))
 
-    targetNamespace := getNamespace(fragment.AppId)
+    targetNamespace := getNamespace(fragment.OrganizationId,fragment.InstanceId)
 
     var resources executor.Deployable
     // Build the structures to be executed. If any of then cannot be built, we have a failure.

@@ -22,7 +22,8 @@ func NewHandler(m *Manager) *Handler {
     return &Handler{m}
 }
 
-func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.DeployFragmentRequest) (*pbDeploymentMgr.DeployFragmentResponse, error) {
+func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.DeploymentFragmentRequest) (*pbDeploymentMgr.DeploymentFragmentResponse, error) {
+    log.Debug().Msgf("requested to execute fragment %v",request)
     if request == nil {
         theError := errors.New("received nil deployment plan request")
         return nil, theError
@@ -31,11 +32,11 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
     err := h.m.Execute(request)
     if err != nil {
         log.Error().Err(err).Msgf("failed to execute fragment request %s",request.RequestId)
-        response := pbDeploymentMgr.DeployFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
+        response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
         return &response, err
     }
 
-    response := pbDeploymentMgr.DeployFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
+    response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
 
     return &response, nil
 }

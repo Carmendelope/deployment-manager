@@ -25,7 +25,7 @@ func NewManager(conductorConnection *grpc.ClientConn, executor *executor.Executo
     return &Manager{executor: *executor, appClient: &appClient}
 }
 
-func(m *Manager) Execute(request *pbDeploymentMgr.DeployFragmentRequest) error {
+func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
     log.Debug().Msgf("execute plan with id %s",request.RequestId)
 
     for stageNumber, stage := range request.Fragment.Stages {

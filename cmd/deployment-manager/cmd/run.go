@@ -19,6 +19,7 @@ var runCmd = &cobra.Command{
     Short: "Run deployment manager",
     Long: "Run deployment manager service with... and with...",
     Run: func(cmd *cobra.Command, args [] string) {
+        SetupLogging()
         Run()
     },
 }
@@ -29,6 +30,7 @@ func init() {
     // logs will write with UNIX time
     zerolog.TimeFieldFormat = ""
 
+
     RootCmd.AddCommand(runCmd)
 
     runCmd.Flags().Uint32P("port", "p",5200,"port where deployment manager listens to")
@@ -38,7 +40,6 @@ func init() {
 }
 
 func Run() {
-
 
     config := service.Config{
         Local: viper.GetBool("local"),

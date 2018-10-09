@@ -29,6 +29,8 @@ import (
 const (
     // Grace period in seconds to delete a deployable.
     DeleteGracePeriod = 10
+    // Namespace length
+    NamespaceLength = 63
 )
 
 
@@ -174,6 +176,7 @@ func(d *DeployableDeployment) Build() error {
 
     for serviceIndex, service := range d.stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
+
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: service.Name,
@@ -276,7 +279,11 @@ func(s *DeployableService) Build() error {
                 Spec: apiv1.ServiceSpec{
                     ExternalName: service.Name,
                     Ports: getServicePorts(service.ExposedPorts),
+                    // TODO remove by default we use clusterip.
+                    Type: apiv1.ServiceTypeNodePort,
+                    Selector: service.Labels,
                 },
+
             }
             services = append(services, k8sService)
         } else {
@@ -400,17 +407,23 @@ func getServicePorts(ports []*pbConductor.Port) []apiv1.ServicePort {
 //   list of k8s environment variables
 func getEnvVariables(variables map[string]string) []apiv1.EnvVar {
     obtained := make([]apiv1.EnvVar,0,len(variables))
-    for _, k := range variables {
-        obtained = append(obtained, apiv1.EnvVar{Name: k, Value: variables[k]})
+    for k, v := range variables {
+        obtained = append(obtained, apiv1.EnvVar{Name: k, Value: v})
     }
     return obtained
 }
 
 // Return the namespace associated with a service.
 //  params:
-//   appId for the application this namespace is connected to
+//   organizationId
+//   appInstanceId
 //  return:
 //   associated namespace
-func getNamespace(appId *pbConductor.AppDescriptorId) string {
-    return fmt.Sprintf("%s-%s", appId.OrganizationId, appId.AppDescriptorId)
+func getNamespace(organizationId string, appInstanceId string) string {
+    target := fmt.Sprintf("%s-%s", organizationId, appInstanceId)
+    // check if the namespace is larger than the allowed k8s namespace length
+    if len(target) > NamespaceLength {
+        return target[:NamespaceLength]
+    }
+    return target
 }
