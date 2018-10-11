@@ -142,14 +142,14 @@
 [[projects]]
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
-  revision = "dda69cf1574d78093fb4882f17c1bee9312983a9"
-  version = "v0.0.26"
+  revision = "6bd7ba9e414b4873ba1bef098231f31cff885c9c"
+  version = "v0.0.31"
 
 [[projects]]
   name = "github.com/nalej/grpc-deployment-manager-go"
   packages = ["."]
-  revision = "790f4014d3d8ebbb9361f0136b06f5c8f1980819"
-  version = "v0.0.7"
+  revision = "603217ff8c5669caabad9e3328f2a3e5ca725656"
+  version = "v0.0.10"
 
 [[projects]]
   name = "github.com/nalej/grpc-infrastructure-go"
@@ -341,6 +341,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1183bf5082f5a67680f5e53fd5b936e245e1058704863da3f8ae2b6eba56ae89"
+  inputs-digest = "70292f4c3c75a54828db2aafd4955e5fc81700285e0ea811205cb080852aa486"
   solver-name = "gps-cdcl"
   solver-version = 1

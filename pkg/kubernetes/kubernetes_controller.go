@@ -20,6 +20,7 @@ import (
     "k8s.io/api/core/v1"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/golang/glog"
+    "github.com/nalej/deployment-manager/pkg/monitor"
 )
 
 // The kubernetes controllers has a set of queues monitoring k8s related operations.
@@ -37,7 +38,7 @@ type KubernetesController struct {
 
 // Create a new kubernetes controller for a given namespace.
 func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages,
-    namespace string) executor.DeploymentController {
+    namespace string, monitor *monitor.MonitorHelper) executor.DeploymentController {
 
     // Watch deployments
     deploymentsListWatcher := cache.NewListWatchFromClient(
@@ -199,7 +200,6 @@ func (c *KubernetesObserver) updatePendingChecks(key string) error {
         // Note that you also have to check the uid if you have a local controlled resource, which
         // is dependent on the actual instance, to detect that a Pod was recreated with the same name
         c.checkingFunc(obj,c.pendingChecks)
-
     }
     return nil
 }
@@ -283,7 +283,7 @@ func checkDeployments(stored interface{}, pending *executor.PendingStages){
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
 func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
-    // TODO determine what do we expect for a service to be deployed
+    // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Service)
     log.Debug().Msgf("service %s status %v", dep.GetName(), dep)
 
@@ -301,7 +301,7 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
 func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages){
-    // TODO determine what do we expect for a service to be deployed
+    // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Namespace)
     log.Debug().Msgf("namespace %s status %v", dep.GetName(), dep)
 

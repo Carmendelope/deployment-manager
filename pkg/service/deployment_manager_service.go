@@ -43,13 +43,14 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         return nil, err
     }
 
-    // Build connection with system model
+    // Build connection with conductor
     conn, err := grpc.Dial(config.AddressConductor, grpc.WithInsecure())
     if err != nil {
         log.Panic().Err(err).Msgf("impossible to connect with system model at %s", config.AddressConductor)
         panic(err.Error())
         return nil, err
     }
+
 
     mgr := handler.NewManager(conn,&exec)
     deploymentServer := tools.NewGenericGRPCServer(config.Port)

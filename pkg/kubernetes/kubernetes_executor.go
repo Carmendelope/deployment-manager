@@ -19,6 +19,7 @@ import (
     "errors"
     "fmt"
     "time"
+    "github.com/nalej/deployment-manager/pkg/monitor"
 )
 
 
@@ -56,7 +57,7 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
         log.Error().Err(foundError)
         return nil, foundError
     }
-    toReturn := KubernetesExecutor{c}
+    toReturn := KubernetesExecutor{Client: c}
     return &toReturn, err
 }
 
@@ -64,10 +65,11 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
 // Every service defined into the stage is translated into k8s and executed. Then, the controller monitors the
 // correct completion of the deployment if the deployment fails, a rollback operation terminating all the services
 // is done.
-func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage) (*executor.Deployable,error) {
+func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage,
+    monitor *monitor.MonitorHelper) (*executor.Deployable,error) {
     log.Info().Str("stage",stage.StageId).Msgf("execute stage %s with %d services", stage.StageId, len(stage.Services))
 
-    targetNamespace := getNamespace(fragment.OrganizationId,fragment.InstanceId)
+    targetNamespace := getNamespace(fragment.OrganizationId,fragment.AppInstanceId)
 
     var resources executor.Deployable
     // Build the structures to be executed. If any of then cannot be built, we have a failure.
@@ -82,8 +84,10 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
     }
 
     // Build a controller for this deploy operation
-    checks := executor.NewPendingStages()
-    kontroller := NewKubernetesController(k, checks, targetNamespace)
+    // First, build a struct in charge of the pending stages
+    checks := executor.NewPendingStages(fragment.FragmentId, monitor)
+    // Second, instantiate a new controller
+    kontroller := NewKubernetesController(k, checks, targetNamespace, monitor)
 
     var k8sController *KubernetesController
     k8sController = kontroller.(*KubernetesController)

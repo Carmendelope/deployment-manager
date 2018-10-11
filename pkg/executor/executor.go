@@ -8,6 +8,7 @@ package executor
 
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
+    "github.com/nalej/deployment-manager/pkg/monitor"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -19,9 +20,11 @@ type Executor interface {
     //  params:
     //   fragment to the stage belongs to
     //   stage to be executed
+    //   monitor to inform about system information
     //  return:
     //   deployable object or error if any
-    Execute(fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) (*Deployable,error)
+    Execute(fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
+        monitor *monitor.MonitorHelper) (*Deployable,error)
 
     // Operation to be run in case a stage deployment fails. The rollback should bring the system to
     // the system status before this stage was executed.
@@ -51,6 +54,5 @@ type Deployable interface {
 // Minimalistic interface to run a controller in charge of overviewing the successful deployment of requested
 // operations. The system model must be updated accordingly.
 type DeploymentController interface {
-    // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
    AddMonitoredResource(uid string, stageId string)
 }

@@ -182,6 +182,9 @@ func(d *DeployableDeployment) Build() error {
                 Name: service.Name,
                 Namespace: d.targetNamespace,
                 Labels: service.Labels,
+                Annotations: map[string] string {
+                    "nalej-service" : service.ServiceId,
+                },
             },
             Spec: appsv1.DeploymentSpec{
                 Replicas: int32Ptr(service.Specs.Replicas),
@@ -275,6 +278,9 @@ func(s *DeployableService) Build() error {
                     Namespace: s.targetNamespace,
                     Name: service.Name,
                     Labels: service.Labels,
+                    Annotations: map[string] string {
+                        "nalej-service" : service.ServiceId,
+                    },
                 },
                 Spec: apiv1.ServiceSpec{
                     ExternalName: service.Name,
