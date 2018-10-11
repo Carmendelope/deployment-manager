@@ -51,8 +51,8 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, serviceId string,
     req := pbConductor.DeploymentServiceUpdateRequest{
         FragmentId: fragmentId,
         ClusterId: "fill this with cluster id",
-        List: []*pbConductor.ServiceUpdate{&pbConductor.ServiceUpdate{
-            AppInstanceId: serviceId, Status: entities.ServiceStatusToGRPC[status]}},
+        List: []*pbConductor.ServiceUpdate{
+            {AppInstanceId: serviceId, Status: entities.ServiceStatusToGRPC[status]}},
     }
     _, err := m.client.UpdateServiceStatus(context.Background(), &req)
     if err != nil {

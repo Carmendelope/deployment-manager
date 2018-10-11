@@ -60,7 +60,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
     })
 
     ginkgo.Context("a deployment fragment request arrives with a single stage and two services", func(){
-        var request pbDeploymentManager.DeployFragmentRequest
+        var request pbDeploymentManager.DeploymentFragmentRequest
         var fragment pbConductor.DeploymentFragment
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
@@ -98,11 +98,11 @@ var _ = ginkgo.Describe("Deployment server API", func() {
             fragment = pbConductor.DeploymentFragment{
                 DeploymentId: "deployment-001",
                 FragmentId: "fragment-001",
-                AppId: &pbApplication.AppDescriptorId{AppDescriptorId:"app-001",OrganizationId:"org-001"},
+                AppInstanceId: "app-001",
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
 
-            request = pbDeploymentManager.DeployFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
+            request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
         })
         ginkgo.It("the new request is processed and the stages are deployed", func(){
             response, err := client.Execute(context.Background(),&request)
@@ -119,7 +119,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
     })
 
     ginkgo.Context("a deployment fragment request arrives with a two stages and two services", func(){
-        var request pbDeploymentManager.DeployFragmentRequest
+        var request pbDeploymentManager.DeploymentFragmentRequest
         var fragment pbConductor.DeploymentFragment
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
@@ -166,11 +166,11 @@ var _ = ginkgo.Describe("Deployment server API", func() {
             fragment = pbConductor.DeploymentFragment{
                 DeploymentId: "deployment-001",
                 FragmentId: "fragment-001",
-                AppId: &pbApplication.AppDescriptorId{AppDescriptorId:"app-002",OrganizationId:"org-001"},
+                AppInstanceId: "app-002",
                 Stages: []*pbConductor.DeploymentStage{&stage1,&stage2},
             }
 
-            request = pbDeploymentManager.DeployFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
+            request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
         })
         ginkgo.It("the new request is processed and the stages are deployed", func(){
             response, err := client.Execute(context.Background(),&request)

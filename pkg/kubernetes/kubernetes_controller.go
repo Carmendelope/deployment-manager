@@ -20,7 +20,7 @@ import (
     "k8s.io/api/core/v1"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/golang/glog"
-    "github.com/nalej/deployment-manager/pkg/monitor"
+    "github.com/nalej/deployment-manager/internal/entities"
 )
 
 // The kubernetes controllers has a set of queues monitoring k8s related operations.
@@ -38,7 +38,7 @@ type KubernetesController struct {
 
 // Create a new kubernetes controller for a given namespace.
 func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages,
-    namespace string, monitor *monitor.MonitorHelper) executor.DeploymentController {
+    namespace string) executor.DeploymentController {
 
     // Watch deployments
     deploymentsListWatcher := cache.NewListWatchFromClient(
@@ -80,8 +80,13 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
 
 
 // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
-func (c *KubernetesController) AddMonitoredResource(uid string, stageId string) {
-    c.pendingStages.AddResource(uid,stageId)
+func (c *KubernetesController) AddMonitoredResource(uid string, serviceId string, stageId string) {
+    c.pendingStages.AddMonitoredResource(uid,serviceId,stageId)
+}
+
+// Set the status of a native resource
+func (c *KubernetesController) SetResourceStatus(uid string, status entities.ServiceStatus) {
+    c.pendingStages.SetResourceStatus(uid, status)
 }
 
 // Run this controller with its corresponding observers

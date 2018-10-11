@@ -47,9 +47,9 @@ type DeployableKubernetesStage struct {
     // name of the target namespace to use
     namespace *DeployableNamespace
     // collection of deployments
-    deployments *DeployableDeployment
+    deployments *DeployableDeployments
     // collection of services
-    services *DeployableService
+    services *DeployableServices
 }
 
 // Instantiate a new set of resources for a stage to be deployed.
@@ -145,38 +145,38 @@ func (d DeployableKubernetesStage) Undeploy() error {
 // Deployable deployments
 //-----------------------
 
-type DeployableDeployment struct{
+type DeployableDeployments struct{
     // kubernetes Client
     client v1.DeploymentInterface
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
     // namespace name descriptor
     targetNamespace string
-    // deployments
-    deployments []appsv1.Deployment
+    // map of deployments ready to be deployed
+    // service_id -> deployment
+    deployments map[string]appsv1.Deployment
 }
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string) *DeployableDeployment {
-    return &DeployableDeployment{
+    targetNamespace string) *DeployableDeployments {
+    return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
-        deployments: make([]appsv1.Deployment,0),
+        deployments: make(map[string]appsv1.Deployment,0),
     }
 }
 
-func(d *DeployableDeployment) GetId() string {
+func(d *DeployableDeployments) GetId() string {
     return d.stage.StageId
 }
 
-func(d *DeployableDeployment) Build() error {
+func(d *DeployableDeployments) Build() error {
     // TODO check potential errors.
-    deployments:= make([]appsv1.Deployment,0,len(d.stage.Services))
+    deployments:= make(map[string]appsv1.Deployment,0)
 
     for serviceIndex, service := range d.stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
-
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: service.Name,
@@ -208,25 +208,25 @@ func(d *DeployableDeployment) Build() error {
                 },
             },
         }
-        deployments = append(deployments, deployment)
+        deployments[service.ServiceId] = deployment
     }
     d.deployments = deployments
     return nil
 }
 
-func(d *DeployableDeployment) Deploy(controller executor.DeploymentController) error {
-    for _, dep := range d.deployments {
+func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
+    for serviceId, dep := range d.deployments {
         deployed, err := d.client.Create(&dep)
         if err != nil {
             log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
             return err
         }
-        controller.AddMonitoredResource(string(deployed.GetUID()), d.stage.StageId)
+        controller.AddMonitoredResource(string(deployed.GetUID()), serviceId, d.stage.StageId)
     }
     return nil
 }
 
-func(d *DeployableDeployment) Undeploy() error {
+func(d *DeployableDeployments) Undeploy() error {
     for _, dep := range d.deployments {
         err := d.client.Delete(dep.Name,metav1.NewDeleteOptions(DeleteGracePeriod))
         if err != nil {
@@ -240,35 +240,35 @@ func(d *DeployableDeployment) Undeploy() error {
 // Deployable services
 //--------------------
 
-type DeployableService struct {
+type DeployableServices struct {
     // kubernetes Client
     client v12.ServiceInterface
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
     // namespace name descriptor
     targetNamespace string
-    // services
-    services []apiv1.Service
+    // serviceId -> serviceInstance
+    services map[string]apiv1.Service
 }
 
 func NewDeployableService(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string) *DeployableService {
+    targetNamespace string) *DeployableServices {
 
-    return &DeployableService{
+    return &DeployableServices{
         client: client.CoreV1().Services(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
-        services: make([]apiv1.Service,0),
+        services: make(map[string]apiv1.Service,0),
     }
 }
 
-func(d *DeployableService) GetId() string {
+func(d *DeployableServices) GetId() string {
     return d.stage.StageId
 }
 
-func(s *DeployableService) Build() error {
+func(s *DeployableServices) Build() error {
     // TODO check potential errors
-    services := make([]apiv1.Service,0,len(s.stage.Services))
+    services := make(map[string]apiv1.Service,0)
     for serviceIndex, service := range s.stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.stage.Services))
         ports := getServicePorts(service.ExposedPorts)
@@ -291,7 +291,7 @@ func(s *DeployableService) Build() error {
                 },
 
             }
-            services = append(services, k8sService)
+            services[service.ServiceId] = k8sService
         } else {
             log.Debug().Msgf("No k8s service is generated for %s",service.ServiceId)
         }
@@ -301,20 +301,19 @@ func(s *DeployableService) Build() error {
     return nil
 }
 
-func(s *DeployableService) Deploy(controller executor.DeploymentController) error {
-    for _, serv := range s.services {
+func(s *DeployableServices) Deploy(controller executor.DeploymentController) error {
+    for serviceId, serv := range s.services {
         created, err := s.client.Create(&serv)
         if err != nil {
             log.Error().Err(err).Msgf("error creating service %s",serv.Name)
             return err
         }
-        controller.AddMonitoredResource(string(created.GetUID()), s.stage.StageId)
-        s.services = append(s.services, *created)
+        controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
     }
     return nil
 }
 
-func(s *DeployableService) Undeploy() error {
+func(s *DeployableServices) Undeploy() error {
     for _, serv := range s.services {
         err := s.client.Delete(serv.Name, metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
         if err != nil {
@@ -370,7 +369,8 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     }
     created, err := n.client.Create(&n.namespace)
     n.namespace = *created
-    controller.AddMonitoredResource(string(created.GetUID()), n.stage.StageId)
+    // The namespace is a special case that covers all the services
+    controller.AddMonitoredResource(string(created.GetUID()), "all",n.stage.StageId)
     return err
 }
 

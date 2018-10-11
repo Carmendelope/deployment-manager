@@ -87,7 +87,7 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
     // First, build a struct in charge of the pending stages
     checks := executor.NewPendingStages(fragment.FragmentId, monitor)
     // Second, instantiate a new controller
-    kontroller := NewKubernetesController(k, checks, targetNamespace, monitor)
+    kontroller := NewKubernetesController(k, checks, targetNamespace)
 
     var k8sController *KubernetesController
     k8sController = kontroller.(*KubernetesController)
@@ -132,13 +132,13 @@ func(k *KubernetesExecutor) checkPendingStage(checks *executor.PendingStages, st
         select {
         // Got a timeout! Error
         case <-timeout:
-            log.Error().Msgf("checking pending resources exceeded for stage %s", stage.StageId)
-            return errors.New(fmt.Sprintf("checking pending resources exceeded for stage %s", stage.StageId))
+            log.Error().Msgf("checking pendingStages resources exceeded for stage %s", stage.StageId)
+            return errors.New(fmt.Sprintf("checking pendingStages resources exceeded for stage %s", stage.StageId))
         // Next check
         case <-tick:
-            pending := checks.HasPendingChecks(stage.StageId)
-            if !pending {
-                log.Info().Msgf("stage %s has no pending checks. Exit checking stage", stage.StageId)
+            pendingStages := checks.StageHasPendingChecks(stage.StageId)
+            if !pendingStages {
+                log.Info().Msgf("stage %s has no pendingStages checks. Exit checking stage", stage.StageId)
                 return nil
             }
         }
