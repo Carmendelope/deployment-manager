@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: deployment-manager
+  namespace: nalej
+  labels:
+    cluster: application
+    component: deployment-manager
+spec:
+  selector:
+    cluster: application
+    component: deployment-manager
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 5200
+    targetPort: 5200
