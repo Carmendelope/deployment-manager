@@ -47,7 +47,8 @@ func (m *MonitorHelper) UpdateFragmentStatus(fragmentId string, status entities.
 
 func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, serviceId string, status entities.ServiceStatus) {
     // TODO report information if an only if a considerable bunch of updates are available
-
+    log.Debug().Msgf("send update service status with %s, %s, %s",fragmentId, serviceId, status)
+    log.Debug().Msgf("the status to send is %s transformed into %s",status,entities.ServiceStatusToGRPC[status])
     req := pbConductor.DeploymentServiceUpdateRequest{
         FragmentId: fragmentId,
         ClusterId: "fill this with cluster id",

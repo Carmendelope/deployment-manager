@@ -99,6 +99,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
                 DeploymentId: "deployment-001",
                 FragmentId: "fragment-001",
                 AppInstanceId: "app-001",
+                OrganizationId: "org-001",
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
 
@@ -167,6 +168,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
                 DeploymentId: "deployment-001",
                 FragmentId: "fragment-001",
                 AppInstanceId: "app-002",
+                OrganizationId: "org-001",
                 Stages: []*pbConductor.DeploymentStage{&stage1,&stage2},
             }
 

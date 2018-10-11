@@ -50,7 +50,6 @@ func Execute() {
 
 func initConfig() {
     // if --config is passed, attempt to parse the config file
-    log.Info().Msg("running init config")
     if configFile != "" {
 
         // get the filepath
@@ -76,8 +75,6 @@ func initConfig() {
             log.Fatal().AnErr("Failed to read config file: ", err)
             os.Exit(1)
         }
-    } else {
-        log.Info().Msg("no config file was set")
     }
 }
 

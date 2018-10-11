@@ -46,6 +46,7 @@ func NewPendingStages(fragmentId string, monitor *monitor.MonitorHelper) *Pendin
         resourceService:    make(map[string]string,0),
         serviceResources:   make(map[string][]string,0),
         resourceStatus:     make(map[string]entities.ServiceStatus),
+        serviceStatus:      make(map[string]entities.ServiceStatus),
         monitor:            monitor,
     }
 }
@@ -71,6 +72,8 @@ func(p *PendingStages) AddMonitoredResource(uid string, serviceId string, stageI
     } else {
         p.serviceResources[serviceId] = append(p.serviceResources[serviceId], uid)
     }
+    p.serviceStatus[serviceId] = entities.SERVICE_WAITING
+
 }
 
 
@@ -152,6 +155,7 @@ func (p *PendingStages) ServiceHasPendingChecks(serviceId string) bool {
 func (p *PendingStages) SetResourceStatus(uid string, status entities.ServiceStatus) {
     p.mu.RLock()
     defer p.mu.RUnlock()
+    log.Debug().Msg("call set resource status")
     // get associated service id
     serviceId, isthere := p.resourceService[uid]
     if !isthere{

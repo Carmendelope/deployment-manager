@@ -19,7 +19,6 @@ import (
     "github.com/rs/zerolog/log"
     "k8s.io/api/core/v1"
     "github.com/nalej/deployment-manager/pkg/executor"
-    "github.com/golang/glog"
     "github.com/nalej/deployment-manager/internal/entities"
 )
 
@@ -255,7 +254,7 @@ func (c *KubernetesObserver) Run(threadiness int) {
     }
 
     <-c.stopCh
-    glog.Info("Stopping Pod controller")
+    log.Debug().Msg("stopping Pod controller")
 }
 
 func (c *KubernetesObserver) runWorker() {
@@ -271,12 +270,14 @@ func (c *KubernetesObserver) runWorker() {
 //   pending list of pending checks.
 func checkDeployments(stored interface{}, pending *executor.PendingStages){
     dep := stored.(*v1beta1.Deployment)
-    log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
+    //log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
     // This deployment is monitored, and all its replicas are available
     if pending.IsMonitoredResource(string(dep.GetUID())){
         if dep.Status.UnavailableReplicas == 0 {
             pending.RemoveResource(string(dep.GetUID()))
+            return
         }
+        pending.SetResourceStatus(string(dep.GetUID()), entities.KubernetesDeploymentStatusTranslation(dep.Status))
     } else {
         log.Info().Msgf("deployment %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
     }
@@ -290,7 +291,7 @@ func checkDeployments(stored interface{}, pending *executor.PendingStages){
 func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
     // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Service)
-    log.Debug().Msgf("service %s status %v", dep.GetName(), dep)
+    //log.Debug().Msgf("service %s status %v", dep.GetName(), dep)
 
     // This deployment is monitored, and all its replicas are available
     if pending.IsMonitoredResource(string(dep.GetUID())) {
@@ -308,7 +309,7 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
 func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages){
     // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Namespace)
-    log.Debug().Msgf("namespace %s status %v", dep.GetName(), dep)
+    //log.Debug().Msgf("namespace %s status %v", dep.GetName(), dep)
 
     // This namespace will only be correct if it is active
     if pending.IsMonitoredResource(string(dep.GetUID())){
