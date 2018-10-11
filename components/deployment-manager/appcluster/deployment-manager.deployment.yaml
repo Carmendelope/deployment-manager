@@ -1,0 +1,37 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    cluster: application
+    component: deployment-manager
+  name: deployment-manager
+  namespace: nalej
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      cluster: application
+      component: deployment-manager
+  template:
+    metadata:
+      labels:
+        cluster: application
+        component: deployment-manager
+    spec:
+      containers:
+      - name: musician
+        image: nalej/deployment-manager:VERSION
+        imagePullPolicy: Never
+        securityContext:
+          runAsUser: 2000
+        args:
+        - "run"
+        #  - "--logger-address=http://log-collector.kube-system.svc.cluster.local:8083"
+        ports:
+        - name: api-port
+          containerPort: 5200
+        # readinessProbe:
+        #  httpGet:
+        #    path: /ping
+        #    port: api-port

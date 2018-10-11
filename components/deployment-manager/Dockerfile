@@ -3,6 +3,6 @@
 FROM iron/go
 
 # Now just add the binary
-COPY deployment_manager /nalej/
+COPY deployment-manager /nalej/
 
-ENTRYPOINT ["./nalej/deployment_manager"]
+ENTRYPOINT ["./nalej/deployment-manager"]

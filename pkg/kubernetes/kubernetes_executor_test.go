@@ -63,9 +63,8 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
                 DeploymentId: "deployment_001",
-                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: appId},
+                AppInstanceId: appId,
                 Stages: []*pbConductor.DeploymentStage{&stage},
-
             }
         })
 
@@ -124,7 +123,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
                 DeploymentId: "deployment_001",
-                AppId: &pbApplication.AppDescriptorId{OrganizationId: "test-organization", AppDescriptorId: "test-app-001"},
+                AppInstanceId: "app-003",
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
         })
