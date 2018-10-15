@@ -75,6 +75,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
                 DeploymentId: "deployment_001",
                 AppInstanceId: "errorapp",
                 OrganizationId: "test-organization",
+
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
         })
