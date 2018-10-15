@@ -210,9 +210,9 @@
   digest = "1:bd221407a45c918740b0ae838079f07486c73fd4fe8802ea49919d696cdac095"
   name = "github.com/nalej/grpc-application-go"
   packages = ["."]
-  pruneopts = ""
-  revision = "2a9136aa55f8bc4c187117201f0dec02026ac00f"
-  version = "v0.0.11"
+  revision = "f2c7f61db91c5609b988094c3eb00156b8b5f238"
+  version = "v0.0.14"
+
 
 [[projects]]
   digest = "1:cd1db58d47491fca87d1ca3c75f2fa4aceb1becc467f577c39e7bc1f19cac8fa"
@@ -226,9 +226,9 @@
   digest = "1:8f411cb58ecc88fea2e332c10b48e720b95042d3ed7965cf7642feede1fe874b"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
-  pruneopts = ""
-  revision = "6bd7ba9e414b4873ba1bef098231f31cff885c9c"
-  version = "v0.0.31"
+  revision = "19d7dd8d4c2ab5e8d49db7ab925e07c195f91914"
+  version = "v0.0.33"
+
 
 [[projects]]
   digest = "1:beae51b5a49f00a3680d6d9453589c9730f08bfbaa7df3284c3b8c404a9edb9e"
@@ -748,39 +748,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "github.com/golang/glog",
-    "github.com/nalej/golang-template/version",
-    "github.com/nalej/grpc-application-go",
-    "github.com/nalej/grpc-conductor-go",
-    "github.com/nalej/grpc-deployment-manager-go",
-    "github.com/nalej/grpc-utils/pkg/test",
-    "github.com/nalej/grpc-utils/pkg/tools",
-    "github.com/onsi/ginkgo",
-    "github.com/onsi/gomega",
-    "github.com/rs/zerolog",
-    "github.com/rs/zerolog/log",
-    "github.com/spf13/cobra",
-    "github.com/spf13/viper",
-    "google.golang.org/grpc",
-    "google.golang.org/grpc/reflection",
-    "google.golang.org/grpc/test/bufconn",
-    "k8s.io/api/apps/v1",
-    "k8s.io/api/core/v1",
-    "k8s.io/api/extensions/v1beta1",
-    "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/fields",
-    "k8s.io/apimachinery/pkg/runtime",
-    "k8s.io/apimachinery/pkg/util/intstr",
-    "k8s.io/apimachinery/pkg/util/runtime",
-    "k8s.io/apimachinery/pkg/util/wait",
-    "k8s.io/client-go/kubernetes",
-    "k8s.io/client-go/kubernetes/typed/apps/v1",
-    "k8s.io/client-go/kubernetes/typed/core/v1",
-    "k8s.io/client-go/rest",
-    "k8s.io/client-go/tools/cache",
-    "k8s.io/client-go/tools/clientcmd",
-    "k8s.io/client-go/util/workqueue",
-  ]
+  inputs-digest = "d6e2e88d626d604829e67165e5dc6ac7e2d32a62b3b2e8ca07fdf2d0a00b045c"
   solver-name = "gps-cdcl"
   solver-version = 1

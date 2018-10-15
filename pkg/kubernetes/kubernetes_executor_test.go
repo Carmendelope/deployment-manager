@@ -11,12 +11,16 @@ import (
     "github.com/onsi/gomega"
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
+    monitor2 "github.com/nalej/deployment-manager/pkg/monitor"
+    "google.golang.org/grpc"
 )
 
+var ConnectorAddress string
 
 var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
 
     var k8sExecutor *KubernetesExecutor
+    var monitor *monitor2.MonitorHelper
 
 
     ginkgo.BeforeSuite(func() {
@@ -27,6 +31,13 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
 
         k8sExecutor = ex.(*KubernetesExecutor)
 
+        // Instantiate a new monitor
+        ConnectorAddress = "localhost:5000"
+        conn, err := grpc.Dial(ConnectorAddress, grpc.WithInsecure())
+        gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+        monitor = monitor2.NewMonitorHelper(conn)
+
     })
 
 
@@ -35,7 +46,6 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
-        appId := "errorapp"
 
         ginkgo.BeforeEach(func(){
             serv1 = pbApplication.Service{
@@ -63,13 +73,15 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
                 DeploymentId: "deployment_001",
-                AppInstanceId: appId,
+                AppInstanceId: "errorapp",
+                OrganizationId: "test-organization",
+
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
         })
 
         ginkgo.It("deploys a service, second fails and waits until rollback", func(){
-            deployed, err := k8sExecutor.Execute(&fragment, &stage)
+            deployed, err := k8sExecutor.Execute(&fragment, &stage, monitor)
             gomega.Expect(err).NotTo(gomega.BeNil())
             gomega.Expect(deployed).NotTo(gomega.BeNil())
         })
@@ -89,7 +101,6 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
-        //var deployed *executor.Deployable
 
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
@@ -123,13 +134,14 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
                 DeploymentId: "deployment_001",
-                AppInstanceId: "app-003",
+                AppInstanceId: "test-app-001",
                 Stages: []*pbConductor.DeploymentStage{&stage},
+                OrganizationId: "test-organization",
             }
         })
 
         ginkgo.It("deploys a stage and waits until completion", func(){
-            deployed, err := k8sExecutor.Execute(&fragment, &stage)
+            deployed, err := k8sExecutor.Execute(&fragment, &stage, monitor)
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             gomega.Expect(deployed).ToNot(gomega.BeNil())
         })

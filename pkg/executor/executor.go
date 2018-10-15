@@ -9,6 +9,7 @@ package executor
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/nalej/deployment-manager/pkg/monitor"
+    "github.com/nalej/deployment-manager/internal/entities"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -54,5 +55,18 @@ type Deployable interface {
 // Minimalistic interface to run a controller in charge of overviewing the successful deployment of requested
 // operations. The system model must be updated accordingly.
 type DeploymentController interface {
-   AddMonitoredResource(uid string, stageId string)
+    // Add a monitor resource in the native platform using its uid and connect it with the corresponding service
+    // and deployment stage.
+    // params:
+    //  uid native resource identifier
+    //  serviceId nalej service identifier
+    //  stageId for the deployment stage
+   AddMonitoredResource(uid string, serviceId string, stageId string)
+
+   // Sets the status of a resource in the system. The implementation is in charge of transforming the native
+   // status value into a NalejServiceStatus
+   // params:
+   //  uid native identifier
+   //  status of the resource
+   SetResourceStatus(uid string, status entities.NalejServiceStatus)
 }
