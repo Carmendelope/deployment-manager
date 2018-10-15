@@ -84,7 +84,7 @@ func (c *KubernetesController) AddMonitoredResource(uid string, serviceId string
 }
 
 // Set the status of a native resource
-func (c *KubernetesController) SetResourceStatus(uid string, status entities.ServiceStatus) {
+func (c *KubernetesController) SetResourceStatus(uid string, status entities.NalejServiceStatus) {
     c.pendingStages.SetResourceStatus(uid, status)
 }
 
@@ -239,7 +239,7 @@ func (c *KubernetesObserver) Run(threadiness int) {
 
     // Let the workers stop when we are done
     defer c.queue.ShutDown()
-    log.Debug().Msg("starting Pod controller")
+    //log.Debug().Msg("starting Pod controller")
 
     go c.informer.Run(c.stopCh)
 
@@ -254,7 +254,7 @@ func (c *KubernetesObserver) Run(threadiness int) {
     }
 
     <-c.stopCh
-    log.Debug().Msg("stopping Pod controller")
+    //log.Debug().Msg("stopping Pod controller")
 }
 
 func (c *KubernetesObserver) runWorker() {
@@ -273,14 +273,22 @@ func checkDeployments(stored interface{}, pending *executor.PendingStages){
     //log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
     // This deployment is monitored, and all its replicas are available
     if pending.IsMonitoredResource(string(dep.GetUID())){
-        if dep.Status.UnavailableReplicas == 0 {
+        // if there are enough replicas, we assume this is working
+        if (dep.Status.UnavailableReplicas == 0){
+            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
             pending.RemoveResource(string(dep.GetUID()))
-            return
+        } else {
+            foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
+            pending.SetResourceStatus(string(dep.GetUID()), foundStatus)
+            if foundStatus == entities.NALEJ_SERVICE_RUNNING {
+                pending.RemoveResource(string(dep.GetUID()))
+            }
         }
-        pending.SetResourceStatus(string(dep.GetUID()), entities.KubernetesDeploymentStatusTranslation(dep.Status))
+
     } else {
         log.Info().Msgf("deployment %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
     }
+    return
 }
 
 // Helping function to check if a service is deployed or not. If so, it should
@@ -293,8 +301,12 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
     dep := stored.(*v1.Service)
     //log.Debug().Msgf("service %s status %v", dep.GetName(), dep)
 
-    // This deployment is monitored, and all its replicas are available
+    // This deployment is monitored.
     if pending.IsMonitoredResource(string(dep.GetUID())) {
+        // K8S API does not offer any direct method to check if a service is already up an running
+        // The ServiceStatus is almost empty and only contains pointer the load ingress values.
+        // TODO check if there is a way to get more information for service status
+        pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
         pending.RemoveResource(string(dep.GetUID()))
     } else {
         log.Warn().Msgf("service %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
@@ -314,6 +326,7 @@ func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages
     // This namespace will only be correct if it is active
     if pending.IsMonitoredResource(string(dep.GetUID())){
         if dep.Status.Phase == v1.NamespaceActive {
+            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
             pending.RemoveResource(string(dep.GetUID()))
         }
     } else {

@@ -17,6 +17,10 @@ import (
 // of pending stages until, it's zero. For every pending resource we store an inverted pointer to the stage it
 // belongs to.
 type PendingStages struct {
+    // Organization Id these stages are running into
+    OrganizationId string
+    // Instance Id these stages belong to
+    InstanceId string
     // fragment id for these stages
     FragmentId string
     // nalej stage -> num pending checks
@@ -28,9 +32,9 @@ type PendingStages struct {
     // serviceId -> [resourceId_0, resourceId_1, etc.]
     serviceResources map[string][]string
     // native resourceId -> status
-    resourceStatus map[string]entities.ServiceStatus
+    resourceStatus map[string]entities.NalejServiceStatus
     // serviceId -> status
-    serviceStatus map[string]entities.ServiceStatus
+    serviceStatus map[string]entities.NalejServiceStatus
     mu               sync.RWMutex
     // conductor monitor client
     monitor *monitor.MonitorHelper
@@ -38,15 +42,18 @@ type PendingStages struct {
 
 
 // Create a new set of pending stages with a monitor helper to inform conductor about the current status.
-func NewPendingStages(fragmentId string, monitor *monitor.MonitorHelper) *PendingStages {
+func NewPendingStages(organizationId string, instanceId string, fragmentId string,
+    monitor *monitor.MonitorHelper) *PendingStages {
     return &PendingStages{
+        OrganizationId:     organizationId,
+        InstanceId:         instanceId,
         FragmentId:         fragmentId,
         stagePendingChecks: make(map[string]int,0),
         resourceStage:      make(map[string]string,0),
         resourceService:    make(map[string]string,0),
         serviceResources:   make(map[string][]string,0),
-        resourceStatus:     make(map[string]entities.ServiceStatus),
-        serviceStatus:      make(map[string]entities.ServiceStatus),
+        resourceStatus:     make(map[string]entities.NalejServiceStatus),
+        serviceStatus:      make(map[string]entities.NalejServiceStatus),
         monitor:            monitor,
     }
 }
@@ -70,9 +77,12 @@ func(p *PendingStages) AddMonitoredResource(uid string, serviceId string, stageI
     if !isThere {
         p.serviceResources[serviceId] = []string{uid}
     } else {
-        p.serviceResources[serviceId] = append(p.serviceResources[serviceId], uid)
+        items := p.serviceResources[serviceId]
+        items = append(items, uid)
+        p.serviceResources[serviceId] = items
     }
-    p.serviceStatus[serviceId] = entities.SERVICE_WAITING
+    log.Debug().Msgf("resources for service %s are %v",serviceId, p.serviceResources[serviceId])
+    p.serviceStatus[serviceId] = entities.NALEJ_SERVICE_SCHEDULED
 
 }
 
@@ -83,24 +93,28 @@ func(p *PendingStages) RemoveResource(uid string) bool {
     defer p.mu.Unlock()
 
     // remove from the observed services
+    delete(p.resourceStatus,uid)
     serviceId := p.resourceService[uid]
     delete(p.resourceService,uid)
-    resources := p.serviceResources[serviceId]
-    for index, res := range resources {
+    newResources := p.serviceResources[serviceId]
+    for index, res := range newResources {
         if res == uid {
-            resources = append(resources[:index],resources[index+1:]...)
+            newResources = append(newResources[:index], newResources[index+1:]...)
             break
         }
     }
-    if len(resources) == 0 {
-        // no more pending resources for this service
-        log.Debug().Msgf("no more pending resources for service %s", serviceId)
+    if len(newResources) == 0 {
+        // no more pending newResources for this service
+        log.Debug().Msgf("no more pending newResources for service %s", serviceId)
         delete(p.serviceResources,serviceId)
+    } else {
+        p.serviceResources[serviceId] = newResources
     }
+
 
     stage,isthere := p.resourceStage[uid]
     if !isthere {
-        return false
+        log.Error().Msgf("impossible to remove resource %s. It had no associated stage", uid)
     }
     // delete the entry
     delete(p.resourceStage,uid)
@@ -152,29 +166,35 @@ func (p *PendingStages) ServiceHasPendingChecks(serviceId string) bool {
 // params:
 //  uid native resource identifier
 //  status of the native resource
-func (p *PendingStages) SetResourceStatus(uid string, status entities.ServiceStatus) {
-    p.mu.RLock()
-    defer p.mu.RUnlock()
-    log.Debug().Msg("call set resource status")
+func (p *PendingStages) SetResourceStatus(uid string, status entities.NalejServiceStatus) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
     // get associated service id
     serviceId, isthere := p.resourceService[uid]
     if !isthere{
-        log.Error().Msgf("trying to set resource status for resource without service")
+        log.Error().Msgf("trying to set resource status for resource %s without service", uid)
         return
     }
     // update status
     p.resourceStatus[uid] = status
     // get the worst status found in the resources required by this service
-    var finalStatus entities.ServiceStatus
-    finalStatus = entities.SERVICE_ERROR
+    var finalStatus entities.NalejServiceStatus
+    finalStatus = entities.NALEJ_SERVICE_ERROR
+    //log.Debug().Msgf("check service %s with resources %v", serviceId, p.resourceService[serviceId])
     for _,resourceId := range p.serviceResources[serviceId] {
-        if p.resourceStatus[resourceId] == entities.SERVICE_ERROR {
-            finalStatus = entities.SERVICE_ERROR
+        //log.Debug().Msgf("--> resource %s has status %v",resourceId, p.resourceStatus[resourceId])
+        if p.resourceStatus[resourceId] == entities.NALEJ_SERVICE_ERROR {
+            finalStatus = entities.NALEJ_SERVICE_ERROR
             break
         } else if p.resourceStatus[resourceId] < finalStatus {
             finalStatus = p.resourceStatus[resourceId]
         }
+
     }
+    //log.Debug().Msgf("finally service %s has status %v", serviceId, finalStatus)
     p.serviceStatus[serviceId] = finalStatus
-    p.monitor.UpdateServiceStatus(p.FragmentId,serviceId,finalStatus)
+    // Do not communicate updates regarding all services.
+    if serviceId != monitor.AllServices {
+        p.monitor.UpdateServiceStatus(p.FragmentId,p.OrganizationId, p.InstanceId, serviceId,p.serviceStatus[serviceId])
+    }
 }

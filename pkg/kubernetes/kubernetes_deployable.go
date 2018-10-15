@@ -20,6 +20,7 @@ import (
     "k8s.io/client-go/kubernetes/typed/apps/v1"
 
     "github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/nalej/deployment-manager/pkg/monitor"
 )
 
 /*
@@ -221,6 +222,7 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
             return err
         }
+        log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
         controller.AddMonitoredResource(string(deployed.GetUID()), serviceId, d.stage.StageId)
     }
     return nil
@@ -308,6 +310,7 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
             log.Error().Err(err).Msgf("error creating service %s",serv.Name)
             return err
         }
+        log.Debug().Msgf("created service with uid %s", created.GetUID())
         controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
     }
     return nil
@@ -368,9 +371,13 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
         return nil
     }
     created, err := n.client.Create(&n.namespace)
+    if err != nil {
+        return err
+    }
+    log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
     n.namespace = *created
     // The namespace is a special case that covers all the services
-    controller.AddMonitoredResource(string(created.GetUID()), "all",n.stage.StageId)
+    controller.AddMonitoredResource(string(created.GetUID()), monitor.AllServices,n.stage.StageId)
     return err
 }
 

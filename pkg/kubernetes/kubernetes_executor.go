@@ -85,7 +85,7 @@ func (k *KubernetesExecutor) Execute(fragment *pbConductor.DeploymentFragment, s
 
     // Build a controller for this deploy operation
     // First, build a struct in charge of the pending stages
-    checks := executor.NewPendingStages(fragment.FragmentId, monitor)
+    checks := executor.NewPendingStages(fragment.OrganizationId,fragment.AppInstanceId,fragment.FragmentId, monitor)
     // Second, instantiate a new controller
     kontroller := NewKubernetesController(k, checks, targetNamespace)
 

@@ -20,6 +20,8 @@ const (
     MessageBatchSize = 5
     // Time between notifications in milliseconds
     NotificationsSleep = 3000
+    // Services wildcard is a reserved word to indicate all the services in a deployment stage
+    AllServices = "all"
 )
 
 type MonitorHelper struct {
@@ -45,15 +47,20 @@ func (m *MonitorHelper) UpdateFragmentStatus(fragmentId string, status entities.
 }
 
 
-func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, serviceId string, status entities.ServiceStatus) {
+func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
+    status entities.NalejServiceStatus) {
     // TODO report information if an only if a considerable bunch of updates are available
-    log.Debug().Msgf("send update service status with %s, %s, %s",fragmentId, serviceId, status)
-    log.Debug().Msgf("the status to send is %s transformed into %s",status,entities.ServiceStatusToGRPC[status])
+    // TODO improve performance by sending a bunch of updates at the same time
+    log.Debug().Msgf("send update service status with %s, %s, %v",fragmentId, serviceId, status)
     req := pbConductor.DeploymentServiceUpdateRequest{
         FragmentId: fragmentId,
         ClusterId: "fill this with cluster id",
         List: []*pbConductor.ServiceUpdate{
-            {AppInstanceId: serviceId, Status: entities.ServiceStatusToGRPC[status]}},
+            {ApplicationInstanceId: instanceId,
+            ServiceInstanceId: serviceId,
+            OrganizationId: organizationId,
+            Status: entities.ServiceStatusToGRPC[status]},
+            },
     }
     _, err := m.client.UpdateServiceStatus(context.Background(), &req)
     if err != nil {

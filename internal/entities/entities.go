@@ -3,27 +3,26 @@ package entities
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
     "k8s.io/api/extensions/v1beta1"
-    "github.com/rs/zerolog/log"
 )
 
 // Service status definition
 
-type ServiceStatus int
+type NalejServiceStatus int
 
 const (
-    SERVICE_SCHEDULED = iota
-    SERVICE_WAITING
-    SERVICE_DEPLOYING
-    SERVICE_RUNNING
-    SERVICE_ERROR
+    NALEJ_SERVICE_SCHEDULED     = iota
+    NALEJ_SERVICE_WAITING
+    NALEJ_SERVICE_DEPLOYING
+    NALEJ_SERVICE_RUNNING
+    NALEJ_SERVICE_ERROR
 )
 
-var ServiceStatusToGRPC = map[ServiceStatus] pbConductor.ServiceStatus {
-    SERVICE_SCHEDULED : pbConductor.ServiceStatus_SERVICE_SCHEDULED,
-    SERVICE_WAITING : pbConductor.ServiceStatus_SERVICE_WAITING,
-    SERVICE_DEPLOYING : pbConductor.ServiceStatus_SERVICE_DEPLOYING,
-    SERVICE_RUNNING : pbConductor.ServiceStatus_SERVICE_RUNNING,
-    SERVICE_ERROR : pbConductor.ServiceStatus_SERVICE_ERROR,
+var ServiceStatusToGRPC = map[NalejServiceStatus] pbConductor.ServiceStatus {
+    NALEJ_SERVICE_SCHEDULED: pbConductor.ServiceStatus_SERVICE_SCHEDULED,
+    NALEJ_SERVICE_WAITING:   pbConductor.ServiceStatus_SERVICE_WAITING,
+    NALEJ_SERVICE_DEPLOYING: pbConductor.ServiceStatus_SERVICE_DEPLOYING,
+    NALEJ_SERVICE_RUNNING:   pbConductor.ServiceStatus_SERVICE_RUNNING,
+    NALEJ_SERVICE_ERROR:     pbConductor.ServiceStatus_SERVICE_ERROR,
 }
 
 // Translate a kubenetes deployment status into a Nalej service status
@@ -37,8 +36,8 @@ var ServiceStatusToGRPC = map[ServiceStatus] pbConductor.ServiceStatus {
 //  All into available -> Running
 //  Unknown situation --> Waiting
 //
-func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) ServiceStatus {
-    var result ServiceStatus
+func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) NalejServiceStatus {
+    var result NalejServiceStatus
     running := 0
     progressing := 0
     error := 0
@@ -54,20 +53,21 @@ func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) Se
         }
     }
     if error > 0 {
-        result = SERVICE_ERROR
+        result = NALEJ_SERVICE_ERROR
     } else if running == len(kStatus.Conditions) {
-        result = SERVICE_RUNNING
+        result = NALEJ_SERVICE_RUNNING
     } else if progressing > 0 {
-        result = SERVICE_DEPLOYING
+        result = NALEJ_SERVICE_DEPLOYING
     } else {
-        result = SERVICE_WAITING
+        result = NALEJ_SERVICE_WAITING
     }
 
-
-    log.Debug().Msgf("translate condition status %v into %s",kStatus.Conditions, result)
+    // log.Debug().Msgf("translate condition status %v into %s",kStatus.Conditions, result)
 
     return result
 }
+
+// Translate the Nalej exposed service definition into the K8s service definition.
 
 
 

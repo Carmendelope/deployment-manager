@@ -64,9 +64,9 @@ type DeploymentController interface {
    AddMonitoredResource(uid string, serviceId string, stageId string)
 
    // Sets the status of a resource in the system. The implementation is in charge of transforming the native
-   // status value into a ServiceStatus
+   // status value into a NalejServiceStatus
    // params:
    //  uid native identifier
    //  status of the resource
-   SetResourceStatus(uid string, status entities.ServiceStatus)
+   SetResourceStatus(uid string, status entities.NalejServiceStatus)
 }
