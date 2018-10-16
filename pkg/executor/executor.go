@@ -8,8 +8,8 @@ package executor
 
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
-    "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/pkg/monitor"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -17,24 +17,43 @@ import (
 // created/deployed in order to follow the deployment plan.
 type Executor interface {
 
+    // Build a deployable object that can be executed into the current platform using its native description.
+    //  params:
+    //   stage to be deployed
+    //   namespace where the stage has to be deployed
+    //  return:
+    //   deployable entity or error if any
+    BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string) (Deployable, error)
+
     // Execute a deployment stage for the current platform.
     //  params:
+    //   toDeploy items to be deployed
     //   fragment to the stage belongs to
     //   stage to be executed
     //   monitor to inform about system information
     //  return:
     //   deployable object or error if any
-    Execute(fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
-        monitor *monitor.MonitorHelper) (*Deployable,error)
+    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
+        monitor *monitor.MonitorHelper) error
 
-    // Operation to be run in case a stage deployment fails. The rollback should bring the system to
-    // the system status before this stage was executed.
+    // This operation should be executed after the failed deployment of a deployment stage. The target platform must
+    // be ready to retry again the deployment of this stage. This means, that other deployable entities deployed
+    // by other stages must be untouched.
     //  params:
-    //   stage this rollback belongs to
-    //   deployed entries
+    //   stage to be deployed
+    //   toUndeploy deployable entities associated with the stage that have to be undeployed
     //  return:
     //   error if any
-    StageRollback(stage *pbConductor.DeploymentStage, deployed Deployable) error
+    UndeployStage(stage *pbConductor.DeploymentStage, toUndeploy Deployable) error
+
+    // This operation should be executed after the failed deployment of a fragment. After running this operation,
+    // any deployable associated with this fragment must be removed.
+    //  params:
+    //   fragment to be deployed
+    //   toUndeploy deployable entities associated with the fragment that have to be undeployed
+    //  return:
+    //   error if any
+    UndeployFragment(fragment *pbConductor.DeploymentStage, toUndeploy Deployable) error
 
 }
 

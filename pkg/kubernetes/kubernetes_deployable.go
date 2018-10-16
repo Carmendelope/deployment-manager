@@ -13,7 +13,6 @@ import (
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-    "fmt"
     "github.com/rs/zerolog/log"
     "k8s.io/apimachinery/pkg/util/intstr"
     "k8s.io/client-go/kubernetes"
@@ -30,8 +29,6 @@ import (
 const (
     // Grace period in seconds to delete a deployable.
     DeleteGracePeriod = 10
-    // Namespace length
-    NamespaceLength = 63
 )
 
 
@@ -426,17 +423,3 @@ func getEnvVariables(variables map[string]string) []apiv1.EnvVar {
     return obtained
 }
 
-// Return the namespace associated with a service.
-//  params:
-//   organizationId
-//   appInstanceId
-//  return:
-//   associated namespace
-func getNamespace(organizationId string, appInstanceId string) string {
-    target := fmt.Sprintf("%s-%s", organizationId, appInstanceId)
-    // check if the namespace is larger than the allowed k8s namespace length
-    if len(target) > NamespaceLength {
-        return target[:NamespaceLength]
-    }
-    return target
-}
