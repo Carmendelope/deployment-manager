@@ -17,6 +17,17 @@ import (
 // created/deployed in order to follow the deployment plan.
 type Executor interface {
 
+
+    // Execute any initial preparation to deploy a fragment.
+    //  params:
+    //   fragment to be deployed
+    //   namespace the fragment belongs to
+    //   monitor to overview the deployment
+    //  return:
+    //   error if any
+    PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
+        monitor *monitor.MonitorHelper) (Deployable, error)
+
     // Build a deployable object that can be executed into the current platform using its native description.
     //  params:
     //   stage to be deployed

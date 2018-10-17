@@ -43,7 +43,7 @@ type DeployableKubernetesStage struct {
     // namespace name descriptor
     targetNamespace string
     // name of the target namespace to use
-    namespace *DeployableNamespace
+    //namespace *DeployableNamespace
     // collection of deployments
     deployments *DeployableDeployments
     // collection of services
@@ -62,7 +62,7 @@ func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConduc
         client: client,
         stage: stage,
         targetNamespace: targetNamespace,
-        namespace: NewDeployableNamespace(client, stage, targetNamespace),
+        //namespace: NewDeployableNamespace(client, stage, targetNamespace),
         services: NewDeployableService(client, stage, targetNamespace),
         deployments: NewDeployableDeployment(client, stage, targetNamespace),
     }
@@ -74,14 +74,16 @@ func(d DeployableKubernetesStage) GetId() string {
 
 func (d DeployableKubernetesStage) Build() error {
     // Build namespace
+    /*
     err := d.namespace.Build()
     if err != nil {
         log.Error().Err(err).Msgf("impossible to create namespace %s for stageId %s", d.targetNamespace, d.stage.StageId)
         return err
     }
+    */
 
     // Build deployments
-    err = d.deployments.Build()
+    err := d.deployments.Build()
     if err != nil {
         log.Error().Err(err).Msgf("impossible to create deployments for stageId %s", d.stage.StageId)
         return err
@@ -98,14 +100,16 @@ func (d DeployableKubernetesStage) Build() error {
 
 func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
     // Deploy namespace
+    /*
     log.Debug().Msgf("build namespace for stage %s",d.stage.StageId)
     err := d.namespace.Deploy(controller)
     if err != nil {
         return err
     }
+    */
     // Deploy deployments
     log.Debug().Msgf("build deployments for stage %s",d.stage.StageId)
-    err = d.deployments.Deploy(controller)
+    err := d.deployments.Deploy(controller)
     if err != nil {
         return err
     }
@@ -121,13 +125,14 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
 func (d DeployableKubernetesStage) Undeploy() error {
     // Deploying the namespace should be enough
     // Deploy namespace
+    /*
     err := d.namespace.Undeploy()
     if err != nil {
         return err
     }
-    /*
+    */
     // Deploy deployments
-    err = d.deployments.Undeploy()
+    err := d.deployments.Undeploy()
     if err != nil {
         return err
     }
@@ -136,7 +141,7 @@ func (d DeployableKubernetesStage) Undeploy() error {
     if err != nil {
         return err
     }
-    */
+
     return nil
 }
 
@@ -326,31 +331,32 @@ func(s *DeployableServices) Undeploy() error {
 
 
 // Deployable namespace
+// A namespace is associated with a fragment. This is a special case of deployable that is only intended to be
+// executed before the fragment deployment starts.
 //--------------------
 
 type DeployableNamespace struct {
     // kubernetes Client
     client v12.NamespaceInterface
-    // stage associated with these resources
-    stage *pbConductor.DeploymentStage
+    // fragment this namespace is attached to
+    fragmentId string
     // namespace name descriptor
     targetNamespace string
     // namespace
     namespace apiv1.Namespace
 }
 
-func NewDeployableNamespace(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string) *DeployableNamespace {
+func NewDeployableNamespace(client *kubernetes.Clientset, fragmentId string, targetNamespace string) *DeployableNamespace {
     return &DeployableNamespace{
         client:          client.CoreV1().Namespaces(),
-        stage:           stage,
+        fragmentId:      fragmentId,
         targetNamespace: targetNamespace,
         namespace:       apiv1.Namespace{},
     }
 }
 
 func(n *DeployableNamespace) GetId() string {
-    return n.stage.StageId
+    return n.fragmentId
 }
 
 func(n *DeployableNamespace) Build() error {
@@ -374,7 +380,7 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
     n.namespace = *created
     // The namespace is a special case that covers all the services
-    controller.AddMonitoredResource(string(created.GetUID()), monitor.AllServices,n.stage.StageId)
+    controller.AddMonitoredResource(string(created.GetUID()), monitor.AllServices,n.fragmentId)
     return err
 }
 

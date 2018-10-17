@@ -71,32 +71,36 @@ func(k *KubernetesExecutor) BuildNativeDeployable(stage *pbConductor.DeploymentS
     return resources, nil
 }
 
-
-/*
-func (k *KubernetesExecutor) DeployStage(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage,
-    monitor *monitor.MonitorHelper) (*executor.Deployable,error) {
-    log.Info().Str("stage",stage.StageId).Msgf("execute stage %s with %d services", stage.StageId, len(stage.Services))
-
-    targetNamespace := getNamespace(fragment.OrganizationId,fragment.AppInstanceId)
-
-    var resources executor.Deployable
-    // Build the structures to be executed. If any of then cannot be built, we have a failure.
-    k8sDeploy := NewDeployableKubernetesStage(k.Client, stage, targetNamespace)
-    resources = k8sDeploy
-
-    err := k8sDeploy.Build()
-
+// Prepare the namespace for the deployment. This is a special case because all the deployments will share a common
+// namespace. If this step cannot be done, no stage deployment will start.
+func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
+    monitor *monitor.MonitorHelper) (executor.Deployable, error) {
+    // Create a namespace
+    namespaceDeployable := NewDeployableNamespace(k.Client, fragment.FragmentId, namespace)
+    err := namespaceDeployable.Build()
     if err != nil {
-        log.Error().Err(err).Msgf("impossible to build resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
-        return &resources,err
+       log.Error().Err(err).Msgf("impossible to build namespace %s",namespace)
+       return nil, err
     }
 
-    // Run the deployable elements generated for this stage
-    stageErr := k.runStage(targetNamespace, k8sDeploy, fragment, stage, monitor)
+    // Prepare a controller to be sure that we have a working namespace
+    // Build a controller for this deploy operation
+    checks := executor.NewPendingStages(fragment.OrganizationId,fragment.AppInstanceId,fragment.FragmentId, monitor)
+    // Second, instantiate a new controller
+    kontroller := NewKubernetesController(k, checks, namespaceDeployable.targetNamespace)
 
-    return &resources,stageErr
+    err = namespaceDeployable.Deploy(kontroller)
+    if err != nil {
+        log.Error().Err(err).Msgf("impossible to deploy namespace %s",namespace)
+        return nil,err
+    }
+
+    var toReturn executor.Deployable
+    toReturn = namespaceDeployable
+
+    return toReturn, nil
 }
-*/
+
 
 // Deploy a stage into kubernetes. This function
 func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment *pbConductor.DeploymentFragment,

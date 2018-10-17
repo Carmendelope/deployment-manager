@@ -52,6 +52,21 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_DEPLOYING)
 
     namespace := m.getNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
+    preDeployable, prepError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace, m.monitor)
+    if prepError != nil {
+        log.Error().Err(prepError).Msgf("failed environment preparation for fragment %s",
+            request.Fragment.FragmentId)
+        log.Info().Msgf("undeploy deployments for preparation in fragment %s",request.Fragment.FragmentId)
+        err := preDeployable.Undeploy()
+        if err != nil {
+            log.Error().Err(err).Msgf("impossible to undeploy preparation for fragment %s",
+                request.Fragment.FragmentId)
+            return errors.New("failed environment preparation for fragment %s, " +
+                "impossible to undeploy preparation for fragment %s")
+        }
+        return errors.New(fmt.Sprintf("failed environment preparation for fragment %s",
+            request.Fragment.FragmentId))
+    }
 
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
@@ -62,9 +77,6 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
             log.Error().Err(err).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
             return err
         }
-
-        // TODO decide what to do if rollback fails
-        log.Error().AnErr("error",err).Msgf("error deploying stage %d out of %d",stageNumber,len(request.Fragment.Stages))
 
         var executionErr error
         switch request.RollbackPolicy {
@@ -82,10 +94,19 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
                 executionErr = m.deploymentLoopStage(request.Fragment, stage, deployable, NoRetries)
         }
         if executionErr != nil {
-            log.Error().Err(executionErr).Msgf("failed to deploy stage %s from fragment %s", stage.StageId,
-                request.Fragment.FragmentId)
+            log.Error().AnErr("error",err).Msgf("error deploying stage %d out of %d",stageNumber,
+                len(request.Fragment.Stages))
             m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
                 request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_ERROR)
+            // clear fragment operations
+            log.Info().Msgf("clear fragment %s", request.Fragment.FragmentId)
+
+            err := preDeployable.Undeploy()
+            if err != nil {
+                log.Error().Err(err).Msgf("impossible to undeploy preparation for fragment %s",
+                    request.Fragment.FragmentId)
+            }
+
             return executionErr
         }
 
