@@ -82,7 +82,7 @@ func init() {
     cobra.OnInitialize(initConfig)
     // initialization file
     RootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file path")
-    RootCmd.PersistentFlags().BoolVar(&debugLevel, "debugLevel", false, "enable debugLevel mode")
+    RootCmd.PersistentFlags().BoolVar(&debugLevel, "debug", false, "enable debugLevel mode")
     RootCmd.PersistentFlags().BoolVar(&consoleLogging, "consoleLogging", false, "Pretty print logging")
 
 
@@ -101,19 +101,3 @@ func SetupLogging() {
         log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
     }
 }
-
-/*
-// small example for testing
-func Run() {
-    client,err := kubernetes.NewKubernetesClient(false)
-
-    if err != nil {
-        log.Panic().Err(err).Msg("impossible to get k8s client")
-        panic(err)
-        os.Exit(1)
-    }
-
-    client.runDeployment()
-    client.Test()
-}
-*/

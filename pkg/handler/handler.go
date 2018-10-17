@@ -29,6 +29,13 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
         return nil, theError
     }
 
+    if !h.ValidDeployFragmentRequest(request) {
+        theError := errors.New("non valid deployment fragment request")
+        return nil, theError
+    }
+
+
+
     err := h.m.Execute(request)
     if err != nil {
         log.Error().Err(err).Msgf("failed to execute fragment request %s",request.RequestId)
@@ -39,4 +46,21 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
     response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
 
     return &response, nil
+}
+
+func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) bool {
+    if request.RequestId == "" {
+        log.Error().Msg("impossible to process request with no request_id")
+        return false
+    }
+    if request.Fragment == nil || request.Fragment.FragmentId == "" {
+        log.Error().Msg("impossible to process request with no fragment_id")
+        return false
+    }
+    if request.Fragment.DeploymentId == "" || request.Fragment.AppInstanceId == "" || request.Fragment.OrganizationId == "" {
+        log.Error().Msg("impossible to process request with no deployment_id, app_intance_id or organization_id")
+        return false
+    }
+
+    return true
 }

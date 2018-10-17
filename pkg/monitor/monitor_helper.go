@@ -33,12 +33,16 @@ func NewMonitorHelper(conn *grpc.ClientConn) *MonitorHelper {
     return &MonitorHelper{client}
 }
 
-func (m *MonitorHelper) UpdateFragmentStatus(fragmentId string, status entities.FragmentStatus) {
+func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
+    appInstanceId string, status entities.FragmentStatus) {
     //TODO find how to populate the cluster id entry
     req := pbConductor.DeploymentFragmentUpdateRequest{
+        OrganizationId: organizationId,
+        DeploymentId: deploymentId,
         FragmentId: fragmentId,
         Status: entities.FragmentStatusToGRPC[status],
         ClusterId: "fill this with the cluster id",
+        AppInstanceId: appInstanceId,
     }
     _, err := m.client.UpdateDeploymentFragmentStatus(context.Background(), &req)
     if err != nil {
@@ -53,6 +57,7 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
     // TODO improve performance by sending a bunch of updates at the same time
     log.Debug().Msgf("send update service status with %s, %s, %v",fragmentId, serviceId, status)
     req := pbConductor.DeploymentServiceUpdateRequest{
+        OrganizationId: organizationId,
         FragmentId: fragmentId,
         ClusterId: "fill this with cluster id",
         List: []*pbConductor.ServiceUpdate{

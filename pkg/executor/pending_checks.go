@@ -7,10 +7,21 @@
 package executor
 
 import (
+    "errors"
     "sync"
+    "time"
+    "fmt"
     "github.com/rs/zerolog/log"
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/internal/entities"
+)
+
+
+const (
+    // Time in seconds we wait for a stage to be finished.
+    StageCheckingTimeout = 120
+    // Time between pending stage checks in seconds
+    CheckingSleepTime = 1
 )
 
 // We store the number of pending checks for a certain stage. Every time a check is done, we reduce the number
@@ -57,6 +68,32 @@ func NewPendingStages(organizationId string, instanceId string, fragmentId strin
         monitor:            monitor,
     }
 }
+
+
+// Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
+// If after the maximum expiration time the check is not successful, the execution is considered to be failed.
+func(p *PendingStages) WaitPendingChecks(stageId string) error {
+    log.Info().Msgf("stage %s wait until all stages are complete",stageId)
+    timeout := time.After(time.Second * StageCheckingTimeout)
+    tick := time.Tick(time.Second * CheckingSleepTime)
+    for {
+        select {
+        // Got a timeout! Error
+        case <-timeout:
+            log.Error().Msgf("checking pendingStages resources exceeded for stage %s", stageId)
+            return errors.New(fmt.Sprintf("checking pendingStages resources exceeded for stage %s", stageId))
+            // Next check
+        case <-tick:
+            pendingStages := p.StageHasPendingChecks(stageId)
+            if !pendingStages {
+                log.Info().Msgf("stage %s has no pendingStages checks. Exit checking stage", stageId)
+                return nil
+            }
+        }
+    }
+}
+
+
 
 // Add a new resource pending to be checked.
 func(p *PendingStages) AddMonitoredResource(uid string, serviceId string, stageId string) {
