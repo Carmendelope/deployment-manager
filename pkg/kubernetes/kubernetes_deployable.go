@@ -20,6 +20,7 @@ import (
 
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/monitor"
+    "github.com/nalej/deployment-manager/pkg/utils"
 )
 
 /*
@@ -186,7 +187,7 @@ func(d *DeployableDeployments) Build() error {
                 Namespace: d.targetNamespace,
                 Labels: service.Labels,
                 Annotations: map[string] string {
-                    "nalej-service" : service.ServiceId,
+                    utils.NALEJ_SERVICE_NAME : service.ServiceId,
                 },
             },
             Spec: appsv1.DeploymentSpec{
@@ -211,6 +212,7 @@ func(d *DeployableDeployments) Build() error {
                 },
             },
         }
+
         deployments[service.ServiceId] = deployment
     }
     d.deployments = deployments
