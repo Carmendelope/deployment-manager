@@ -299,7 +299,6 @@ func checkDeployments(stored interface{}, pending *executor.PendingStages){
 func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
     // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Service)
-    //log.Debug().Msgf("service %s status %v", dep.GetName(), dep)
 
     // This deployment is monitored.
     if pending.IsMonitoredResource(string(dep.GetUID())) {
@@ -321,7 +320,6 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
 func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages){
     // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Namespace)
-    //log.Debug().Msgf("namespace %s status %v", dep.GetName(), dep)
 
     // This namespace will only be correct if it is active
     if pending.IsMonitoredResource(string(dep.GetUID())){
@@ -330,6 +328,6 @@ func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages
             pending.RemoveResource(string(dep.GetUID()))
         }
     } else {
-        log.Info().Msgf("namespace %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
+        log.Debug().Msgf("namespace %s,%s is not monitored", dep.GetName(),string(dep.GetUID()))
     }
 }
