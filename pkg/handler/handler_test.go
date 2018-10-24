@@ -17,10 +17,15 @@ import (
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/grpc-utils/pkg/test"
     "context"
+    "github.com/nalej/deployment-manager/pkg/utils"
+    "os"
 )
 
 
 var _ = ginkgo.Describe("Deployment server API", func() {
+    var isReady bool
+    // Conductor address
+    var conductorAddress string
     // grpc server
     var server *grpc.Server
     // Deployment manager
@@ -35,26 +40,44 @@ var _ = ginkgo.Describe("Deployment server API", func() {
 
 
     ginkgo.BeforeSuite(func(){
+        isReady = false
+        if utils.RunIntegrationTests() {
+            conductorAddress = os.Getenv(utils.IT_CONDUCTOR_ADDRESS)
+            if conductorAddress != "" {
+                isReady = true
+            }
+        }
+
+        if !isReady {
+            return
+        }
+
+
         listener = test.GetDefaultListener()
         server = grpc.NewServer()
         exec, err := kubernetes.NewKubernetesExecutor(false)
         k8sExec = exec.(*kubernetes.KubernetesExecutor)
         gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-        conn, err := test.GetConn(*listener)
+        localConn, err := test.GetConn(*listener)
+        conn, err := grpc.Dial(conductorAddress, grpc.WithInsecure())
+        gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-        dm = NewManager(conn,&exec)
+        dm = NewManager(conn, &exec)
 
         test.LaunchServer(server, listener)
         // Register the service
         pbDeploymentManager.RegisterDeploymentManagerServer(server, NewHandler(dm))
 
         gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-        client = pbDeploymentManager.NewDeploymentManagerClient(conn)
+        client = pbDeploymentManager.NewDeploymentManagerClient(localConn)
 
        })
 
     ginkgo.AfterSuite(func(){
+        if !isReady {
+            return
+        }
         server.Stop()
         listener.Close()
     })
@@ -106,6 +129,9 @@ var _ = ginkgo.Describe("Deployment server API", func() {
             request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
         })
         ginkgo.It("the new request is processed and the stages are deployed", func(){
+            if !isReady {
+                ginkgo.Skip("no integration test is set")
+            }
             response, err := client.Execute(context.Background(),&request)
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             gomega.Expect(response.RequestId).To(gomega.Equal(request.RequestId))
@@ -113,7 +139,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
 
         ginkgo.AfterEach(func(){
             // remove the namespace
-            deployedNamespace := kubernetes.NewDeployableNamespace(k8sExec.Client,&stage,"org-001-app-001")
+            deployedNamespace := kubernetes.NewDeployableNamespace(k8sExec.Client,stage.FragmentId,"org-001-app-001")
             err := deployedNamespace.Undeploy()
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         })
@@ -175,6 +201,9 @@ var _ = ginkgo.Describe("Deployment server API", func() {
             request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
         })
         ginkgo.It("the new request is processed and the stages are deployed", func(){
+            if !isReady {
+                ginkgo.Skip("no integration test is set")
+            }
             response, err := client.Execute(context.Background(),&request)
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             gomega.Expect(response.RequestId).To(gomega.Equal(request.RequestId))
@@ -182,7 +211,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
 
         ginkgo.AfterEach(func(){
             // remove the namespace
-            deployedNamespace := kubernetes.NewDeployableNamespace(k8sExec.Client,&stage1,"org-001-app-002")
+            deployedNamespace := kubernetes.NewDeployableNamespace(k8sExec.Client,stage1.FragmentId,"org-001-app-002")
             err := deployedNamespace.Undeploy()
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
         })
