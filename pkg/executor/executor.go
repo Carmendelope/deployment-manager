@@ -32,9 +32,10 @@ type Executor interface {
     //  params:
     //   stage to be deployed
     //   namespace where the stage has to be deployed
+    //   ztNetworkId identifier for the zero-tier network these deployables will use
     //  return:
     //   deployable entity or error if any
-    BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string) (Deployable, error)
+    BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, ztNetworkId string) (Deployable, error)
 
     // Execute a deployment stage for the current platform.
     //  params:

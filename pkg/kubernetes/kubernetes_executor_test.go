@@ -19,8 +19,6 @@ import (
 )
 
 
-
-
 var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
 
     var isReady bool
