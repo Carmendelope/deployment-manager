@@ -19,8 +19,6 @@ import (
 )
 
 
-
-
 var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
 
     var isReady bool
@@ -67,6 +65,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var fragment pbConductor.DeploymentFragment
         var preDeployed executor.Deployable
         namespace := "test-app-single"
+        ztNetworkId := "testztid"
 
         ginkgo.BeforeEach(func(){
             serv1 = pbApplication.Service{
@@ -110,7 +109,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace)
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             err = k8sExecutor.DeployStage(toDeploy, &fragment, &stage, monitor)
@@ -134,6 +133,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var fragment pbConductor.DeploymentFragment
         var preDeployed executor.Deployable
         namespace := "test-app-double"
+        ztNetworkId := "testztid"
 
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
@@ -181,7 +181,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace)
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             err = k8sExecutor.DeployStage(toDeploy, &fragment, &stage, monitor)
@@ -205,6 +205,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var fragment pbConductor.DeploymentFragment
         var preDeployed executor.Deployable
         namespace := "test-app-two-stages"
+        ztNetworkId := "testztid"
 
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
@@ -255,7 +256,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage1, namespace)
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage1, namespace, ztNetworkId)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             err = k8sExecutor.DeployStage(toDeploy, &fragment, &stage2, monitor)

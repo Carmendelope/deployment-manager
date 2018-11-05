@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
 
-            request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
+            request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment, ZtNetworkId: "ztNetwork1"}
         })
         ginkgo.It("the new request is processed and the stages are deployed", func(){
             if !isReady {
@@ -198,7 +198,7 @@ var _ = ginkgo.Describe("Deployment server API", func() {
                 Stages: []*pbConductor.DeploymentStage{&stage1,&stage2},
             }
 
-            request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment}
+            request = pbDeploymentManager.DeploymentFragmentRequest{RequestId:"plan-001",Fragment: &fragment, ZtNetworkId: "ztNetwork1"}
         })
         ginkgo.It("the new request is processed and the stages are deployed", func(){
             if !isReady {

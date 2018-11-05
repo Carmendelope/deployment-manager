@@ -34,8 +34,6 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
         return nil, theError
     }
 
-
-
     err := h.m.Execute(request)
     if err != nil {
         log.Error().Err(err).Msgf("failed to execute fragment request %s",request.RequestId)
@@ -51,6 +49,10 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
 func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) bool {
     if request.RequestId == "" {
         log.Error().Msg("impossible to process request with no request_id")
+        return false
+    }
+    if request.ZtNetworkId == "" {
+        log.Error().Msg("impossible to process request with no zt_network_id")
         return false
     }
     if request.Fragment == nil || request.Fragment.FragmentId == "" {

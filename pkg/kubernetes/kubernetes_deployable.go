@@ -43,8 +43,8 @@ type DeployableKubernetesStage struct {
     stage *pbConductor.DeploymentStage
     // namespace name descriptor
     targetNamespace string
-    // name of the target namespace to use
-    //namespace *DeployableNamespace
+    // ZeroTier network id
+    ztNetworkId string
     // collection of deployments
     deployments *DeployableDeployments
     // collection of services
@@ -57,15 +57,14 @@ type DeployableKubernetesStage struct {
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    //targetNamespace string) executor.Deployable {
-    targetNamespace string) *DeployableKubernetesStage {
+    targetNamespace string, ztNetworkId string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client: client,
         stage: stage,
         targetNamespace: targetNamespace,
-        //namespace: NewDeployableNamespace(client, stage, targetNamespace),
+        ztNetworkId: ztNetworkId,
         services: NewDeployableService(client, stage, targetNamespace),
-        deployments: NewDeployableDeployment(client, stage, targetNamespace),
+        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId),
     }
 }
 
@@ -74,15 +73,6 @@ func(d DeployableKubernetesStage) GetId() string {
 }
 
 func (d DeployableKubernetesStage) Build() error {
-    // Build namespace
-    /*
-    err := d.namespace.Build()
-    if err != nil {
-        log.Error().Err(err).Msgf("impossible to create namespace %s for stageId %s", d.targetNamespace, d.stage.StageId)
-        return err
-    }
-    */
-
     // Build deployments
     err := d.deployments.Build()
     if err != nil {
@@ -100,14 +90,7 @@ func (d DeployableKubernetesStage) Build() error {
 }
 
 func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
-    // Deploy namespace
-    /*
-    log.Debug().Msgf("build namespace for stage %s",d.stage.StageId)
-    err := d.namespace.Deploy(controller)
-    if err != nil {
-        return err
-    }
-    */
+
     // Deploy deployments
     log.Debug().Msgf("build deployments for stage %s",d.stage.StageId)
     err := d.deployments.Deploy(controller)
@@ -156,17 +139,20 @@ type DeployableDeployments struct{
     stage *pbConductor.DeploymentStage
     // namespace name descriptor
     targetNamespace string
+    // zero-tier network id
+    ztNetworkId string
     // map of deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
 }
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string) *DeployableDeployments {
+    targetNamespace string, ztNetworkId string) *DeployableDeployments {
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
+        ztNetworkId: ztNetworkId,
         deployments: make(map[string]appsv1.Deployment,0),
     }
 }
@@ -199,6 +185,9 @@ func(d *DeployableDeployments) Build() error {
                     ObjectMeta: metav1.ObjectMeta{
                         Labels: service.Labels,
                     },
+                    // Every pod template is designed to use a container with the requested image
+                    // and a helping sidecar with a containerized zerotier that joins the network
+                    // after running
                     Spec: apiv1.PodSpec{
                         Containers: []apiv1.Container{
                             {
@@ -206,6 +195,41 @@ func(d *DeployableDeployments) Build() error {
                                 Image: service.Image,
                                 Env: getEnvVariables(service.EnvironmentVariables),
                                 Ports: getContainerPorts(service.ExposedPorts),
+                            },
+                            // zero-tier sidecar
+                            {
+                                Name: "zt-sidecar",
+                                //Image: "nalej/zt-nalej:latest",
+                                // TODO prepare this to pull from a repository
+                                Image: "nalej/zt-nalej:0.1.0",
+                                Args: []string{d.ztNetworkId},
+                                SecurityContext:
+                                    &apiv1.SecurityContext{
+                                        Privileged: boolPtr(true),
+                                        Capabilities: &apiv1.Capabilities{
+                                            Add: [] apiv1.Capability{
+                                              "NET_ADMIN", "SYS_ADMIN",
+                                            },
+                                        },
+                                    },
+                                VolumeMounts: []apiv1.VolumeMount{
+                                    {
+                                        Name: "dev-net-tun",
+                                        ReadOnly: true,
+                                        MountPath: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                        },
+                        Volumes: []apiv1.Volume{
+                            // zerotier sidecar volume
+                            {
+                                Name: "dev-net-tun",
+                                VolumeSource: apiv1.VolumeSource{
+                                    HostPath: &apiv1.HostPathVolumeSource{
+                                        Path: "/dev/net/tun",
+                                    },
+                                },
                             },
                         },
                     },
