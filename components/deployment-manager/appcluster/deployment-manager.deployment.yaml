@@ -28,10 +28,12 @@ spec:
         args:
         - "run"
         #  - "--logger-address=http://log-collector.kube-system.svc.cluster.local:8083"
+        env:
+        - name: MANAGER_CLUSTER_IP
+          valueFrom:
+            secretKeyRef:
+              name: manager-cluster-secret
+              key: MANAGER_CLUSTER_IP
         ports:
         - name: api-port
           containerPort: 5200
-        # readinessProbe:
-        #  httpGet:
-        #    path: /ping
-        #    port: api-port

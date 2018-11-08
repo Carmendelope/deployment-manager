@@ -21,6 +21,8 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/deployment-manager/pkg"
+    "fmt"
 )
 
 /*
@@ -199,10 +201,12 @@ func(d *DeployableDeployments) Build() error {
                             // zero-tier sidecar
                             {
                                 Name: "zt-sidecar",
-                                //Image: "nalej/zt-nalej:latest",
-                                // TODO prepare this to pull from a repository
+                                // TODO prepare this to be pulled from a public docker repository
                                 Image: "nalej/zt-nalej:0.1.0",
                                 Args: []string{d.ztNetworkId},
+                                Env: []apiv1.EnvVar{
+                                    apiv1.EnvVar{Name:"MANAGER_CLUSTER",Value:fmt.Sprintf("%s:8000",pkg.MANAGER_CLUSTER_IP)},
+                                },
                                 SecurityContext:
                                     &apiv1.SecurityContext{
                                         Privileged: boolPtr(true),

@@ -14,6 +14,9 @@ import (
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
+    "os"
+    "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/deployment-manager/pkg"
 )
 
 // Configuration structure
@@ -35,6 +38,12 @@ type DeploymentManagerService struct {
 
 
 func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, error) {
+
+    if os.Getenv(utils.MANAGER_ClUSTER_IP) == "" {
+        log.Fatal().Msgf("%s variable was not set", utils.MANAGER_ClUSTER_IP)
+    }
+
+    pkg.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP)
 
     exec, err := kubernetes.NewKubernetesExecutor(config.Local)
     if err != nil {
