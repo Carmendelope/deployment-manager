@@ -21,6 +21,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/deployment-manager/pkg"
 )
 
 /*
@@ -57,14 +58,16 @@ type DeployableKubernetesStage struct {
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string) *DeployableKubernetesStage {
+    targetNamespace string, ztNetworkId string, organizationId string, deploymentId string,
+    appInstanceId string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client: client,
         stage: stage,
         targetNamespace: targetNamespace,
         ztNetworkId: ztNetworkId,
         services: NewDeployableService(client, stage, targetNamespace),
-        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId),
+        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId, deploymentId,
+            appInstanceId),
     }
 }
 
@@ -141,18 +144,28 @@ type DeployableDeployments struct{
     targetNamespace string
     // zero-tier network id
     ztNetworkId string
+    // organization id
+    organizationId string
+    // deployment id
+    deploymentId string
+    // application instance id
+    appInstanceId string
     // map of deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
 }
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string) *DeployableDeployments {
+    targetNamespace string, ztNetworkId string, organizationId string, deploymentId string,
+    appInstanceId string) *DeployableDeployments {
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
         ztNetworkId: ztNetworkId,
+        organizationId: organizationId,
+        deploymentId: deploymentId,
+        appInstanceId: appInstanceId,
         deployments: make(map[string]appsv1.Deployment,0),
     }
 }
@@ -198,11 +211,25 @@ func(d *DeployableDeployments) Build() error {
                             },
                             // zero-tier sidecar
                             {
-                                Name: "zt-sidecar",
-                                //Image: "nalej/zt-nalej:latest",
-                                // TODO prepare this to pull from a repository
-                                Image: "nalej/zt-nalej:0.1.0",
-                                Args: []string{d.ztNetworkId},
+                                Name: "zt-agent",
+                                // TODO prepare this to be pulled from a public docker repository
+                                Image: "nalej/zt-agent:v0.1.0",
+                                Args: []string{
+                                    "run",
+                                    "--appInstanceId", d.appInstanceId,
+                                    "--deploymentId", d.deploymentId,
+                                    "--fragmentId", d.stage.FragmentId,
+                                    "--hostname", "$(HOSTNAME)",
+                                    //"--managerAddr", "10.0.2.2:5200",
+                                    "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
+                                    //"--managerAddr", "10.0.2.2:$($DEPLOYMENT_MANAGER_SERVICE_PORT)",
+                                    //"--managerAddr", fmt.Sprintf("deployment-manager.nalej:$($DEPLOYMENT_MANAGER_SERVICE_PORT)"),
+                                    "--organizationId", d.organizationId,
+                                    "--networkId", d.ztNetworkId,
+                                },
+                                Env: []apiv1.EnvVar{
+                                    apiv1.EnvVar{Name:"HOSTNAME", ValueFrom: &apiv1.EnvVarSource{FieldRef: &apiv1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+                                },
                                 SecurityContext:
                                     &apiv1.SecurityContext{
                                         Privileged: boolPtr(true),

@@ -199,6 +199,14 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:0cc441f3dfe124dd74f44dd7e466dfc17cc7edff468094fbc3847a96b5ebf6f7"
+  name = "github.com/nalej/derrors"
+  packages = ["."]
+  pruneopts = ""
+  revision = "7a6df7f0bb1c7cddfec82c91119f193f6fcbc9d5"
+  version = "v2.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:25200286ac352bab5df0e84f9ec1e360ba61ec237a759c6b9381afa4b489e2dc"
   name = "github.com/nalej/golang-template"
@@ -223,20 +231,20 @@
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:5d0fc376d8eed2d15b1d671cfe81c1d5458f0b6c21da9adece29a1aba8a7ed61"
+  digest = "1:f387868431e20b2904b5f9709b0fd60ee6f1021195146b5fcc71c89d228c302f"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
   pruneopts = ""
-  revision = "8cb8f26576a4267baabbfccb53cdf578aadb6f4c"
-  version = "v0.0.45"
+  revision = "12254c12d09b69cebf5b5a70552fb6e82369c900"
+  version = "v0.0.52"
 
 [[projects]]
-  digest = "1:54ef635135052b82becd649df5281613d44aeda05e2a5f2c68b423a4d2030237"
+  digest = "1:cc471f899b0f9aec125a5e662b9b4c9b4ee253a4d0505e5fa0c8db0add3e4d7c"
   name = "github.com/nalej/grpc-deployment-manager-go"
   packages = ["."]
   pruneopts = ""
-  revision = "619227b53b095c2fdf8ef893da00289cc0aff7c0"
-  version = "v0.0.19"
+  revision = "29f31222af1e4ea4d318705879b34b5e24f46507"
+  version = "v0.0.25"
 
 [[projects]]
   digest = "1:31f10e244830122699d60e0923942e8a723023175816b0f24e640ad3fe12d49c"
@@ -247,12 +255,20 @@
   version = "v0.0.9"
 
 [[projects]]
-  digest = "1:f7f16614345880bbdd83b8f5a44f78827a3cfb685de40be35ccee332e1edb3f1"
+  digest = "1:7ed8a57b95fda0795385b56fc74c961ca557873e2c16646d08c8b22d1a41d977"
+  name = "github.com/nalej/grpc-network-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "d08df592bc9275130662e20fa7f54544a9c16e00"
+  version = "v0.0.11"
+
+[[projects]]
+  digest = "1:f67ef4fca5de50942bba5c4dc70ecf9a86ab360dc7b9d3780ebe39547dfe8e5b"
   name = "github.com/nalej/grpc-organization-go"
   packages = ["."]
   pruneopts = ""
-  revision = "f4e16aba05d8a37ec1b895da3c1a0eead4b2bd1c"
-  version = "v0.0.4"
+  revision = "fa03342ed5416ef844e295e2675368169a877ff0"
+  version = "v0.0.12"
 
 [[projects]]
   digest = "1:05c1a54c80e2d88b6af8f6e3af68ded6ef7f5aea9a28873fb68edc72ea798581"
@@ -749,10 +765,13 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/nalej/derrors",
     "github.com/nalej/golang-template/version",
     "github.com/nalej/grpc-application-go",
+    "github.com/nalej/grpc-common-go",
     "github.com/nalej/grpc-conductor-go",
     "github.com/nalej/grpc-deployment-manager-go",
+    "github.com/nalej/grpc-network-go",
     "github.com/nalej/grpc-utils/pkg/test",
     "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/onsi/ginkgo",

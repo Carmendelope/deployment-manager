@@ -69,13 +69,16 @@
 
 [[constraint]]
     name = "github.com/nalej/grpc-conductor-go"
-    version="v0.0.45"
+    version="v0.0.52"
 
 [[constraint]]
     name = "github.com/nalej/grpc-application-go"
     version="v0.0.14"
 
-
 [[constraint]]
     name = "github.com/nalej/grpc-deployment-manager-go"
-    version="v0.0.19"
+    version="v0.0.20"
+
+[[constraint]]
+    name = "github.com/nalej/grpc-network-go"
+    version="v0.0.11"

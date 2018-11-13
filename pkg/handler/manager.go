@@ -36,6 +36,8 @@ type Manager struct {
     executor executor.Executor
     // Helper monitor
     monitor *monitor.MonitorHelper
+    // Conductor address
+    conductorAddress string
 }
 
 func NewManager(conductorConnection *grpc.ClientConn, executor *executor.Executor) *Manager {
@@ -71,7 +73,8 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
-        deployable, err := m.executor.BuildNativeDeployable(stage, namespace, request.ZtNetworkId)
+        deployable, err := m.executor.BuildNativeDeployable(stage, namespace, request.ZtNetworkId,
+            request.Fragment.OrganizationId, request.Fragment.DeploymentId, request.Fragment.AppInstanceId)
 
         if err != nil {
             log.Error().Err(err).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
