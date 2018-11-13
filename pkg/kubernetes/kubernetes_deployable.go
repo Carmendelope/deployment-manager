@@ -21,7 +21,6 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/utils"
-    "github.com/nalej/deployment-manager/pkg"
     "fmt"
 )
 
@@ -59,14 +58,16 @@ type DeployableKubernetesStage struct {
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string) *DeployableKubernetesStage {
+    targetNamespace string, ztNetworkId string, organizationId string, deploymentId string,
+    appInstanceId string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client: client,
         stage: stage,
         targetNamespace: targetNamespace,
         ztNetworkId: ztNetworkId,
         services: NewDeployableService(client, stage, targetNamespace),
-        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId),
+        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId, deploymentId,
+            appInstanceId),
     }
 }
 
@@ -143,18 +144,28 @@ type DeployableDeployments struct{
     targetNamespace string
     // zero-tier network id
     ztNetworkId string
+    // organization id
+    organizationId string
+    // deployment id
+    deploymentId string
+    // application instance id
+    appInstanceId string
     // map of deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
 }
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string) *DeployableDeployments {
+    targetNamespace string, ztNetworkId string, organizationId string, deploymentId string,
+    appInstanceId string) *DeployableDeployments {
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
         ztNetworkId: ztNetworkId,
+        organizationId: organizationId,
+        deploymentId: deploymentId,
+        appInstanceId: appInstanceId,
         deployments: make(map[string]appsv1.Deployment,0),
     }
 }
@@ -200,13 +211,21 @@ func(d *DeployableDeployments) Build() error {
                             },
                             // zero-tier sidecar
                             {
-                                Name: "zt-sidecar",
+                                Name: "zt-agent",
                                 // TODO prepare this to be pulled from a public docker repository
-                                Image: "nalej/zt-nalej:0.1.0",
-                                Args: []string{d.ztNetworkId},
-                                Env: []apiv1.EnvVar{
-                                    apiv1.EnvVar{Name:"MANAGER_CLUSTER",Value:fmt.Sprintf("%s:8000",pkg.MANAGER_CLUSTER_IP)},
+                                Image: "nalej/zt-agent:0.1.0",
+                                Args: []string{
+                                    "--appInstanceId", d.appInstanceId,
+                                    "--deploymentId", d.deploymentId,
+                                    "--fragmentId", d.stage.FragmentId,
+                                    "--hostname", "$($HOSTNAME)",
+                                    "--managerAddr", fmt.Sprintf("deployment-manager.nalej:$($DEPLOYMENT_MANAGER_SERVICE_PORT)"),
+                                    "--organizationId", d.organizationId,
+                                    "--networkId", d.ztNetworkId,
                                 },
+                                // Env: []apiv1.EnvVar{
+                                //    apiv1.EnvVar{Name:"MANAGER_CLUSTER",Value:fmt.Sprintf("%s:8000",pkg.MANAGER_CLUSTER_IP)},
+                                //},
                                 SecurityContext:
                                     &apiv1.SecurityContext{
                                         Privileged: boolPtr(true),

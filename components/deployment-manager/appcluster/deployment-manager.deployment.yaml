@@ -20,20 +20,25 @@ spec:
         component: deployment-manager
     spec:
       containers:
-      - name: musician
+      - name: deployment-manager
         image: nalej/deployment-manager:VERSION
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 2000
         args:
         - "run"
-        #  - "--logger-address=http://log-collector.kube-system.svc.cluster.local:8083"
+        - "--local"
         env:
         - name: MANAGER_CLUSTER_IP
           valueFrom:
             secretKeyRef:
               name: manager-cluster-secret
               key: MANAGER_CLUSTER_IP
+        - name: MANAGER_CLUSTER_PORT
+          valueFrom:
+            secretKeyRef:
+              name: manager-cluster-secret
+              key: MANAGER_CLUSTER_PORT
         ports:
         - name: api-port
           containerPort: 5200

@@ -11,6 +11,9 @@ const (
     // Address of the remote manager cluster in charge of controlling this deployment manager.
     MANAGER_ClUSTER_IP = "MANAGER_CLUSTER_IP"
 
+    // Port of the remote manager cluster
+    MANAGER_CLUSTER_PORT = "MANAGER_CLUSTER_PORT"
+
     // Annotation to identify services deployed by nalej
     NALEJ_SERVICE_NAME = "nalej-service"
 

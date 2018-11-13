@@ -11,3 +11,6 @@ package pkg
 // IP for the manager in charge of this cluster. This is required to set local environments when running
 // local instances.
 var MANAGER_CLUSTER_IP string
+
+// Port of the manager cluster service.
+var MANAGER_CLUSTER_PORT string

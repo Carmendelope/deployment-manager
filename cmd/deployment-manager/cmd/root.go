@@ -14,7 +14,7 @@ import (
     "path/filepath"
     "strings"
     "os"
-    "github.com/nalej/golang-template/version"
+    "github.com/nalej/deployment-manager/version"
 )
 
 var RootCmd = &cobra.Command{
@@ -44,8 +44,6 @@ func Execute() {
         log.Error().Msg(err.Error())
     }
 }
-
-
 
 
 func initConfig() {
