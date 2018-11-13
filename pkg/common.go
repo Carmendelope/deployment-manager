@@ -14,3 +14,6 @@ var MANAGER_CLUSTER_IP string
 
 // Port of the manager cluster service.
 var MANAGER_CLUSTER_PORT string
+
+// Deployment manager address
+var DEPLOYMENT_MANAGER_ADDR string

@@ -28,6 +28,7 @@ spec:
         args:
         - "run"
         - "--local"
+        - "-d deployment-manager.nalej:5200"
         env:
         - name: MANAGER_CLUSTER_IP
           valueFrom:

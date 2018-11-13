@@ -21,6 +21,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/deployment-manager/pkg"
 )
 
 /*
@@ -219,7 +220,8 @@ func(d *DeployableDeployments) Build() error {
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
                                     "--hostname", "$(HOSTNAME)",
-                                    "--managerAddr", "10.0.2.2:5200",
+                                    //"--managerAddr", "10.0.2.2:5200",
+                                    "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
                                     //"--managerAddr", "10.0.2.2:$($DEPLOYMENT_MANAGER_SERVICE_PORT)",
                                     //"--managerAddr", fmt.Sprintf("deployment-manager.nalej:$($DEPLOYMENT_MANAGER_SERVICE_PORT)"),
                                     "--organizationId", d.organizationId,

@@ -9,14 +9,14 @@ package service
 import (
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/grpc-utils/pkg/tools"
-    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-    "google.golang.org/grpc/reflection"
-    "github.com/nalej/deployment-manager/pkg/kubernetes"
-    "github.com/rs/zerolog/log"
-    "google.golang.org/grpc"
     "github.com/nalej/deployment-manager/pkg/network"
-    "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/deployment-manager/pkg/kubernetes"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/reflection"
+    "github.com/rs/zerolog/log"
     "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/utils"
     "os"
     "strconv"
     "net"
@@ -31,6 +31,8 @@ type Config struct {
     ConductorAddress string
     // Network manager address
     NetworkAddress string
+    // DeploymentManager address
+    DeploymentMgrAddress string
     // is kubernetes locally available
     Local bool
 }
@@ -47,7 +49,8 @@ type DeploymentManagerService struct {
 }
 
 // Set the values of the environment variables.
-func setEnvironmentVars() {
+
+func setEnvironmentVars(config *Config) {
     if pkg.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP); pkg.MANAGER_CLUSTER_IP == "" {
         log.Fatal().Msgf("%s variable was not set", utils.MANAGER_ClUSTER_IP)
     }
@@ -60,9 +63,13 @@ func setEnvironmentVars() {
         }
     }
 
+    pkg.DEPLOYMENT_MANAGER_ADDR = config.DeploymentMgrAddress
 }
 
+
 func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, error) {
+
+    setEnvironmentVars(config)
 
     exec, err := kubernetes.NewKubernetesExecutor(config.Local)
     if err != nil {
