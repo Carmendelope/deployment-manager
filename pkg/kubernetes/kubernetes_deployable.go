@@ -21,7 +21,6 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/utils"
-    "fmt"
 )
 
 /*
@@ -213,19 +212,22 @@ func(d *DeployableDeployments) Build() error {
                             {
                                 Name: "zt-agent",
                                 // TODO prepare this to be pulled from a public docker repository
-                                Image: "nalej/zt-agent:0.1.0",
+                                Image: "nalej/zt-agent:v0.1.0",
                                 Args: []string{
+                                    "run",
                                     "--appInstanceId", d.appInstanceId,
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
-                                    "--hostname", "$($HOSTNAME)",
-                                    "--managerAddr", fmt.Sprintf("deployment-manager.nalej:$($DEPLOYMENT_MANAGER_SERVICE_PORT)"),
+                                    "--hostname", "$(HOSTNAME)",
+                                    "--managerAddr", "10.0.2.2:5200",
+                                    //"--managerAddr", "10.0.2.2:$($DEPLOYMENT_MANAGER_SERVICE_PORT)",
+                                    //"--managerAddr", fmt.Sprintf("deployment-manager.nalej:$($DEPLOYMENT_MANAGER_SERVICE_PORT)"),
                                     "--organizationId", d.organizationId,
                                     "--networkId", d.ztNetworkId,
                                 },
-                                // Env: []apiv1.EnvVar{
-                                //    apiv1.EnvVar{Name:"MANAGER_CLUSTER",Value:fmt.Sprintf("%s:8000",pkg.MANAGER_CLUSTER_IP)},
-                                //},
+                                Env: []apiv1.EnvVar{
+                                    apiv1.EnvVar{Name:"HOSTNAME", ValueFrom: &apiv1.EnvVarSource{FieldRef: &apiv1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+                                },
                                 SecurityContext:
                                     &apiv1.SecurityContext{
                                         Privileged: boolPtr(true),

@@ -28,7 +28,9 @@ type Config struct {
     // listening port
     Port uint32
     // Conductor address
-    AddressConductor string
+    ConductorAddress string
+    // Network manager address
+    NetworkAddress string
     // is kubernetes locally available
     Local bool
 }
@@ -70,9 +72,9 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Build connection with conductor
-    conn, err := grpc.Dial(config.AddressConductor, grpc.WithInsecure())
+    conn, err := grpc.Dial(config.ConductorAddress, grpc.WithInsecure())
     if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with system model at %s", config.AddressConductor)
+        log.Panic().Err(err).Msgf("impossible to connect with system model at %s", config.ConductorAddress)
         panic(err.Error())
         return nil, err
     }
@@ -80,8 +82,16 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     // Instantiate deployment manager service
     mgr := handler.NewManager(conn,&exec)
 
+    // Build connection with networking manager
+    connNet, err := grpc.Dial(config.NetworkAddress, grpc.WithInsecure())
+    if err != nil {
+        log.Panic().Err(err).Msgf("impossible to connect with system model at %s", config.NetworkAddress)
+        panic(err.Error())
+        return nil, err
+    }
+
     // Instantiate network manager service
-    net := network.NewManager(conn)
+    net := network.NewManager(connNet)
 
     // Instantiate target server
     server := tools.NewGenericGRPCServer(config.Port)

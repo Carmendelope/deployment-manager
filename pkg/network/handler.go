@@ -27,6 +27,7 @@ func NewHandler(m *Manager) *Handler {
 
 // A pod requests authorization to join a ZT Network
 func(h *Handler) AuthorizeNetworkMembership(context context.Context, request *pbDeploymentMgr.AuthorizeNetworkMembershipRequest) (*pbCommon.Success, error) {
+    log.Debug().Msgf("authorize member %s to join network %s", request.MemberId, request.MemberId)
     err := h.mng.AuthorizeNetworkMembership(request.OrganizationId, request.NetworkId, request.MemberId)
     if err != nil {
         msg := fmt.Sprintf("error authorizing member %s in network %s", request.MemberId, request.NetworkId)
@@ -39,8 +40,8 @@ func(h *Handler) AuthorizeNetworkMembership(context context.Context, request *pb
 
 // Request the creation of a new network entry
 func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeploymentMgr.RegisterNetworkEntryRequest) (*pbCommon.Success, error) {
-
-    log.Debug().Msgf("%#v", request)
+    log.Debug().Msgf("reqister network entry for app %s in organization %s with ip %s ",request.AppInstanceId,
+        request.OrganizationId, request.ServiceIp)
 
     err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.NetworkId, request.ServiceName, request.ServiceIp)
     if err != nil {
