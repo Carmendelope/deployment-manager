@@ -27,6 +27,8 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 
 # Docker configuration
+AZURE_CR=nalejregistry
+DOCKER_REGISTRY=$(AZURE_CR).azurecr.io
 DOCKER_REPO=nalej
 VERSION=$(shell cat .version)
 
@@ -134,9 +136,9 @@ create-image:
         echo Create image of app $$app ; \
         if [ -f components/"$$app"/Dockerfile ]; then \
             mkdir -p $(TARGET)/images/"$$app" ; \
-            docker build --no-cache -t $(DOCKER_REPO)/"$$app":$(VERSION) -f components/"$$app"/Dockerfile $(TARGET)/linux_amd64 ; \
-            docker save $(DOCKER_REPO)/"$$app" > $(TARGET)/images/"$$app"/image.tar ; \
-            // docker rmi $(DOCKER_REPO)/"$$app":$(VERSION) ; \
+            docker build --no-cache -t $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) -f components/"$$app"/Dockerfile $(TARGET)/linux_amd64 ; \
+            docker save $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app" > $(TARGET)/images/"$$app"/image.tar ; \
+            // docker rmi $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) ; \
             cd $(TARGET)/images/"$$app"/ && tar cvzf "$$app".tar.gz * && cd - ; \
         else  \
             echo $$app has no Dockerfile ; \
@@ -147,25 +149,17 @@ create-image:
 publish: image publish-image
 
 publish-image:
-	$(info >>> Publish images into Docker Hub ...)
-	if [ ""$$DOCKER_USER"" = "" ]; then \
-	    echo DOCKER_USER environment variable was not set!!! ; \
-	    exit 1 ; \
-	fi ; \
-	if [ ""$$DOCKER_USER"" = "" ]; then \
-        echo DOCKER_USER environment variable was not set!!! ; \
-        exit 1 ; \
-    fi ; \
-	$(info >>> Assuming credentials are available in environment variables ...)
-	echo  "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USER" --password-stdin
+	$(info >>> Logging in Azure and Azure Container Registry ...)
+	az login
+	az acr login --name $(AZURE_CR)
+
+	$(info >>> Publish images into Azure Container Registry ...)
 	for app in $(APPS); do \
 	    if [ -f $(TARGET)/images/"$$app"/image.tar ]; then \
-	        docker push $(DOCKER_REPO)/"$$app":$(VERSION) ; \
+	        docker push $(DOCKER_REGISTRY)/$(DOCKER_REPO)/"$$app":$(VERSION) ; \
 	    else \
 	        echo $$app has no image to be pushed ; \
 	    fi ; \
-   	    echo  Publish image of app $$app ; \
+   	    echo  Published image of app $$app ; \
     done ; \
-    docker logout ; \
-
-
+    az logout ; \
