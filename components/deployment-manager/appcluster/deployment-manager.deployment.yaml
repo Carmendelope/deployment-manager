@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: deployment-manager
-        image: nalej/deployment-manager:VERSION
+        image: nalejregistry.azurecr.io/nalej/deployment-manager:VERSION
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 2000
@@ -43,3 +43,5 @@ spec:
         ports:
         - name: api-port
           containerPort: 5200
+      imagePullSecrets:
+      - name: nalej-registry
