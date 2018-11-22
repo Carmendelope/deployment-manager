@@ -22,6 +22,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/deployment-manager/pkg"
+    "fmt"
 )
 
 /*
@@ -153,6 +154,9 @@ type DeployableDeployments struct{
     // map of deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
+    // map of agents deployed for every service
+    // service_id -> zt-agent deployment
+    ztAgents map[string]appsv1.Deployment
 }
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
@@ -167,6 +171,7 @@ func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.De
         deploymentId: deploymentId,
         appInstanceId: appInstanceId,
         deployments: make(map[string]appsv1.Deployment,0),
+        ztAgents: make(map[string]appsv1.Deployment,0),
     }
 }
 
@@ -175,8 +180,9 @@ func(d *DeployableDeployments) GetId() string {
 }
 
 func(d *DeployableDeployments) Build() error {
-    // TODO check potential errors.
+
     deployments:= make(map[string]appsv1.Deployment,0)
+    agents:= make(map[string]appsv1.Deployment,0)
 
     for serviceIndex, service := range d.stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
@@ -198,17 +204,51 @@ func(d *DeployableDeployments) Build() error {
                     ObjectMeta: metav1.ObjectMeta{
                         Labels: service.Labels,
                     },
-                    // Every pod template is designed to use a container with the requested image
-                    // and a helping sidecar with a containerized zerotier that joins the network
-                    // after running
                     Spec: apiv1.PodSpec{
                         Containers: []apiv1.Container{
                             {
                                 Name:  service.Name,
                                 Image: service.Image,
-                                Env: getEnvVariables(service.EnvironmentVariables),
+                                Env:   getEnvVariables(service.EnvironmentVariables),
                                 Ports: getContainerPorts(service.ExposedPorts),
                             },
+                        },
+                    },
+                },
+            },
+        }
+        // Set a different set of labels to identify this agent
+        ztAgentLabels := map[string]string {
+            "agent": "zt-agent",
+            "app": service.Labels["app"],
+        }
+
+        zero := int64(0)
+        root := &zero
+        agent := appsv1.Deployment{
+            ObjectMeta: metav1.ObjectMeta{
+                Name: fmt.Sprintf("zt-%s",service.Name),
+                Namespace: d.targetNamespace,
+                Labels: ztAgentLabels,
+                Annotations: map[string] string {
+                    utils.NALEJ_SERVICE_NAME : service.ServiceId,
+                },
+            },
+            Spec: appsv1.DeploymentSpec{
+                Replicas: int32Ptr(1),
+                Selector: &metav1.LabelSelector{
+                    MatchLabels:ztAgentLabels,
+                },
+                Template: apiv1.PodTemplateSpec{
+                    ObjectMeta: metav1.ObjectMeta{
+                        Labels: ztAgentLabels,
+                    },
+                    // Every pod template is designed to use a container with the requested image
+                    // and a helping sidecar with a containerized zerotier that joins the network
+                    // after running
+                    Spec: apiv1.PodSpec{
+                        // HostNetwork: true,
+                        Containers: []apiv1.Container{
                             // zero-tier sidecar
                             {
                                 Name: "zt-agent",
@@ -217,28 +257,44 @@ func(d *DeployableDeployments) Build() error {
                                 Args: []string{
                                     "run",
                                     "--appInstanceId", d.appInstanceId,
+                                    "--appName", service.Name,
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
-                                    "--hostname", "$(HOSTNAME)",
-                                    //"--managerAddr", "10.0.2.2:5200",
                                     "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
-                                    //"--managerAddr", "10.0.2.2:$($DEPLOYMENT_MANAGER_SERVICE_PORT)",
-                                    //"--managerAddr", fmt.Sprintf("deployment-manager.nalej:$($DEPLOYMENT_MANAGER_SERVICE_PORT)"),
                                     "--organizationId", d.organizationId,
+                                    "--organizationName", "myorg",
                                     "--networkId", d.ztNetworkId,
                                 },
                                 Env: []apiv1.EnvVar{
-                                    apiv1.EnvVar{Name:"HOSTNAME", ValueFrom: &apiv1.EnvVarSource{FieldRef: &apiv1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+                                    apiv1.EnvVar{
+                                        Name:  "K8S_SERVICE_NAME",
+                                        Value: fmt.Sprintf("%s.%s", service.Name, d.targetNamespace),
+                                    },
+                                },
+                                Ports: []apiv1.ContainerPort{
+                                    apiv1.ContainerPort{
+                                        Name:"zt-port-tcp",
+                                        ContainerPort: 9993,
+                                        Protocol: apiv1.ProtocolTCP,
+                                    },
+                                    apiv1.ContainerPort{
+                                        Name:"zt-port-udp",
+                                        ContainerPort: 9993,
+                                        Protocol: apiv1.ProtocolUDP,
+                                    },
                                 },
                                 SecurityContext:
-                                    &apiv1.SecurityContext{
-                                        Privileged: boolPtr(true),
-                                        Capabilities: &apiv1.Capabilities{
-                                            Add: [] apiv1.Capability{
-                                              "NET_ADMIN", "SYS_ADMIN",
-                                            },
+                                &apiv1.SecurityContext{
+                                    RunAsUser: root,
+                                    Privileged: boolPtr(true),
+                                    Capabilities: &apiv1.Capabilities{
+                                        Add: [] apiv1.Capability{
+                                            "NET_ADMIN",
+                                            "SYS_ADMIN",
                                         },
                                     },
+                                },
+
                                 VolumeMounts: []apiv1.VolumeMount{
                                     {
                                         Name: "dev-net-tun",
@@ -248,6 +304,7 @@ func(d *DeployableDeployments) Build() error {
                                 },
                             },
                         },
+
                         Volumes: []apiv1.Volume{
                             // zerotier sidecar volume
                             {
@@ -259,14 +316,19 @@ func(d *DeployableDeployments) Build() error {
                                 },
                             },
                         },
+
                     },
                 },
             },
         }
 
         deployments[service.ServiceId] = deployment
+        agents[service.ServiceId] = agent
     }
+
+
     d.deployments = deployments
+    d.ztAgents = agents
     return nil
 }
 
@@ -275,6 +337,16 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
         deployed, err := d.client.Create(&dep)
         if err != nil {
             log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
+            return err
+        }
+        log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
+        controller.AddMonitoredResource(string(deployed.GetUID()), serviceId, d.stage.StageId)
+    }
+    // same approach for agents
+    for serviceId, dep := range d.ztAgents {
+        deployed, err := d.client.Create(&dep)
+        if err != nil {
+            log.Error().Err(err).Msgf("error creating deployment for zt-agent %s",dep.Name)
             return err
         }
         log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
@@ -306,6 +378,8 @@ type DeployableServices struct {
     targetNamespace string
     // serviceId -> serviceInstance
     services map[string]apiv1.Service
+    // service_id -> zt-agent service
+    ztAgents map[string]apiv1.Service
 }
 
 func NewDeployableService(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
@@ -316,6 +390,7 @@ func NewDeployableService(client *kubernetes.Clientset, stage *pbConductor.Deplo
         stage: stage,
         targetNamespace: targetNamespace,
         services: make(map[string]apiv1.Service,0),
+        ztAgents: make(map[string]apiv1.Service,0),
     }
 }
 
@@ -326,6 +401,7 @@ func(d *DeployableServices) GetId() string {
 func(s *DeployableServices) Build() error {
     // TODO check potential errors
     services := make(map[string]apiv1.Service,0)
+    ztServices := make(map[string]apiv1.Service,0)
     for serviceIndex, service := range s.stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.stage.Services))
         ports := getServicePorts(service.ExposedPorts)
@@ -346,15 +422,43 @@ func(s *DeployableServices) Build() error {
                     Type: apiv1.ServiceTypeNodePort,
                     Selector: service.Labels,
                 },
-
             }
             services[service.ServiceId] = k8sService
+
+            // Create the zt-agent service
+            // Set a different set of labels to identify this agent
+            ztAgentLabels := map[string]string {
+                "agent": "zt-agent",
+                "app": service.Labels["app"],
+            }
+
+            ztServiceName := fmt.Sprintf("zt-%s",service.Name)
+            ztService := apiv1.Service{
+                ObjectMeta: metav1.ObjectMeta{
+                    Namespace: s.targetNamespace,
+                    Name: ztServiceName,
+                    Labels: ztAgentLabels,
+                    Annotations: map[string] string {
+                        "nalej-service" : service.ServiceId,
+                    },
+                },
+                Spec: apiv1.ServiceSpec{
+                    ExternalName: ztServiceName,
+                    Ports: getServicePorts(service.ExposedPorts),
+                    // TODO remove by default we use clusterip.
+                    Type: apiv1.ServiceTypeNodePort,
+                    Selector: ztAgentLabels,
+                },
+            }
+            ztServices[service.ServiceId] = ztService
+
         } else {
             log.Debug().Msgf("No k8s service is generated for %s",service.ServiceId)
         }
     }
     // add the created services
     s.services = services
+    s.ztAgents = ztServices
     return nil
 }
 
@@ -368,6 +472,17 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
         log.Debug().Msgf("created service with uid %s", created.GetUID())
         controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
     }
+
+    // Create services for agents
+    for serviceId, serv := range s.ztAgents {
+        created, err := s.client.Create(&serv)
+        if err != nil {
+            log.Error().Err(err).Msgf("error creating service agent %s",serv.Name)
+            return err
+        }
+        log.Debug().Msgf("created service agent with uid %s", created.GetUID())
+        controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
+    }
     return nil
 }
 
@@ -375,7 +490,15 @@ func(s *DeployableServices) Undeploy() error {
     for _, serv := range s.services {
         err := s.client.Delete(serv.Name, metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
         if err != nil {
-            log.Error().Err(err).Msgf("error creating service %s",serv.Name)
+            log.Error().Err(err).Msgf("error deleting service %s",serv.Name)
+            return err
+        }
+    }
+    // undeploy zt agents
+    for _, serv := range s.ztAgents {
+        err := s.client.Delete(serv.Name, metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
+        if err != nil {
+            log.Error().Err(err).Msgf("error deleting service agent %s",serv.Name)
             return err
         }
     }
