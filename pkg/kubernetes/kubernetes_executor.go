@@ -7,6 +7,7 @@
 package kubernetes
 
 import (
+    "github.com/nalej/derrors"
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/nalej/deployment-manager/pkg/executor"
     "k8s.io/client-go/kubernetes"
@@ -178,6 +179,15 @@ func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentSt
     err := toUndeploy.Undeploy()
     if err != nil {
         log.Error().Msgf("error undeploying fragment %s", fragment.FragmentId)
+    }
+    return err
+}
+
+func (k *KubernetesExecutor) UndeployNamespace(request *pbConductor.UndeployRequest, toUndeploy executor.Deployable) derrors.Error {
+    log.Info().Msgf("undeploy app %s", request.InstaceId)
+    err := toUndeploy.Undeploy()
+    if err != nil {
+        log.Error().Msgf("error undeploying app %s", request.InstaceId)
     }
     return err
 }
