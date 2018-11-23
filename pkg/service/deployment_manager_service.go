@@ -79,9 +79,10 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Build connection with conductor
+    log.Debug().Msgf("connect with conductor at %s", config.ConductorAddress)
     conn, err := grpc.Dial(config.ConductorAddress, grpc.WithInsecure())
     if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with system model at %s", config.ConductorAddress)
+        log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ConductorAddress)
         panic(err.Error())
         return nil, err
     }
@@ -90,9 +91,10 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     mgr := handler.NewManager(conn,&exec)
 
     // Build connection with networking manager
+    log.Debug().Msgf("connect with network manager at %s", config.NetworkAddress)
     connNet, err := grpc.Dial(config.NetworkAddress, grpc.WithInsecure())
     if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with system model at %s", config.NetworkAddress)
+        log.Panic().Err(err).Msgf("impossible to connect with networking manager at %s", config.NetworkAddress)
         panic(err.Error())
         return nil, err
     }

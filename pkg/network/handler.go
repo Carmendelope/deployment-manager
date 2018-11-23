@@ -27,7 +27,7 @@ func NewHandler(m *Manager) *Handler {
 
 // A pod requests authorization to join a ZT Network
 func(h *Handler) AuthorizeNetworkMembership(context context.Context, request *pbDeploymentMgr.AuthorizeNetworkMembershipRequest) (*pbCommon.Success, error) {
-    log.Debug().Msgf("authorize member %s to join network %s", request.MemberId, request.MemberId)
+    log.Debug().Msgf("authorize member %s to join network %s", request.MemberId, request.NetworkId)
     err := h.mng.AuthorizeNetworkMembership(request.OrganizationId, request.NetworkId, request.MemberId)
     if err != nil {
         msg := fmt.Sprintf("error authorizing member %s in network %s", request.MemberId, request.NetworkId)

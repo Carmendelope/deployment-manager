@@ -89,14 +89,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:009a1928b8c096338b68b5822d838a72b4d8520715c1463614476359f3282ec8"
+  digest = "1:5e345eb75d8bfb2b91cfbfe02a82a79c0b2ea55cf06c5a4d180a9321f36973b4"
   name = "github.com/gregjones/httpcache"
   packages = [
     ".",
     "diskcache",
   ]
   pruneopts = ""
-  revision = "9cad4c3443a7200dd6400aef47183728de563a38"
+  revision = "c63ab54fda8f77302f8d414e19933f2b6026a089"
 
 [[projects]]
   digest = "1:3313a63031ae281e5f6fd7b0bbca733dfa04d2429df86519e3b4d4c016ccb836"
@@ -175,12 +175,12 @@
   version = "v1.8.0"
 
 [[projects]]
-  digest = "1:5219b4506253ccc598f9340677162a42d6a78f340a4cc6df2d62db4d0593c4e9"
+  digest = "1:bcc46a0fbd9e933087bef394871256b5c60269575bb661935874729c65bbbf60"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   pruneopts = ""
-  revision = "fa473d140ef3c6adf42d6b391fe76707f1f243c8"
-  version = "v1.0.0"
+  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
+  version = "v1.1.2"
 
 [[projects]]
   digest = "1:0c0ff2a89c1bb0d01887e1dac043ad7efbf3ec77482ef058ac423d13497e16fd"
@@ -208,59 +208,59 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:25200286ac352bab5df0e84f9ec1e360ba61ec237a759c6b9381afa4b489e2dc"
+  digest = "1:1d27e34878d3ea83a30652014c4d51450a4666d6fd4d8e31049aeb1ca29c53c6"
   name = "github.com/nalej/golang-template"
   packages = ["version"]
   pruneopts = ""
-  revision = "07a770bd10401011de703a9357df0d959e722ebd"
+  revision = "f7eb8bc9309cbe4608c6f4ddbee7e8f6e00bc89e"
 
 [[projects]]
-  digest = "1:cf8ba07d415234e037938060edc8ac21d1211c66e368932a8f849a81b8fe1d87"
+  digest = "1:bc305e6d8dfac46a20b10ffd637a1c40d6656d080ea7c6e5f174cc8037aeb632"
   name = "github.com/nalej/grpc-application-go"
   packages = ["."]
   pruneopts = ""
-  revision = "f2c7f61db91c5609b988094c3eb00156b8b5f238"
-  version = "v0.0.14"
+  revision = "e9c8cc03e6e38d801e20946100e76914976addd1"
+  version = "v0.0.20"
 
 [[projects]]
-  digest = "1:cd1db58d47491fca87d1ca3c75f2fa4aceb1becc467f577c39e7bc1f19cac8fa"
+  digest = "1:9243bfe5d57a78cd5cd88ea48bff788649f92bac1a5b4a451b800a9c0eb92e29"
   name = "github.com/nalej/grpc-common-go"
   packages = ["."]
   pruneopts = ""
-  revision = "c5c7d4e388336451cdc0e42cf1c52fab99961419"
-  version = "v0.0.3"
+  revision = "afbeabffafbb2ad8bee5c6d6909064da4fe7a44e"
+  version = "v0.0.13"
 
 [[projects]]
-  digest = "1:f387868431e20b2904b5f9709b0fd60ee6f1021195146b5fcc71c89d228c302f"
+  digest = "1:81dc68aa6eb5ebecca748ff445815f77d07213938483f223fef86cccf90bbcfc"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
   pruneopts = ""
-  revision = "12254c12d09b69cebf5b5a70552fb6e82369c900"
-  version = "v0.0.52"
+  revision = "f81d4b53e970fc88bc597cea78956d55e6808eab"
+  version = "v0.0.53"
 
 [[projects]]
-  digest = "1:cc471f899b0f9aec125a5e662b9b4c9b4ee253a4d0505e5fa0c8db0add3e4d7c"
+  digest = "1:ddd3e56c1f10930fd011f0a4854d088edbbfd31653f912ede55428a11b67267f"
   name = "github.com/nalej/grpc-deployment-manager-go"
   packages = ["."]
   pruneopts = ""
-  revision = "29f31222af1e4ea4d318705879b34b5e24f46507"
-  version = "v0.0.25"
+  revision = "56e3379df54ee3f0322e0d67f3ec5e0e8837b917"
+  version = "v0.0.27"
 
 [[projects]]
-  digest = "1:31f10e244830122699d60e0923942e8a723023175816b0f24e640ad3fe12d49c"
+  digest = "1:072acc3354fe3d8ad2ea1f76d852a2c59c5120aead0801dbbb7bd3d1329e70ac"
   name = "github.com/nalej/grpc-infrastructure-go"
   packages = ["."]
   pruneopts = ""
-  revision = "7516f7818d29acfecc0e4e973857418dd862d355"
-  version = "v0.0.9"
+  revision = "2aff58ef27e1d66db11aefb93b0355dcb6c8a891"
+  version = "v0.0.13"
 
 [[projects]]
-  digest = "1:7ed8a57b95fda0795385b56fc74c961ca557873e2c16646d08c8b22d1a41d977"
+  digest = "1:44bedbd1cdaffdf8df95f1641948b0462f2f7784e8fea2a8db7b60a6fe898fc8"
   name = "github.com/nalej/grpc-network-go"
   packages = ["."]
   pruneopts = ""
-  revision = "d08df592bc9275130662e20fa7f54544a9c16e00"
-  version = "v0.0.11"
+  revision = "2701085ea2481902df28283922d188cebd433453"
+  version = "v0.0.12"
 
 [[projects]]
   digest = "1:f67ef4fca5de50942bba5c4dc70ecf9a86ab360dc7b9d3780ebe39547dfe8e5b"
@@ -354,7 +354,7 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:8f075bc8fa5543d148c597311032f403eb9cbcc55b72c8bf0f98c6186c04a69e"
+  digest = "1:d518eb4bfb76545977b0be8549606e6de5c56f8887b84cc24d12f5ec1c587e3a"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
@@ -363,8 +363,8 @@
     "log",
   ]
   pruneopts = ""
-  revision = "e0f8de6c359435b241b622af8e9a2e6d5a5e012c"
-  version = "v1.9.0"
+  revision = "8747b7b3a51b5d08ee7ac50eaf4869edaf9f714a"
+  version = "v1.11.0"
 
 [[projects]]
   digest = "1:d0431c2fd72e39ee43ea7742322abbc200c3e704c9102c5c3c2e2e667095b0ca"
@@ -378,12 +378,12 @@
   version = "v1.1.2"
 
 [[projects]]
-  digest = "1:d0b38ba6da419a6d4380700218eeec8623841d44a856bb57369c172fbf692ab4"
+  digest = "1:ae3493c780092be9d576a1f746ab967293ec165e8473425631f06658b6212afc"
   name = "github.com/spf13/cast"
   packages = ["."]
   pruneopts = ""
-  revision = "8965335b8c7107321228e3e3702cab9832751bac"
-  version = "v1.2.0"
+  revision = "8c9545af88b134710ab1cd196795e7f2388358d7"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:a1403cc8a94b8d7956ee5e9694badef0e7b051af289caad1cf668331e3ffa4f6"
@@ -402,32 +402,32 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:0a52bcb568386d98f4894575d53ce3e456f56471de6897bb8b9de13c33d9340e"
+  digest = "1:cbaf13cdbfef0e4734ed8a7504f57fe893d471d62a35b982bf6fb3f036449a66"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = ""
-  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
-  version = "v1.0.2"
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
 
 [[projects]]
-  digest = "1:ac25ea6cc1156aca9611411274b4a0bdd83a623845df6985aab508253955cc66"
+  digest = "1:1ed7a19588d3b74fc6a45fe89f95aa980a34870342fb9c3183b19cad08b18a1e"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = ""
-  revision = "8fb642006536c8d3760c99d4fa2389f5e2205631"
-  version = "v1.2.0"
+  revision = "2c12c60302a5a0e62ee102ca9bc996277c2f64f5"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "master"
-  digest = "1:61a86f0be8b466d6e3fbdabb155aaa4006137cb5e3fd3b949329d103fa0ceb0f"
+  digest = "1:f7be435e0ca22e2cd62b2d2542081a231685837170a87a3662abb7cdf9f3f1cd"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = ""
-  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
+  revision = "3d3f9f413869b949e48070b5bc593aa22cc2b8f2"
 
 [[projects]]
   branch = "master"
-  digest = "1:fbdbb6cf8db3278412c9425ad78b26bb8eb788181f26a3ffb3e4f216b314f86a"
+  digest = "1:4ac199b027ed34460ec4e0a92c882156f561e78cd046fef095e50f867462435a"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -443,29 +443,29 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "26e67e76b6c3f6ce91f7c52def5af501b4e0f3a2"
+  revision = "adae6a3d119ae4890b46832a2e88a95adc62b8e7"
 
 [[projects]]
   branch = "master"
-  digest = "1:235cb00e80dcf85b78a24be4bbe6c827fb28613b84037a9d524084308a849d91"
+  digest = "1:76df884b1ac08579aff75a621a538800759808f000bb4a1b08c91b485bfb3522"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
     "internal",
   ]
   pruneopts = ""
-  revision = "c57b0facaced709681d9f90397429b9430a74754"
+  revision = "8f65e3013ebad444f13bc19536f7865efc793816"
 
 [[projects]]
   branch = "master"
-  digest = "1:6f8f4a4fffbef9ef137261e37fd4da98981b978efeb79837434be05831bb87fc"
+  digest = "1:2e1aadff5bda52e267975408bf6b5e90135fc643829c9e4e964ff82c3826a1dd"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = ""
-  revision = "ee1b12c67af419cf5a9be3bdbeea7fc1c5f32f11"
+  revision = "0cf1ed9e522b7dbb416f080a5c8003de9b702bf4"
 
 [[projects]]
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
@@ -504,14 +504,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:55a681cb66f28755765fa5fa5104cbd8dc85c55c02d206f9f89566451e3fe1aa"
+  digest = "1:14cb1d4240bcbbf1386ae763957e04e2765ec4e4ce7bb2769d05fa6faccd774e"
   name = "golang.org/x/time"
   packages = ["rate"]
   pruneopts = ""
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
+  revision = "85acf8d2951cb2a3bde7632f9ff273ef0379bcbd"
 
 [[projects]]
-  digest = "1:8c432632a230496c35a15cfdf441436f04c90e724ad99c8463ef0c82bbe93edb"
+  digest = "1:77d3cff3a451d50be4b52db9c7766c0d8570ba47593f0c9dc72173adb208e788"
   name = "google.golang.org/appengine"
   packages = [
     "internal",
@@ -523,19 +523,19 @@
     "urlfetch",
   ]
   pruneopts = ""
-  revision = "ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06"
-  version = "v1.2.0"
+  revision = "4a4468ece617fc8205e99368fa2200e9d1fad421"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:b6225010c089d419d86aa7bc8e80f50364a9464adad138bb6b46f4012c052177"
+  digest = "1:212d4045ef941b209a154001718705dc723bd77e0200fcea36d15ec87ed49dec"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = ""
-  revision = "c3f76f3b92d1ffa4c58a9ff842a58b8877655e0f"
+  revision = "b5d43981345bdb2c233eb4bf3277847b48c6fdc6"
 
 [[projects]]
-  digest = "1:15656947b87a6a240e61dcfae9e71a55a8d5677f240d12ab48f02cdbabf1e309"
+  digest = "1:1293087271e314cfa2b3decededba2ecba0ff327e7b7809e00f73f616449191c"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -569,17 +569,17 @@
     "test/bufconn",
   ]
   pruneopts = ""
-  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
-  version = "v1.15.0"
+  revision = "2e463a05d100327ca47ac218281906921038fd95"
+  version = "v1.16.0"
 
 [[projects]]
-  digest = "1:9f1e571696860f2b4f8a241b43ce91c6085e7aaed849ccca53f590a4dc7b95bd"
+  digest = "1:eb53021a8aa3f599d29c7102e65026242bdedce998a54837dc67f14b6a97c5fd"
   name = "gopkg.in/fsnotify.v1"
   packages = ["."]
   pruneopts = ""
-  revision = "629574ca2a5df945712d3079857300b5e4da0236"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
-  version = "v1.4.2"
+  version = "v1.4.7"
 
 [[projects]]
   digest = "1:75fb3fcfc73a8c723efde7777b40e8e8ff9babf30d8c56160d01beffea8a95a6"
