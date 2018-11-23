@@ -34,12 +34,14 @@ type Executor interface {
     //   namespace where the stage has to be deployed
     //   ztNetworkId identifier for the zero-tier network these deployables will use
     //   organizationId identifier for the organization
+    //   organizationName required for human readable naming
     //   deploymentId identifier for the specific deployment
     //   appInstanceId identifier of the application instance
+    //   appName name of the nalej application
     //  return:
     //   deployable entity or error if any
     BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, ztNetworkId string,
-        organizationId string, deploymentId string, appInstanceId string) (Deployable, error)
+        organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string) (Deployable, error)
 
     // Execute a deployment stage for the current platform.
     //  params:

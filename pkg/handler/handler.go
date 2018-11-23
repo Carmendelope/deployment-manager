@@ -9,6 +9,7 @@ package handler
 import (
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     pbApplication "github.com/nalej/grpc-application-go"
+    pbCommon "github.com/nalej/grpc-common-go"
     "github.com/rs/zerolog/log"
     "context"
     "errors"
@@ -65,4 +66,9 @@ func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.Deployment
     }
 
     return true
+}
+
+func (h *Handler) Undeploy(context.Context, *pbDeploymentMgr.UndeployRequest) (*pbCommon.Success, error){
+    log.Error().Msg("undeploy not implemented yet")
+    return nil,nil
 }
