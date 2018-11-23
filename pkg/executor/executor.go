@@ -78,7 +78,7 @@ type Executor interface {
     //   toUndeploy deployable entities associated with the fragment that have to be undeployed
     //  return:
     //   error if any
-    UndeployNamespace(request *pbConductor.UndeployRequest, toUndeploy Deployable) derrors.Error
+    UndeployNamespace(request *pbConductor.UndeployRequest) derrors.Error
 
 }
 

@@ -7,7 +7,9 @@
 package kubernetes
 
 import (
+    "github.com/kubernetes/pkg/controller/namespace"
     "github.com/nalej/derrors"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/nalej/deployment-manager/pkg/executor"
     "k8s.io/client-go/kubernetes"
@@ -183,13 +185,23 @@ func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentSt
     return err
 }
 
-func (k *KubernetesExecutor) UndeployNamespace(request *pbConductor.UndeployRequest, toUndeploy executor.Deployable) derrors.Error {
-    log.Info().Msgf("undeploy app %s", request.InstaceId)
-    err := toUndeploy.Undeploy()
+func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) derrors.Error {
+    log.Info().Msgf("undeploy app %s", request.AppInstanceId)
+
+    ns := NewDeployableNamespace(k.Client, "notnecessary", request.AppInstanceId)
+    err := ns.Build()
     if err != nil {
-        log.Error().Msgf("error undeploying app %s", request.InstaceId)
+        log.Error().Msgf("error building deployable namespace %s", ns.namespace.Name)
+        return derrors.NewGenericError("error undeploying application", err)
     }
-    return err
+
+    err = ns.Undeploy()
+    if err != nil {
+        log.Error().Msgf("error undeploying application %s in namespace %s", request.AppInstanceId, namespace.namespace.Name)
+        return derrors.NewGenericError("error undeploying application", err)
+    }
+
+    return nil
 }
 
 func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage, deployed executor.Deployable) error {

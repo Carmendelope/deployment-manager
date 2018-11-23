@@ -127,7 +127,9 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) derrors.Er
 
 	// Monitor?
 
-	//namespace := m.getNamespace(request.OrganizationId, request.AppInstanceId)
+	namespace := m.getNamespace(request.OrganizationId, request.AppInstanceId)
+
+	err := m.executor.UndeployNamespace(request)
 
 	return nil
 }
