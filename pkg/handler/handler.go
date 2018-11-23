@@ -7,6 +7,7 @@
 package handler
 
 import (
+    "github.com/nalej/derrors"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     pbApplication "github.com/nalej/grpc-application-go"
     "github.com/rs/zerolog/log"
@@ -46,6 +47,31 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
     return &response, nil
 }
 
+func (h* Handler) Undeploy (context context.Context, request *pbDeploymentMgr.UndeployRequest) derrors.Error {
+    log.Debug().Msgf("requested to undeploy application %v", request)
+    if request == nil {
+        err := derrors.NewGenericError("received nil undeploy request")
+        return err
+    }
+
+    if !h.ValidUndeployRequest(request) {
+        err := derrors.NewGenericError("non valid undeploy request")
+        return err
+    }
+
+    //// TODO: build fragment and deployable namespace
+    //
+    //err := h.m.executor.UndeployFragment(fragment, toundeploy)
+    //
+    //if err != nil {
+    //    log.Error().Err(err).Msgf("failed to execute fragment request %s",request.RequestId)
+    //    response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
+    //    return err
+    //}
+
+    return nil
+}
+
 func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) bool {
     if request.RequestId == "" {
         log.Error().Msg("impossible to process request with no request_id")
@@ -61,6 +87,19 @@ func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.Deployment
     }
     if request.Fragment.DeploymentId == "" || request.Fragment.AppInstanceId == "" || request.Fragment.OrganizationId == "" {
         log.Error().Msg("impossible to process request with no deployment_id, app_intance_id or organization_id")
+        return false
+    }
+
+    return true
+}
+
+func (h *Handler) ValidUndeployRequest (request *pbDeploymentMgr.UndeployRequest) bool {
+    if request.OrganizationId == "" {
+        log.Error().Msg("impossible to process request with no organization_id")
+        return false
+    }
+    if request.AppInstanceId == "" {
+        log.Error().Msg("impossible to process request with no app_instance_id")
         return false
     }
 
