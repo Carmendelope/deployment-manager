@@ -7,7 +7,9 @@ package handler
 
 import (
     "github.com/nalej/deployment-manager/pkg/executor"
-    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/deployment-manager/pkg/kubernetes"
+	"github.com/nalej/derrors"
+	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
@@ -119,6 +121,16 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
         request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_DONE)
     return nil
+}
+
+func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) derrors.Error {
+	log.Debug().Msgf("undeploy app instance with id %s",request.AppInstanceId)
+
+	// Monitor?
+
+	namespace := m.getNamespace(request.OrganizationId, request.AppInstanceId)
+
+	return nil
 }
 
 // Private function to execute a stage in a loop of retries.

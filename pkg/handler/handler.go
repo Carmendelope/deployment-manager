@@ -59,15 +59,12 @@ func (h* Handler) Undeploy (context context.Context, request *pbDeploymentMgr.Un
         return err
     }
 
-    //// TODO: build fragment and deployable namespace
-    //
-    //err := h.m.executor.UndeployFragment(fragment, toundeploy)
-    //
-    //if err != nil {
-    //    log.Error().Err(err).Msgf("failed to execute fragment request %s",request.RequestId)
-    //    response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
-    //    return err
-    //}
+    err := h.m.Undeploy(request)
+
+    if err != nil {
+       log.Error().Err(err).Msgf("failed to undeploy application %s",request.AppInstanceId)
+       return err
+    }
 
     return nil
 }
