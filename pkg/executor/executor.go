@@ -7,6 +7,7 @@
 package executor
 
 import (
+    "github.com/nalej/derrors"
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/monitor"
@@ -71,6 +72,14 @@ type Executor interface {
     //   error if any
     UndeployFragment(fragment *pbConductor.DeploymentStage, toUndeploy Deployable) error
 
+    // This operation undeploys the namespace of an application
+    //  params:
+    //   request undeployment request
+    //   toUndeploy deployable entities associated with the fragment that have to be undeployed
+    //  return:
+    //   error if any
+    UndeployNamespace(request *pbConductor.UndeployRequest, toUndeploy Deployable) derrors.Error
+
 }
 
 
@@ -84,7 +93,7 @@ type Deployable interface {
     // Deploy this element using a deployment controller to check when the operation is fully done.
     Deploy(controller DeploymentController) error
     // Undeploy this element
-    Undeploy() error
+    Undeploy() derrors.Error
 }
 
 // Minimalistic interface to run a controller in charge of overviewing the successful deployment of requested

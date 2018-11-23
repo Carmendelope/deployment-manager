@@ -7,7 +7,6 @@ package handler
 
 import (
     "github.com/nalej/deployment-manager/pkg/executor"
-	"github.com/nalej/deployment-manager/pkg/kubernetes"
 	"github.com/nalej/derrors"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
@@ -128,7 +127,7 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) derrors.Er
 
 	// Monitor?
 
-	namespace := m.getNamespace(request.OrganizationId, request.AppInstanceId)
+	//namespace := m.getNamespace(request.OrganizationId, request.AppInstanceId)
 
 	return nil
 }
