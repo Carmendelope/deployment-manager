@@ -6,17 +6,16 @@
 package handler
 
 import (
-    "github.com/nalej/deployment-manager/pkg/executor"
-	"github.com/nalej/derrors"
+	"errors"
+	"fmt"
+	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/monitor"
+	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "github.com/rs/zerolog/log"
-    "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/pkg/monitor"
-    "github.com/nalej/deployment-manager/internal/entities"
-    "fmt"
-    "time"
-    "errors"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
+	"time"
 )
 
 const (
@@ -122,14 +121,14 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     return nil
 }
 
-func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) derrors.Error {
+func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Msgf("undeploy app instance with id %s",request.AppInstanceId)
 
-	// Monitor?
-
-	namespace := m.getNamespace(request.OrganizationId, request.AppInstanceId)
-
 	err := m.executor.UndeployNamespace(request)
+	if err != nil {
+		log.Error().Err(err).Msgf("impossible to undeploy app %s", request.AppInstanceId)
+		return err
+	}
 
 	return nil
 }

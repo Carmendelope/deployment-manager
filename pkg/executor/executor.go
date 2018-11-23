@@ -7,10 +7,10 @@
 package executor
 
 import (
-    "github.com/nalej/derrors"
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "github.com/nalej/deployment-manager/internal/entities"
-    "github.com/nalej/deployment-manager/pkg/monitor"
+	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg/monitor"
+	pbConductor "github.com/nalej/grpc-conductor-go"
+	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -78,7 +78,7 @@ type Executor interface {
     //   toUndeploy deployable entities associated with the fragment that have to be undeployed
     //  return:
     //   error if any
-    UndeployNamespace(request *pbConductor.UndeployRequest) derrors.Error
+    UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
 }
 
@@ -93,7 +93,7 @@ type Deployable interface {
     // Deploy this element using a deployment controller to check when the operation is fully done.
     Deploy(controller DeploymentController) error
     // Undeploy this element
-    Undeploy() derrors.Error
+    Undeploy() error
 }
 
 // Minimalistic interface to run a controller in charge of overviewing the successful deployment of requested

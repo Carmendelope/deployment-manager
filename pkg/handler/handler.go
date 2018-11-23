@@ -7,12 +7,12 @@
 package handler
 
 import (
-    "github.com/nalej/derrors"
-    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-    pbApplication "github.com/nalej/grpc-application-go"
-    "github.com/rs/zerolog/log"
     "context"
     "errors"
+    pbApplication "github.com/nalej/grpc-application-go"
+    "github.com/nalej/grpc-common-go"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/rs/zerolog/log"
 )
 
 type Handler struct {
@@ -47,26 +47,26 @@ func (h* Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
     return &response, nil
 }
 
-func (h* Handler) Undeploy (context context.Context, request *pbDeploymentMgr.UndeployRequest) derrors.Error {
+func (h* Handler) Undeploy (context context.Context, request *pbDeploymentMgr.UndeployRequest) (*grpc_common_go.Success, error) {
     log.Debug().Msgf("requested to undeploy application %v", request)
     if request == nil {
-        err := derrors.NewGenericError("received nil undeploy request")
-        return err
+        err := errors.New("received nil undeploy request")
+        return nil, err
     }
 
     if !h.ValidUndeployRequest(request) {
-        err := derrors.NewGenericError("non valid undeploy request")
-        return err
+        err := errors.New("non valid undeploy request")
+        return nil, err
     }
 
     err := h.m.Undeploy(request)
 
     if err != nil {
        log.Error().Err(err).Msgf("failed to undeploy application %s",request.AppInstanceId)
-       return err
+       return nil, err
     }
 
-    return nil
+    return &grpc_common_go.Success{}, nil
 }
 
 func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) bool {
