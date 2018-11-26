@@ -32,7 +32,8 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId st
     req := pbNetwork.AuthorizeMemberRequest{
         OrganizationId: organizationId,
         NetworkId: networkId,
-        MemberId: memberId,}
+        MemberId: memberId,
+    }
     _, err := m.NetClient.AuthorizeMember(context.Background(), &req)
 
     return err

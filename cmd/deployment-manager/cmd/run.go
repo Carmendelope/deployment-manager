@@ -47,8 +47,9 @@ func Run() {
     config := service.Config{
         Local:            viper.GetBool("local"),
         Port:             uint32(viper.GetInt32("port")),
-        ConductorAddress: viper.GetString("conductor"),
-        NetworkAddress: viper.GetString("network"),
+        ConductorAddress: viper.GetString("conductorAddress"),
+        NetworkAddress: viper.GetString("networkMgrAddress"),
+        DeploymentMgrAddress: viper.GetString("depMgrAddress"),
     }
 
 

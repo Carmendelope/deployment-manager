@@ -7,17 +7,19 @@
 package kubernetes
 
 import (
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "github.com/nalej/deployment-manager/pkg/executor"
-    "k8s.io/client-go/kubernetes"
-    "github.com/rs/zerolog/log"
-    "errors"
-    "github.com/nalej/deployment-manager/pkg/monitor"
-    "k8s.io/client-go/rest"
-    "k8s.io/client-go/tools/clientcmd"
-    "flag"
-    "path/filepath"
-    "os"
+	"errors"
+	"flag"
+	"github.com/nalej/deployment-manager/pkg"
+	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/monitor"
+	pbConductor "github.com/nalej/grpc-conductor-go"
+	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/rs/zerolog/log"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path/filepath"
 )
 
 
@@ -180,6 +182,27 @@ func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentSt
         log.Error().Msgf("error undeploying fragment %s", fragment.FragmentId)
     }
     return err
+}
+
+func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
+    log.Info().Msgf("undeploy app %s", request.AppInstanceId)
+
+    targetNS := pkg.GetNamespace(request.OrganizationId, request.AppInstanceId)
+
+    ns := NewDeployableNamespace(k.Client, "not necessary", targetNS)
+    err := ns.Build()
+    if err != nil {
+        log.Error().Msgf("error building deployable namespace %s", ns.namespace.Name)
+        return err
+    }
+
+    err = ns.Undeploy()
+    if err != nil {
+        log.Error().Msgf("error undeploying application %s in namespace %s", request.AppInstanceId, ns.namespace.Name)
+        return err
+    }
+
+    return nil
 }
 
 func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage, deployed executor.Deployable) error {

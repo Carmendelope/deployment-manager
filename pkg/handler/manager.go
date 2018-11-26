@@ -6,16 +6,17 @@
 package handler
 
 import (
-    "github.com/nalej/deployment-manager/pkg/executor"
-    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "github.com/rs/zerolog/log"
-    "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/pkg/monitor"
-    "github.com/nalej/deployment-manager/internal/entities"
-    "fmt"
-    "time"
-    "errors"
+	"errors"
+	"fmt"
+	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg"
+	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/monitor"
+	pbConductor "github.com/nalej/grpc-conductor-go"
+	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
+	"time"
 )
 
 const (
@@ -27,8 +28,7 @@ const (
     UnlimitedStageRetries = -1
     // Sleep between retries in milliseconds
     SleepBetweenRetries = 10000
-    // Maximum namespace length
-    NamespaceLength = 63
+
 )
 
 
@@ -53,7 +53,7 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
         request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_DEPLOYING)
 
-    namespace := m.getNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
+    namespace := pkg.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
     preDeployable, prepError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace, m.monitor)
     if prepError != nil {
         log.Error().Err(prepError).Msgf("failed environment preparation for fragment %s",
@@ -121,6 +121,18 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     return nil
 }
 
+func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
+	log.Debug().Msgf("undeploy app instance with id %s",request.AppInstanceId)
+
+	err := m.executor.UndeployNamespace(request)
+	if err != nil {
+		log.Error().Err(err).Msgf("impossible to undeploy app %s", request.AppInstanceId)
+		return err
+	}
+
+	return nil
+}
+
 // Private function to execute a stage in a loop of retries.
 //  params:
 //   fragment this stage belongs to
@@ -170,17 +182,3 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
     return errors.New(fmt.Sprintf("exceeded number of retries for stage %s in fragment %s", stage.StageId, fragment.FragmentId))
 }
 
-// Return the namespace associated with a service.
-//  params:
-//   organizationId
-//   appInstanceId
-//  return:
-//   associated namespace
-func (m *Manager) getNamespace(organizationId string, appInstanceId string) string {
-    target := fmt.Sprintf("%s-%s", organizationId, appInstanceId)
-    // check if the namespace is larger than the allowed k8s namespace length
-    if len(target) > NamespaceLength {
-        return target[:NamespaceLength]
-    }
-    return target
-}
