@@ -5,6 +5,13 @@
 
 package pkg
 
+import "fmt"
+
+const(
+	// Maximum namespace length
+	NamespaceLength = 63
+)
+
 // Set of common functions for all the structures.
 
 
@@ -17,3 +24,18 @@ var MANAGER_CLUSTER_PORT string
 
 // Deployment manager address
 var DEPLOYMENT_MANAGER_ADDR string
+
+// Return the namespace associated with a service.
+//  params:
+//   organizationId
+//   appInstanceId
+//  return:
+//   associated namespace
+func GetNamespace(organizationId string, appInstanceId string) string {
+	target := fmt.Sprintf("%s-%s", organizationId, appInstanceId)
+	// check if the namespace is larger than the allowed k8s namespace length
+	if len(target) > NamespaceLength {
+		return target[:NamespaceLength]
+	}
+	return target
+}

@@ -9,6 +9,7 @@ package kubernetes
 import (
 	"errors"
 	"flag"
+	"github.com/nalej/deployment-manager/pkg"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/monitor"
 	pbConductor "github.com/nalej/grpc-conductor-go"
@@ -186,7 +187,9 @@ func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentSt
 func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
     log.Info().Msgf("undeploy app %s", request.AppInstanceId)
 
-    ns := NewDeployableNamespace(k.Client, "notnecessary", request.AppInstanceId)
+    targetNS := pkg.GetNamespace(request.OrganizationId, request.AppInstanceId)
+
+    ns := NewDeployableNamespace(k.Client, "not necessary", targetNS)
     err := ns.Build()
     if err != nil {
         log.Error().Msgf("error building deployable namespace %s", ns.namespace.Name)
