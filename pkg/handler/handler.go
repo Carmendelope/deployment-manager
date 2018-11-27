@@ -7,11 +7,11 @@
 package handler
 
 import (
+    pbApplication "github.com/nalej/grpc-application-go"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "context"
     "errors"
-    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/nalej/grpc-common-go"
-    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/rs/zerolog/log"
 )
 
@@ -90,6 +90,7 @@ func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.Deployment
     return true
 }
 
+
 func (h *Handler) ValidUndeployRequest (request *pbDeploymentMgr.UndeployRequest) bool {
     if request.OrganizationId == "" {
         log.Error().Msg("impossible to process request with no organization_id")
@@ -102,3 +103,4 @@ func (h *Handler) ValidUndeployRequest (request *pbDeploymentMgr.UndeployRequest
 
     return true
 }
+

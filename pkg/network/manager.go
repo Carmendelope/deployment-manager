@@ -43,7 +43,7 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId st
 func (m *Manager) RegisterNetworkEntry(organizationId string, networkId string, serviceName string, ip string) error {
 
     // Create the FQDN for this service
-    fqdn := fmt.Sprintf("%s.%s",serviceName,organizationId)
+    fqdn := fmt.Sprintf("%s-%s",serviceName,organizationId)
 
     req := pbNetwork.AddDNSEntryRequest{
         NetworkId: networkId,

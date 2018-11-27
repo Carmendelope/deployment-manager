@@ -32,6 +32,8 @@ import (
 const (
     // Grace period in seconds to delete a deployable.
     DeleteGracePeriod = 10
+    // Name of the Docker ZT agent image
+    ZTAgentImageName = "nalej/zt-agent:v0.1.0"
 )
 
 
@@ -59,16 +61,16 @@ type DeployableKubernetesStage struct {
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string, organizationId string, deploymentId string,
-    appInstanceId string) *DeployableKubernetesStage {
+    targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
+    deploymentId string, appInstanceId string, appName string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client: client,
         stage: stage,
         targetNamespace: targetNamespace,
         ztNetworkId: ztNetworkId,
         services: NewDeployableService(client, stage, targetNamespace),
-        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId, deploymentId,
-            appInstanceId),
+        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
+            organizationName, deploymentId, appInstanceId, appName),
     }
 }
 
@@ -147,10 +149,14 @@ type DeployableDeployments struct{
     ztNetworkId string
     // organization id
     organizationId string
+    // organization name
+    organizationName string
     // deployment id
     deploymentId string
     // application instance id
     appInstanceId string
+    // app nalej name
+    appName string
     // map of deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
@@ -160,16 +166,18 @@ type DeployableDeployments struct{
 }
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string, organizationId string, deploymentId string,
-    appInstanceId string) *DeployableDeployments {
+    targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
+    deploymentId string, appInstanceId string, appName string) *DeployableDeployments {
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
         ztNetworkId: ztNetworkId,
         organizationId: organizationId,
+        organizationName: organizationName,
         deploymentId: deploymentId,
         appInstanceId: appInstanceId,
+        appName: appName,
         deployments: make(map[string]appsv1.Deployment,0),
         ztAgents: make(map[string]appsv1.Deployment,0),
     }
@@ -186,6 +194,11 @@ func(d *DeployableDeployments) Build() error {
 
     for serviceIndex, service := range d.stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
+
+        // value for privileged user
+        user0 := int64(0)
+        privilegedUser := &user0
+
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: service.Name,
@@ -212,6 +225,61 @@ func(d *DeployableDeployments) Build() error {
                                 Env:   getEnvVariables(service.EnvironmentVariables),
                                 Ports: getContainerPorts(service.ExposedPorts),
                             },
+                            {
+                                Name: "zt-sidecar",
+                                Image: ZTAgentImageName,
+                                Args: []string{
+                                    "run",
+                                    "--appInstanceId", d.appInstanceId,
+                                    "--appName", d.appName,
+                                    "--serviceName", service.Name,
+                                    "--deploymentId", d.deploymentId,
+                                    "--fragmentId", d.stage.FragmentId,
+                                    "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
+                                    "--organizationId", d.organizationId,
+                                    "--organizationName", d.organizationName,
+                                    "--networkId", d.ztNetworkId,
+                                },
+                                Env: []apiv1.EnvVar{
+                                    // Indicate this is not a ZT proxy
+                                    apiv1.EnvVar{
+                                        Name:  "ZT_PROXY",
+                                        Value: "false",
+                                    },
+                                },
+                                // The proxy exposes the same ports of the deployment
+                                Ports: getContainerPorts(service.ExposedPorts),
+                                SecurityContext:
+                                &apiv1.SecurityContext{
+                                    RunAsUser: privilegedUser,
+                                    Privileged: boolPtr(true),
+                                    Capabilities: &apiv1.Capabilities{
+                                        Add: [] apiv1.Capability{
+                                            "NET_ADMIN",
+                                            "SYS_ADMIN",
+                                        },
+                                    },
+                                },
+
+                                VolumeMounts: []apiv1.VolumeMount{
+                                    {
+                                        Name: "dev-net-tun",
+                                        ReadOnly: true,
+                                        MountPath: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                        },
+                        Volumes: []apiv1.Volume{
+                            // zerotier sidecar volume
+                            {
+                                Name: "dev-net-tun",
+                                VolumeSource: apiv1.VolumeSource{
+                                    HostPath: &apiv1.HostPathVolumeSource{
+                                        Path: "/dev/net/tun",
+                                    },
+                                },
+                            },
                         },
                     },
                 },
@@ -223,11 +291,10 @@ func(d *DeployableDeployments) Build() error {
             "app": service.Labels["app"],
         }
 
-        zero := int64(0)
-        root := &zero
+        ztAgentName := fmt.Sprintf("zt-%s",service.Name)
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
-                Name: fmt.Sprintf("zt-%s",service.Name),
+                Name: ztAgentName,
                 Namespace: d.targetNamespace,
                 Labels: ztAgentLabels,
                 Annotations: map[string] string {
@@ -247,53 +314,49 @@ func(d *DeployableDeployments) Build() error {
                     // and a helping sidecar with a containerized zerotier that joins the network
                     // after running
                     Spec: apiv1.PodSpec{
-                        // HostNetwork: true,
                         Containers: []apiv1.Container{
                             // zero-tier sidecar
                             {
-                                Name: "zt-agent",
-                                // TODO prepare this to be pulled from a public docker repository
-                                Image: "nalej/zt-agent:v0.1.0",
+                                Name: ztAgentName,
+                                Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
                                     "--appInstanceId", d.appInstanceId,
-                                    "--appName", service.Name,
+                                    "--appName", d.appName,
+                                    "--serviceName", service.Name,
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
                                     "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
                                     "--organizationId", d.organizationId,
-                                    "--organizationName", "myorg",
+                                    "--organizationName", d.organizationName,
                                     "--networkId", d.ztNetworkId,
+                                    "--isProxy",
                                 },
                                 Env: []apiv1.EnvVar{
+                                    // Indicate this is a ZT proxy
                                     apiv1.EnvVar{
-                                        Name:  "K8S_SERVICE_NAME",
-                                        Value: fmt.Sprintf("%s.%s", service.Name, d.targetNamespace),
+                                        Name:  "ZT_PROXY",
+                                        Value: "true",
+                                    },
+                                    // Indicate the name of the k8s service
+                                    apiv1.EnvVar{
+                                        Name: "K8S_SERVICE_NAME",
+                                        Value: service.Name,
                                     },
                                 },
-                                Ports: []apiv1.ContainerPort{
-                                    apiv1.ContainerPort{
-                                        Name:"zt-port-tcp",
-                                        ContainerPort: 9993,
-                                        Protocol: apiv1.ProtocolTCP,
-                                    },
-                                    apiv1.ContainerPort{
-                                        Name:"zt-port-udp",
-                                        ContainerPort: 9993,
-                                        Protocol: apiv1.ProtocolUDP,
-                                    },
-                                },
+                                // The proxy exposes the same ports of the deployment
+                                Ports: getContainerPorts(service.ExposedPorts),
                                 SecurityContext:
-                                &apiv1.SecurityContext{
-                                    RunAsUser: root,
-                                    Privileged: boolPtr(true),
-                                    Capabilities: &apiv1.Capabilities{
-                                        Add: [] apiv1.Capability{
-                                            "NET_ADMIN",
-                                            "SYS_ADMIN",
+                                    &apiv1.SecurityContext{
+                                        RunAsUser: privilegedUser,
+                                        Privileged: boolPtr(true),
+                                        Capabilities: &apiv1.Capabilities{
+                                            Add: [] apiv1.Capability{
+                                                "NET_ADMIN",
+                                                "SYS_ADMIN",
+                                            },
                                         },
                                     },
-                                },
 
                                 VolumeMounts: []apiv1.VolumeMount{
                                     {
