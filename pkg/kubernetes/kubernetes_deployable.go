@@ -194,6 +194,11 @@ func(d *DeployableDeployments) Build() error {
 
     for serviceIndex, service := range d.stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
+
+        // value for privileged user
+        user0 := int64(0)
+        privilegedUser := &user0
+
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: service.Name,
@@ -220,6 +225,61 @@ func(d *DeployableDeployments) Build() error {
                                 Env:   getEnvVariables(service.EnvironmentVariables),
                                 Ports: getContainerPorts(service.ExposedPorts),
                             },
+                            {
+                                Name: "zt-sidecar",
+                                Image: ZTAgentImageName,
+                                Args: []string{
+                                    "run",
+                                    "--appInstanceId", d.appInstanceId,
+                                    "--appName", d.appName,
+                                    "--serviceName", service.Name,
+                                    "--deploymentId", d.deploymentId,
+                                    "--fragmentId", d.stage.FragmentId,
+                                    "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
+                                    "--organizationId", d.organizationId,
+                                    "--organizationName", d.organizationName,
+                                    "--networkId", d.ztNetworkId,
+                                },
+                                Env: []apiv1.EnvVar{
+                                    // Indicate this is not a ZT proxy
+                                    apiv1.EnvVar{
+                                        Name:  "ZT_PROXY",
+                                        Value: "false",
+                                    },
+                                },
+                                // The proxy exposes the same ports of the deployment
+                                Ports: getContainerPorts(service.ExposedPorts),
+                                SecurityContext:
+                                &apiv1.SecurityContext{
+                                    RunAsUser: privilegedUser,
+                                    Privileged: boolPtr(true),
+                                    Capabilities: &apiv1.Capabilities{
+                                        Add: [] apiv1.Capability{
+                                            "NET_ADMIN",
+                                            "SYS_ADMIN",
+                                        },
+                                    },
+                                },
+
+                                VolumeMounts: []apiv1.VolumeMount{
+                                    {
+                                        Name: "dev-net-tun",
+                                        ReadOnly: true,
+                                        MountPath: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                        },
+                        Volumes: []apiv1.Volume{
+                            // zerotier sidecar volume
+                            {
+                                Name: "dev-net-tun",
+                                VolumeSource: apiv1.VolumeSource{
+                                    HostPath: &apiv1.HostPathVolumeSource{
+                                        Path: "/dev/net/tun",
+                                    },
+                                },
+                            },
                         },
                     },
                 },
@@ -231,8 +291,6 @@ func(d *DeployableDeployments) Build() error {
             "app": service.Labels["app"],
         }
 
-        user0 := int64(0)
-        privilegedUser := &user0
         ztAgentName := fmt.Sprintf("zt-%s",service.Name)
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
@@ -256,7 +314,6 @@ func(d *DeployableDeployments) Build() error {
                     // and a helping sidecar with a containerized zerotier that joins the network
                     // after running
                     Spec: apiv1.PodSpec{
-                        // HostNetwork: true,
                         Containers: []apiv1.Container{
                             // zero-tier sidecar
                             {
@@ -273,40 +330,33 @@ func(d *DeployableDeployments) Build() error {
                                     "--organizationId", d.organizationId,
                                     "--organizationName", d.organizationName,
                                     "--networkId", d.ztNetworkId,
+                                    "--isProxy",
                                 },
                                 Env: []apiv1.EnvVar{
+                                    // Indicate this is a ZT proxy
                                     apiv1.EnvVar{
-                                        Name:  "K8S_SERVICE_NAME",
-                                        Value: fmt.Sprintf("%s.%s", service.Name, d.targetNamespace),
+                                        Name:  "ZT_PROXY",
+                                        Value: "true",
+                                    },
+                                    // Indicate the name of the k8s service
+                                    apiv1.EnvVar{
+                                        Name: "K8S_SERVICE_NAME",
+                                        Value: service.Name,
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
                                 Ports: getContainerPorts(service.ExposedPorts),
-                                /*
-                                Ports: []apiv1.ContainerPort{
-                                    apiv1.ContainerPort{
-                                        Name:"zt-port-tcp",
-                                        ContainerPort: 9993,
-                                        Protocol: apiv1.ProtocolTCP,
-                                    },
-                                    apiv1.ContainerPort{
-                                        Name:"zt-port-udp",
-                                        ContainerPort: 9993,
-                                        Protocol: apiv1.ProtocolUDP,
-                                    },
-                                },
-                                */
                                 SecurityContext:
-                                &apiv1.SecurityContext{
-                                    RunAsUser: privilegedUser,
-                                    Privileged: boolPtr(true),
-                                    Capabilities: &apiv1.Capabilities{
-                                        Add: [] apiv1.Capability{
-                                            "NET_ADMIN",
-                                            "SYS_ADMIN",
+                                    &apiv1.SecurityContext{
+                                        RunAsUser: privilegedUser,
+                                        Privileged: boolPtr(true),
+                                        Capabilities: &apiv1.Capabilities{
+                                            Add: [] apiv1.Capability{
+                                                "NET_ADMIN",
+                                                "SYS_ADMIN",
+                                            },
                                         },
                                     },
-                                },
 
                                 VolumeMounts: []apiv1.VolumeMount{
                                     {
