@@ -7,9 +7,10 @@
 package executor
 
 import (
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "github.com/nalej/deployment-manager/internal/entities"
-    "github.com/nalej/deployment-manager/pkg/monitor"
+	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg/monitor"
+	pbConductor "github.com/nalej/grpc-conductor-go"
+	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -72,6 +73,14 @@ type Executor interface {
     //  return:
     //   error if any
     UndeployFragment(fragment *pbConductor.DeploymentStage, toUndeploy Deployable) error
+
+    // This operation undeploys the namespace of an application
+    //  params:
+    //   request undeployment request
+    //   toUndeploy deployable entities associated with the fragment that have to be undeployed
+    //  return:
+    //   error if any
+    UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
 }
 

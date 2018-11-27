@@ -231,12 +231,12 @@
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:74b587d17872982a113e4568fce95ed97c6d81141db8fd1a05e995dc26988533"
+  digest = "1:5a1bf6016291628e59f4815217faeaee7cb42fd8a9b600f355e178344ed0651f"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
   pruneopts = ""
-  revision = "74a97e6fc74e55d14b86f6f15e00224de7eb34d0"
-  version = "v0.0.57"
+  revision = "7beeb116fb81e31f884011450417d0d1eb5f8aa0"
+  version = "v0.0.59"
 
 [[projects]]
   digest = "1:c492191eba15ac33692a6bf80daceed7bd9c81f809a2f7926085db984de21a49"
@@ -273,10 +273,7 @@
 [[projects]]
   digest = "1:05c1a54c80e2d88b6af8f6e3af68ded6ef7f5aea9a28873fb68edc72ea798581"
   name = "github.com/nalej/grpc-utils"
-  packages = [
-    "pkg/test",
-    "pkg/tools",
-  ]
+  packages = ["pkg/tools"]
   pruneopts = ""
   revision = "5dd4662c03100806b57763212966a72e0c4b85e5"
   version = "v1.1.0"
@@ -566,7 +563,6 @@
     "stats",
     "status",
     "tap",
-    "test/bufconn",
   ]
   pruneopts = ""
   revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
@@ -772,7 +768,6 @@
     "github.com/nalej/grpc-conductor-go",
     "github.com/nalej/grpc-deployment-manager-go",
     "github.com/nalej/grpc-network-go",
-    "github.com/nalej/grpc-utils/pkg/test",
     "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
@@ -782,7 +777,6 @@
     "github.com/spf13/viper",
     "google.golang.org/grpc",
     "google.golang.org/grpc/reflection",
-    "google.golang.org/grpc/test/bufconn",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",

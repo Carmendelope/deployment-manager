@@ -18,13 +18,10 @@ import (
 )
 
 var RootCmd = &cobra.Command{
-    Use: "deployment-manager",
-    Short: "Local deployment-manager",
-    Long: `The deployment manager is a local instance to control...`,
+    Use: "deployment-manager-cli",
+    Short: "Local deployment-manager-cli",
+    Long: `Local deployment-manager-cli`,
     Version: "unknown-version",
-    //Run: func(cmd *cobra.Command, args []string) {
-    //    Run()
-    //},
 }
 
 // Variables
