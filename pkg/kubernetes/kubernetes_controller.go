@@ -286,7 +286,7 @@ func checkDeployments(stored interface{}, pending *executor.PendingStages){
         }
 
     } else {
-        log.Info().Msgf("deployment %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
+        log.Info().Msgf("deployment %s,%s is not monitored", dep.GetName(),string(dep.GetUID()))
     }
     return
 }
@@ -308,7 +308,7 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
         pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
         pending.RemoveResource(string(dep.GetUID()))
     } else {
-        log.Warn().Msgf("service %s,%s it not monitored", dep.GetName(),string(dep.GetUID()))
+        log.Warn().Msgf("service %s,%s is not monitored", dep.GetName(),string(dep.GetUID()))
     }
 }
 
