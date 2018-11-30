@@ -66,6 +66,11 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var preDeployed executor.Deployable
         namespace := "test-app-single"
         ztNetworkId := "testztid"
+        appInstanceId := "errorapp"
+        organizationId := "test-organization"
+        organizationName := "myorg"
+        deploymentId := "deployment_001"
+        appName := "myapp"
 
         ginkgo.BeforeEach(func(){
             serv1 = pbApplication.Service{
@@ -92,9 +97,9 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             }
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
-                DeploymentId: "deployment_001",
-                AppInstanceId: "errorapp",
-                OrganizationId: "test-organization",
+                DeploymentId: deploymentId,
+                AppInstanceId: appInstanceId,
+                OrganizationId: organizationId,
 
                 Stages: []*pbConductor.DeploymentStage{&stage},
             }
@@ -109,7 +114,8 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId)
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId, organizationId, organizationName,
+                deploymentId, appInstanceId, appName)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             err = k8sExecutor.DeployStage(toDeploy, &fragment, &stage, monitor)
@@ -134,6 +140,11 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var preDeployed executor.Deployable
         namespace := "test-app-double"
         ztNetworkId := "testztid"
+        appInstanceId := "test-app-double"
+        organizationId := "test-organization"
+        organizationName := "myorg"
+        deploymentId := "deployment_001"
+        appName := "myapp"
 
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
@@ -167,9 +178,9 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
                 DeploymentId: "deployment_001",
-                AppInstanceId: "test-app-001",
+                AppInstanceId: appInstanceId,
                 Stages: []*pbConductor.DeploymentStage{&stage},
-                OrganizationId: "test-organization",
+                OrganizationId: organizationId,
             }
         })
 
@@ -181,7 +192,8 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId)
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId,organizationId, organizationName,
+                deploymentId, appInstanceId, appName)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             err = k8sExecutor.DeployStage(toDeploy, &fragment, &stage, monitor)
@@ -206,6 +218,11 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var preDeployed executor.Deployable
         namespace := "test-app-two-stages"
         ztNetworkId := "testztid"
+        organizationId := "test-organization"
+        appInstanceId := "test-app-001"
+        organizationName := "myorg"
+        deploymentId := "deployment_001"
+        appName := "myapp"
 
         port1 := pbApplication.Port{Name: "port1", ExposedPort: 3000}
         port2 := pbApplication.Port{Name: "port2", ExposedPort: 3001}
@@ -240,10 +257,10 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             }
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
-                DeploymentId: "deployment_001",
-                AppInstanceId: "test-app-001",
+                DeploymentId: deploymentId,
+                AppInstanceId: appInstanceId,
                 Stages: []*pbConductor.DeploymentStage{&stage1,&stage2},
-                OrganizationId: "test-organization",
+                OrganizationId: organizationId,
             }
         })
 
@@ -256,7 +273,8 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
             aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage1, namespace, ztNetworkId)
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage1, namespace, ztNetworkId,organizationId, organizationName,
+                deploymentId, appInstanceId, appName)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
             err = k8sExecutor.DeployStage(toDeploy, &fragment, &stage2, monitor)
