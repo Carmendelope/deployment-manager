@@ -86,7 +86,7 @@ build-linux: dep linux
 local:
 	@echo ">>> Building ..."
 	for app in $(APPS); do \
-		if [ -d cmd/"$app" ]; then \
+		if [ -d cmd/"$$app" ]; then \
             $(GOBUILD) $(LDFLAGS) -o $(TARGET)/"$$app" ./cmd/"$$app" ; \
 			echo Built $$app binary for your OS ; \
 		fi ; \
