@@ -7,34 +7,37 @@
 package service
 
 import (
+    "fmt"
+    "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/cluster-api"
     "github.com/nalej/deployment-manager/pkg/handler"
-    "github.com/nalej/grpc-utils/pkg/tools"
-    "github.com/nalej/deployment-manager/pkg/network"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
+    "github.com/nalej/deployment-manager/pkg/network"
+    "github.com/nalej/deployment-manager/pkg/utils"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/nalej/grpc-utils/pkg/tools"
+    "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
     "google.golang.org/grpc/reflection"
-    "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg"
-    "github.com/nalej/deployment-manager/pkg/utils"
+    "net"
     "os"
     "strconv"
-    "net"
-    "fmt"
 )
 
 // Configuration structure
 type Config struct {
     // listening port
     Port uint32
-    // Conductor address
-    ConductorAddress string
-    // Network manager address
-    NetworkAddress string
+    // ClusterAPIAddress address
+    ClusterAPIAddress string
     // DeploymentManager address
     DeploymentMgrAddress string
     // is kubernetes locally available
     Local bool
+    // Username/email
+    Email string
+    // Password
+    Password string
 }
 
 type DeploymentManagerService struct {
@@ -78,11 +81,15 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         return nil, err
     }
 
+    // login
+    ClusterAPILogin := cluster_api.NewLogin(utils.MANAGER_ClUSTER_IP, utils.MANAGER_CLUSTER_PORT)
+    ClusterAPILogin.Login(config.Email, config.Password)
+
     // Build connection with conductor
-    log.Debug().Msgf("connect with conductor at %s", config.ConductorAddress)
-    conn, err := grpc.Dial(config.ConductorAddress, grpc.WithInsecure())
+    log.Debug().Msgf("connect with conductor at %s", config.ClusterAPIAddress)
+    conn, err := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
     if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ConductorAddress)
+        log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ClusterAPIAddress)
         panic(err.Error())
         return nil, err
     }
@@ -91,10 +98,10 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     mgr := handler.NewManager(conn,&exec)
 
     // Build connection with networking manager
-    log.Debug().Msgf("connect with network manager at %s", config.NetworkAddress)
-    connNet, err := grpc.Dial(config.NetworkAddress, grpc.WithInsecure())
+    log.Debug().Msgf("connect with network manager at %s", config.ClusterAPIAddress)
+    connNet, err := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
     if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with networking manager at %s", config.NetworkAddress)
+        log.Panic().Err(err).Msgf("impossible to connect with networking manager at %s", config.ClusterAPIAddress)
         panic(err.Error())
         return nil, err
     }

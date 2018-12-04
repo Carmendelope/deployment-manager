@@ -8,11 +8,12 @@
 package monitor
 
 import (
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/internal/entities"
     "context"
+    "github.com/nalej/deployment-manager/internal/entities"
+    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbClusterAPI "github.com/nalej/grpc-cluster-api-go"
     "github.com/rs/zerolog/log"
+    "google.golang.org/grpc"
 )
 
 const (
@@ -25,11 +26,11 @@ const (
 )
 
 type MonitorHelper struct {
-    client pbConductor.ConductorMonitorClient
+    client pbClusterAPI.ConductorClient
 }
 
 func NewMonitorHelper(conn *grpc.ClientConn) *MonitorHelper {
-    client := pbConductor.NewConductorMonitorClient(conn)
+    client := pbClusterAPI.NewConductorClient(conn)
     return &MonitorHelper{client}
 }
 

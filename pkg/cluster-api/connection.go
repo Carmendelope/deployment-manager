@@ -9,7 +9,11 @@ import (
 
 type Connection struct {
 	Address string
-	Port    int
+	Port    string
+}
+
+func NewConnection(address string, port string) *Connection {
+	return &Connection{address, port}
 }
 
 func (c *Connection) GetConnection() (*grpc.ClientConn, derrors.Error) {

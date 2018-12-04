@@ -9,15 +9,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+/*
 type ClusterAPIClient struct {
 	ClusterManagerAddress	string
 	ClusterAPIPort			int
 	LoginAPIPort			int
 	Token					string
 }
+*/
 
 type Login struct {
 	Connection
+}
+
+// NewLogin creates a new Login structure.
+func NewLogin(address string, port string) *Login {
+	return &Login{
+		*NewConnection(address, port),
+	}
 }
 
 func (l *Login) Login(email string, password string) (*Credentials, derrors.Error) {

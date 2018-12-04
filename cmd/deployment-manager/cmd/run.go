@@ -35,10 +35,11 @@ func init() {
 
     runCmd.Flags().Uint32P("port", "p",5200,"port where deployment manager listens to")
     runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
-    runCmd.Flags().StringP("conductorAddress","c", "localhost:5000", "conductor address e.g.: 192.168.1.4:5000")
+    runCmd.Flags().StringP("clusterAPIAddress","c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
     runCmd.Flags().StringP("networkMgrAddress","n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
     runCmd.Flags().StringP("depMgrAddress","d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
-
+    runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
+    runCmd.Flags().StringP("password", "pw", "Passw0rd666", "password")
     viper.BindPFlags(runCmd.Flags())
 }
 
@@ -47,9 +48,10 @@ func Run() {
     config := service.Config{
         Local:            viper.GetBool("local"),
         Port:             uint32(viper.GetInt32("port")),
-        ConductorAddress: viper.GetString("conductorAddress"),
-        NetworkAddress: viper.GetString("networkMgrAddress"),
+        ClusterAPIAddress: viper.GetString("clusterAPIAddress"),
         DeploymentMgrAddress: viper.GetString("depMgrAddress"),
+        Email: viper.GetString("email"),
+        Password: viper.GetString("password"),
     }
 
 

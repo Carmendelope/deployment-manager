@@ -245,6 +245,14 @@
   version = "v0.0.27"
 
 [[projects]]
+  digest = "1:730ba443a1106a4b979f0cc066ec666dfe10b01ad9f3f211b5fa72a0fcb824e4"
+  name = "github.com/nalej/grpc-cluster-api-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "f448b5a4f559ad693a133fc8b31bd145fcd79428"
+  version = "v0.0.6"
+
+[[projects]]
   digest = "1:d120865016aaf6adedaac103b47284c26529493dd6dbc2510c31360ad817067f"
   name = "github.com/nalej/grpc-common-go"
   packages = ["."]
@@ -812,6 +820,7 @@
     "github.com/nalej/golang-template/version",
     "github.com/nalej/grpc-application-go",
     "github.com/nalej/grpc-authx-go",
+    "github.com/nalej/grpc-cluster-api-go",
     "github.com/nalej/grpc-common-go",
     "github.com/nalej/grpc-conductor-go",
     "github.com/nalej/grpc-deployment-manager-go",
