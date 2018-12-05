@@ -14,6 +14,7 @@ import (
     pbClusterAPI "github.com/nalej/grpc-cluster-api-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
+    "github.com/nalej/deployment-manager/pkg"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 )
 
 type MonitorHelper struct {
-    client pbClusterAPI.ConductorClient
+    client pbConductor.ConductorMonitorClient
 }
 
 func NewMonitorHelper(conn *grpc.ClientConn) *MonitorHelper {
@@ -42,7 +43,7 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
         DeploymentId: deploymentId,
         FragmentId: fragmentId,
         Status: entities.FragmentStatusToGRPC[status],
-        ClusterId: "fill this with the cluster id",
+        ClusterId: pkg.CLUSTER_ID,
         AppInstanceId: appInstanceId,
     }
     _, err := m.client.UpdateDeploymentFragmentStatus(context.Background(), &req)

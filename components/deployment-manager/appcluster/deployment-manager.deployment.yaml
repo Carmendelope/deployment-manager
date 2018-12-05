@@ -32,14 +32,19 @@ spec:
         env:
         - name: MANAGER_CLUSTER_IP
           valueFrom:
-            secretKeyRef:
-              name: manager-cluster-secret
-              key: MANAGER_CLUSTER_IP
+            configMapKeyRef:
+              name: cluster-config
+              key: management_public_host
         - name: MANAGER_CLUSTER_PORT
           valueFrom:
-            secretKeyRef:
-              name: manager-cluster-secret
-              key: MANAGER_CLUSTER_PORT
+            configMapKeyRef:
+              name: cluster-config
+              key: management_public_port
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: cluster_id
         ports:
         - name: api-port
           containerPort: 5200

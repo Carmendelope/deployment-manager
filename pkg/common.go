@@ -25,6 +25,9 @@ var MANAGER_CLUSTER_PORT string
 // Deployment manager address
 var DEPLOYMENT_MANAGER_ADDR string
 
+// Cluster ID
+var CLUSTER_ID string
+
 // Return the namespace associated with a service.
 //  params:
 //   organizationId

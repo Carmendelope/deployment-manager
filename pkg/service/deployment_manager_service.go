@@ -66,6 +66,10 @@ func setEnvironmentVars(config *Config) {
         }
     }
 
+    if pkg.CLUSTER_ID = os.Getenv(utils.CLUSTER_ID); pkg.CLUSTER_ID == "" {
+        log.Fatal().Msgf("%s variable was not set", utils.CLUSTER_ID)
+    }
+
     pkg.DEPLOYMENT_MANAGER_ADDR = config.DeploymentMgrAddress
 }
 
