@@ -48,16 +48,20 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId st
 
 }
 
-func (m *Manager) RegisterNetworkEntry(organizationId string, networkId string, serviceName string, ip string) error {
+func (m *Manager) RegisterNetworkEntry(organizationId string, organizationName string, appInstanceId string,
+    networkId string, serviceName string, ip string) error {
 
     // Create the FQDN for this service
-    fqdn := fmt.Sprintf("%s-%s",serviceName,organizationId)
+    fqdn := fmt.Sprintf("%s-%s",serviceName,organizationName)
 
     req := pbNetwork.AddDNSEntryRequest{
         NetworkId: networkId,
         OrganizationId: organizationId,
+        OrganizationName: organizationName,
         Ip: ip,
         Fqdn: fqdn,
+        AppInstanceId: appInstanceId,
+        ServiceName: serviceName,
     }
     _, err := m.ClusterAPIClient.AddDNSEntry(context.Background(), &req)
 
