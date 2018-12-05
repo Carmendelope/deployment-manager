@@ -14,6 +14,9 @@ const (
     // Port of the remote manager cluster
     MANAGER_CLUSTER_PORT = "MANAGER_CLUSTER_PORT"
 
+    // Name of the variable containing the cluster id.
+    CLUSTER_ID = "CLUSTER_ID"
+
     // Annotation to identify services deployed by nalej
     NALEJ_SERVICE_NAME = "nalej-service"
 

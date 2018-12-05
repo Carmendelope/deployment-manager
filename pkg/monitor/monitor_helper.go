@@ -8,11 +8,13 @@
 package monitor
 
 import (
-    pbConductor "github.com/nalej/grpc-conductor-go"
-    "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/internal/entities"
     "context"
+    "github.com/nalej/deployment-manager/internal/entities"
+    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbClusterAPI "github.com/nalej/grpc-cluster-api-go"
     "github.com/rs/zerolog/log"
+    "google.golang.org/grpc"
+    "github.com/nalej/deployment-manager/pkg"
 )
 
 const (
@@ -29,7 +31,7 @@ type MonitorHelper struct {
 }
 
 func NewMonitorHelper(conn *grpc.ClientConn) *MonitorHelper {
-    client := pbConductor.NewConductorMonitorClient(conn)
+    client := pbClusterAPI.NewConductorClient(conn)
     return &MonitorHelper{client}
 }
 
@@ -41,7 +43,7 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
         DeploymentId: deploymentId,
         FragmentId: fragmentId,
         Status: entities.FragmentStatusToGRPC[status],
-        ClusterId: "fill this with the cluster id",
+        ClusterId: pkg.CLUSTER_ID,
         AppInstanceId: appInstanceId,
     }
     _, err := m.client.UpdateDeploymentFragmentStatus(context.Background(), &req)
