@@ -35,10 +35,10 @@ var undeployAppCmd = &cobra.Command{
 func init() {
     RootCmd.AddCommand(undeployAppCmd)
     undeployAppCmd.Flags().StringVar(&undeployDMServer, "server", "localhost:5200", "Deployment Manager server URL")
-    undeployAppCmd.Flags().StringVar(&undeployOrgId, "orgid", "", "Organization ID")
-	undeployAppCmd.Flags().StringVar(&undeployAppId, "appid", "", "App Instance ID")
-    undeployAppCmd.MarkFlagRequired("orgid")
-    undeployAppCmd.MarkFlagRequired("appid")
+    undeployAppCmd.Flags().StringVar(&undeployOrgId, "orgId", "", "Organization ID")
+	undeployAppCmd.Flags().StringVar(&undeployAppId, "appId", "", "App Instance ID")
+    undeployAppCmd.MarkFlagRequired("orgId")
+    undeployAppCmd.MarkFlagRequired("appId")
 }
 
 func undeployApp() {

@@ -9,9 +9,9 @@ package service
 import (
     "fmt"
     "github.com/nalej/deployment-manager/pkg"
-    "github.com/nalej/deployment-manager/pkg/cluster-api"
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
+    "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/deployment-manager/pkg/network"
     "github.com/nalej/deployment-manager/pkg/utils"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
@@ -74,24 +74,30 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
 
     setEnvironmentVars(config)
 
-    exec, err := kubernetes.NewKubernetesExecutor(config.Local)
+    // login
+    log.Debug().Msgf("login to %s", utils.MANAGER_ClUSTER_IP)
+    clusterAPILoginHelper := login_helper.NewLogin(utils.MANAGER_ClUSTER_IP, config.Email, config.Password)
+    err := clusterAPILoginHelper.Login()
     if err != nil {
-        log.Panic().Err(err).Msg("there was an error creating kubernetes client")
+        log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
         panic(err.Error())
         return nil, err
     }
 
-    // login
-    ClusterAPILogin := cluster_api.NewLogin(utils.MANAGER_ClUSTER_IP, utils.MANAGER_CLUSTER_PORT)
-    ClusterAPILogin.Login(config.Email, config.Password)
+    exec, kubErr := kubernetes.NewKubernetesExecutor(config.Local)
+    if kubErr != nil {
+        log.Panic().Err(err).Msg("there was an error creating kubernetes client")
+        panic(err.Error())
+        return nil, kubErr
+    }
 
     // Build connection with conductor
     log.Debug().Msgf("connect with conductor at %s", config.ClusterAPIAddress)
-    conn, err := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
+    conn, errCond := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
     if err != nil {
         log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ClusterAPIAddress)
         panic(err.Error())
-        return nil, err
+        return nil, errCond
     }
 
     // Instantiate deployment manager service
@@ -99,15 +105,15 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
 
     // Build connection with networking manager
     log.Debug().Msgf("connect with network manager at %s", config.ClusterAPIAddress)
-    connNet, err := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
+    connNet, errNM := grpc.Dial(config.ClusterAPIAddress,grpc.WithInsecure())
     if err != nil {
         log.Panic().Err(err).Msgf("impossible to connect with networking manager at %s", config.ClusterAPIAddress)
         panic(err.Error())
-        return nil, err
+        return nil, errNM
     }
 
     // Instantiate network manager service
-    net := network.NewManager(connNet)
+    net := network.NewManager(connNet, clusterAPILoginHelper)
 
     // Instantiate target server
     server := tools.NewGenericGRPCServer(config.Port)
@@ -141,5 +147,4 @@ func (d *DeploymentManagerService) Run() {
     if err := grpcServer.Serve(lis); err != nil {
         log.Fatal().Errs("failed to serve: %v", []error{err})
     }
-
 }

@@ -8,32 +8,43 @@ package network
 import (
     "context"
     "fmt"
-    pbNetwork "github.com/nalej/grpc-network-go"
+    "github.com/nalej/deployment-manager/pkg/login-helper"
+    "github.com/nalej/derrors"
     pbClientAPI "github.com/nalej/grpc-cluster-api-go"
+    pbNetwork "github.com/nalej/grpc-network-go"
     "google.golang.org/grpc"
 )
 
 type Manager struct{
     // Networking & DNS manager client
     ClusterAPIClient pbClientAPI.NetworkManagerClient
+    // LoginHelper Helper
+    ClusterAPILoginHelper *login_helper.LoginHelper
 }
 
-func NewManager(connection *grpc.ClientConn) *Manager{
+func NewManager(connection *grpc.ClientConn, helper *login_helper.LoginHelper) *Manager{
     // Network & DNS client
     clusterAPIClient := pbClientAPI.NewNetworkManagerClient(connection)
-
-    return &Manager{clusterAPIClient}
+    return &Manager{
+        ClusterAPIClient: clusterAPIClient,
+        ClusterAPILoginHelper: helper,
+        }
 }
 
-func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId string, memberId string) error {
+func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId string, memberId string) derrors.Error {
     req := pbNetwork.AuthorizeMemberRequest{
         OrganizationId: organizationId,
         NetworkId: networkId,
         MemberId: memberId,
     }
-    _, err := m.ClusterAPIClient.AuthorizeMember(context.Background(), &req)
 
-    return err
+    _, errAuth := m.ClusterAPIClient.AuthorizeMember(m.ClusterAPILoginHelper.Ctx, &req)
+
+    if errAuth != nil {
+        return derrors.NewGenericError("error authorizing network membership", errAuth)
+    }
+
+    return nil
 
 }
 
