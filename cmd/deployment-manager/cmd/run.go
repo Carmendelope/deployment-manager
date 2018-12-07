@@ -39,7 +39,7 @@ func init() {
     runCmd.Flags().StringP("networkMgrAddress","n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
     runCmd.Flags().StringP("depMgrAddress","d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
     runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
-    runCmd.Flags().StringP("password", "pw", "Passw0rd666", "password")
+    runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
     viper.BindPFlags(runCmd.Flags())
 }
 

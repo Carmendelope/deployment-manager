@@ -8,13 +8,13 @@
 package monitor
 
 import (
-    "context"
     "github.com/nalej/deployment-manager/internal/entities"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbClusterAPI "github.com/nalej/grpc-cluster-api-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
     "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/login-helper"
 )
 
 const (
@@ -27,12 +27,15 @@ const (
 )
 
 type MonitorHelper struct {
-    client pbConductor.ConductorMonitorClient
+    // Client
+    Client pbClusterAPI.ConductorClient
+    // LoginHelper Helper
+    ClusterAPILoginHelper *login_helper.LoginHelper
 }
 
-func NewMonitorHelper(conn *grpc.ClientConn) *MonitorHelper {
+func NewMonitorHelper(conn *grpc.ClientConn, loginHelper *login_helper.LoginHelper) *MonitorHelper {
     client := pbClusterAPI.NewConductorClient(conn)
-    return &MonitorHelper{client}
+    return &MonitorHelper{client, loginHelper}
 }
 
 func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
@@ -46,7 +49,7 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
         ClusterId: pkg.CLUSTER_ID,
         AppInstanceId: appInstanceId,
     }
-    _, err := m.client.UpdateDeploymentFragmentStatus(context.Background(), &req)
+    _, err := m.Client.UpdateDeploymentFragmentStatus(m.ClusterAPILoginHelper.Ctx, &req)
     if err != nil {
         log.Error().Err(err).Msgf("error updating fragment status")
     }
@@ -69,7 +72,7 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
             Status: entities.ServiceStatusToGRPC[status]},
             },
     }
-    _, err := m.client.UpdateServiceStatus(context.Background(), &req)
+    _, err := m.Client.UpdateServiceStatus(m.ClusterAPILoginHelper.Ctx, &req)
     if err != nil {
         log.Error().Err(err).Msgf("error updating service status")
     }

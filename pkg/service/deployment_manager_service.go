@@ -79,8 +79,11 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     setEnvironmentVars(config)
 
     // login
-    log.Debug().Msgf("login to %s", utils.MANAGER_ClUSTER_IP)
-    clusterAPILoginHelper := login_helper.NewLogin(utils.MANAGER_ClUSTER_IP, config.Email, config.Password)
+    // TODO this is hardcoded
+    log.Warn().Msg("!!!!!!!! We are using a hardcoded port for the login service")
+    loginAddress := fmt.Sprintf("%s:%s",pkg.MANAGER_CLUSTER_IP, "31683")
+    log.Debug().Msgf("login to %s", loginAddress)
+    clusterAPILoginHelper := login_helper.NewLogin(loginAddress, config.Email, config.Password)
     err := clusterAPILoginHelper.Login()
     if err != nil {
         log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
@@ -105,7 +108,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Instantiate deployment manager service
-    mgr := handler.NewManager(conn,&exec)
+    mgr := handler.NewManager(conn,&exec,clusterAPILoginHelper)
 
     // Build connection with networking manager
     log.Debug().Msgf("connect with network manager at %s", config.ClusterAPIAddress)

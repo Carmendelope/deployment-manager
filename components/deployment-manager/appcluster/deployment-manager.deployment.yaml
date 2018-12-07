@@ -22,13 +22,18 @@ spec:
       containers:
       - name: deployment-manager
         image: nalejregistry.azurecr.io/nalej/deployment-manager:VERSION
-        imagePullPolicy: IfNotPresent
+        # imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         securityContext:
           runAsUser: 2000
         args:
         - "run"
         - "--local"
         - "-d deployment-manager.nalej:5200"
+        - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
+        - "--email=$(EMAIL)"
+        - "--password=$(PASSWORD)"
+        - "--debug"
         env:
         - name: MANAGER_CLUSTER_IP
           valueFrom:
@@ -45,6 +50,16 @@ spec:
             configMapKeyRef:
               name: cluster-config
               key: cluster_id
+        - name: EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: cluster-user-credentials
+              key: email
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cluster-user-credentials
+              key: password
         ports:
         - name: api-port
           containerPort: 5200
