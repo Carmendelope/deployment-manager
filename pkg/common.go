@@ -5,7 +5,10 @@
 
 package pkg
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const(
 	// Maximum namespace length
@@ -41,4 +44,12 @@ func GetNamespace(organizationId string, appInstanceId string) string {
 		return target[:NamespaceLength]
 	}
 	return target
+}
+
+// Format a string to
+func FormatName(name string) string {
+	aux := strings.ToLower(name)
+	// replace any space
+	aux = strings.Replace(aux, " ", "", -1)
+	return aux
 }
