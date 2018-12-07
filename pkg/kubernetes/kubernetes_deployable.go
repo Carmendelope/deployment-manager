@@ -33,7 +33,8 @@ const (
     // Grace period in seconds to delete a deployable.
     DeleteGracePeriod = 10
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejregistry.azurecr.io/nalej/zt-agent:v0.1.0"
+    // ZTAgentImageName = "nalejregistry.azurecr.io/nalej/zt-agent:v0.1.0"
+    ZTAgentImageName = "nalejops/zt-agent:v0.1.0"
 )
 
 
