@@ -19,6 +19,7 @@ spec:
         cluster: application
         component: deployment-manager
     spec:
+      serviceAccountName: deployment-manager
       containers:
       - name: deployment-manager
         image: nalejregistry.azurecr.io/nalej/deployment-manager:VERSION
@@ -28,7 +29,7 @@ spec:
           runAsUser: 2000
         args:
         - "run"
-        - "--local"
+        # - "--local"
         - "-d deployment-manager.nalej:5200"
         - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
         - "--email=$(EMAIL)"
