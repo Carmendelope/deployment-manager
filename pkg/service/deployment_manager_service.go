@@ -99,7 +99,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Build connection with conductor
-    log.Debug().Msgf("connect with conductor at %s", config.ClusterAPIAddress)
+    log.Debug().Msgf("connect with clustesr api address at %s", config.ClusterAPIAddress)
     conn, errCond := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
     if err != nil {
         log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ClusterAPIAddress)
@@ -110,6 +110,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     // Instantiate deployment manager service
     mgr := handler.NewManager(conn,&exec,clusterAPILoginHelper)
 
+    /*
     // Build connection with networking manager
     log.Debug().Msgf("connect with network manager at %s", config.ClusterAPIAddress)
     connNet, errNM := grpc.Dial(config.ClusterAPIAddress,grpc.WithInsecure())
@@ -118,9 +119,9 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         panic(err.Error())
         return nil, errNM
     }
-
+    */
     // Instantiate network manager service
-    net := network.NewManager(connNet, clusterAPILoginHelper)
+    net := network.NewManager(conn, clusterAPILoginHelper)
 
     // Instantiate target server
     server := tools.NewGenericGRPCServer(config.Port)

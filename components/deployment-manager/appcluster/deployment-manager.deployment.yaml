@@ -30,7 +30,7 @@ spec:
         args:
         - "run"
         - "--local"
-        - "-d deployment-manager.nalej:5200"
+        - "--depMgrAddress=deployment-manager.nalej.svc.cluster.local:5200"
         - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"

@@ -6,7 +6,6 @@
 package network
 
 import (
-    "context"
     "fmt"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/derrors"
@@ -38,7 +37,9 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId st
         MemberId: memberId,
     }
 
-    _, errAuth := m.ClusterAPIClient.AuthorizeMember(m.ClusterAPILoginHelper.Ctx, &req)
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, errAuth := m.ClusterAPIClient.AuthorizeMember(ctx, &req)
 
     if errAuth != nil {
         return derrors.NewGenericError("error authorizing network membership", errAuth)
@@ -63,7 +64,9 @@ func (m *Manager) RegisterNetworkEntry(organizationId string, organizationName s
         AppInstanceId: appInstanceId,
         ServiceName: serviceName,
     }
-    _, err := m.ClusterAPIClient.AddDNSEntry(context.Background(), &req)
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, err := m.ClusterAPIClient.AddDNSEntry(ctx, &req)
 
     return err
 }

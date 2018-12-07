@@ -49,7 +49,10 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
         ClusterId: pkg.CLUSTER_ID,
         AppInstanceId: appInstanceId,
     }
-    _, err := m.Client.UpdateDeploymentFragmentStatus(m.ClusterAPILoginHelper.Ctx, &req)
+
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, err := m.Client.UpdateDeploymentFragmentStatus(ctx, &req)
     if err != nil {
         log.Error().Err(err).Msgf("error updating fragment status")
     }
@@ -72,7 +75,9 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
             Status: entities.ServiceStatusToGRPC[status]},
             },
     }
-    _, err := m.Client.UpdateServiceStatus(m.ClusterAPILoginHelper.Ctx, &req)
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, err := m.Client.UpdateServiceStatus(ctx, &req)
     if err != nil {
         log.Error().Err(err).Msgf("error updating service status")
     }
