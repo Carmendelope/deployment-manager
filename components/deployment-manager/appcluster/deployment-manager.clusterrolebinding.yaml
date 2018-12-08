@@ -13,3 +13,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: deployment-manager
+  namespace: nalej
