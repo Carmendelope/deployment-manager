@@ -17,18 +17,23 @@ const(
 
 // Set of common functions for all the structures.
 
+// TODO This variables must not be global, move them to the configuration.
 
 // IP for the manager in charge of this cluster. This is required to set local environments when running
 // local instances.
+// Deprecated: Use config.ClusterAPIHostname
 var MANAGER_CLUSTER_IP string
 
 // Port of the manager cluster service.
+// Deprecated: Use config.ClusterAPIPort
 var MANAGER_CLUSTER_PORT string
 
 // Deployment manager address
+// Deprecated: Use config.DeploymentMgrAddress
 var DEPLOYMENT_MANAGER_ADDR string
 
 // Cluster ID
+// TODO Create a new variable in the configuration.
 var CLUSTER_ID string
 
 // Return the namespace associated with a service.

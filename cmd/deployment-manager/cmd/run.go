@@ -7,63 +7,72 @@
 package cmd
 
 import (
-    "github.com/spf13/cobra"
-    "github.com/spf13/viper"
-    "github.com/rs/zerolog"
-    "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg/service"
+	"github.com/nalej/deployment-manager/pkg/service"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var runCmd = &cobra.Command{
-    Use: "run",
-    Short: "Run deployment manager",
-    Long: "Run deployment manager service with... and with...",
-    Run: func(cmd *cobra.Command, args [] string) {
-        SetupLogging()
-        Run()
-    },
+	Use:   "run",
+	Short: "Run deployment manager",
+	Long:  "Run deployment manager service with... and with...",
+	Run: func(cmd *cobra.Command, args []string) {
+		SetupLogging()
+		Run()
+	},
 }
 
 func init() {
-    // UNIX Time is faster and smaller than most timestamps
-    // If you set zerolog.TimeFieldFormat to an empty string,
-    // logs will write with UNIX time
-    zerolog.TimeFieldFormat = ""
+	// UNIX Time is faster and smaller than most timestamps
+	// If you set zerolog.TimeFieldFormat to an empty string,
+	// logs will write with UNIX time
+	zerolog.TimeFieldFormat = ""
 
+	RootCmd.AddCommand(runCmd)
 
-    RootCmd.AddCommand(runCmd)
-
-    runCmd.Flags().Uint32P("port", "p",5200,"port where deployment manager listens to")
-    runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
-    runCmd.Flags().StringP("clusterAPIAddress","c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
-    runCmd.Flags().StringP("networkMgrAddress","n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
-    runCmd.Flags().StringP("depMgrAddress","d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
-    runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
-    runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
-    viper.BindPFlags(runCmd.Flags())
+	runCmd.Flags().Uint32P("port", "p", 5200, "port where deployment manager listens to")
+	runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
+	runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
+	runCmd.Flags().StringP("networkMgrAddress", "n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
+	runCmd.Flags().StringP("depMgrAddress", "d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
+	runCmd.Flags().String("clusterAPIHostname", "", "Hostname of the cluster API on the management cluster")
+	runCmd.Flags().Uint32("clusterAPIPort", 8000, "Port where the cluster API is listening")
+	runCmd.Flags().Bool("useTLSForClusterAPI", true, "Use TLS to connect to the Cluster API")
+	runCmd.Flags().String("loginHostname", "", "Hostname of the login service")
+	runCmd.Flags().Uint32("loginPort", 31683, "port where the login service is listening")
+	runCmd.Flags().Bool("useTLSForLogin", true, "Use TLS to connect to the Login API")
+	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
+	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
+	viper.BindPFlags(runCmd.Flags())
 }
 
 func Run() {
 
-    config := service.Config{
-        Local:            viper.GetBool("local"),
-        Port:             uint32(viper.GetInt32("port")),
-        ClusterAPIAddress: viper.GetString("clusterAPIAddress"),
-        DeploymentMgrAddress: viper.GetString("depMgrAddress"),
-        Email: viper.GetString("email"),
-        Password: viper.GetString("password"),
-    }
+	config := service.Config{
+		Port:                 uint32(viper.GetInt32("port")),
+		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
+		ClusterAPIHostname:   viper.GetString("clusterAPIHostname"),
+		ClusterAPIPort:       uint32(viper.GetInt32("clusterAPIPort")),
+		UseTLSForClusterAPI:  viper.GetBool("useTLSForClusterAPI"),
+		LoginHostname:        viper.GetString("loginHostname"),
+		LoginPort:            uint32(viper.GetInt32("loginPort")),
+		UseTLSForLogin:       viper.GetBool("useTLSForLogin"),
+		DeploymentMgrAddress: viper.GetString("depMgrAddress"),
+		Local:                viper.GetBool("local"),
+		Email:                viper.GetString("email"),
+		Password:             viper.GetString("password"),
+	}
 
+	log.Info().Msg("launching deployment manager...")
 
-    log.Info().Msg("launching deployment manager...")
+	deploymentMgrService, err := service.NewDeploymentManagerService(&config)
+	if err != nil {
+		log.Panic().Err(err)
+		panic(err.Error())
+	}
 
-    deploymentMgrService, err := service.NewDeploymentManagerService(&config)
-    if err != nil {
-        log.Panic().Err(err)
-        panic(err.Error())
-    }
-
-    deploymentMgrService.Run()
-
+	deploymentMgrService.Run()
 
 }

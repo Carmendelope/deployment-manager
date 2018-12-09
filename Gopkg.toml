@@ -23,7 +23,6 @@
    source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
    name = "gopkg.in/fsnotify.v1"
 
-
 [[constraint]]
     name="k8s.io/client-go"
     version="v9.0.0"
@@ -61,28 +60,28 @@
 
 [[constraint]]
     name="github.com/nalej/grpc-utils"
-    version="v1.1.0"
+    version="v1.2.0"
 
 [[override]]
     name="github.com/nalej/grpc-infrastructure-go"
-    version="v0.0.15"
+    version="v0.0.26"
 
 [[constraint]]
     name = "github.com/nalej/grpc-conductor-go"
-    version="v0.0.61"
+    version="v0.0.66"
 
 [[constraint]]
     name = "github.com/nalej/grpc-application-go"
-    version="v0.0.23"
+    version="v0.0.33"
 
 [[constraint]]
     name = "github.com/nalej/grpc-deployment-manager-go"
-    version="v0.0.37"
+    version="v0.0.40"
 
 [[constraint]]
     name = "github.com/nalej/grpc-cluster-api-go"
-    version="v0.0.6"
+    version="v0.0.10"
 
 [[constraint]]
     name = "github.com/nalej/grpc-network-go"
-    version="v0.0.23"
+    version="v0.0.26"

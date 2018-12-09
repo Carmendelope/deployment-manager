@@ -11,15 +11,16 @@ import (
 
 type LoginHelper struct {
 	Connection
+	useTLS bool
 	email      string
 	password   string
 	Credentials *Credentials
 }
 
 // NewLogin creates a new LoginHelper structure.
-func NewLogin(address string, email string, password string) *LoginHelper {
+func NewLogin(hostname string, port int, useTLS bool, email string, password string) *LoginHelper {
 	return &LoginHelper{
-		Connection: *NewConnection(address),
+		Connection: *NewConnection(hostname, port, useTLS),
 		email: email,
 		password: password,
 	}

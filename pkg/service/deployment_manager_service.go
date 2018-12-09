@@ -24,22 +24,6 @@ import (
     "strconv"
 )
 
-// Configuration structure
-type Config struct {
-    // listening port
-    Port uint32
-    // ClusterAPIAddress address
-    ClusterAPIAddress string
-    // DeploymentManager address
-    DeploymentMgrAddress string
-    // is kubernetes locally available
-    Local bool
-    // Username/email
-    Email string
-    // Password
-    Password string
-}
-
 type DeploymentManagerService struct {
     // Manager with the logic for incoming requests
     mgr *handler.Manager
@@ -52,7 +36,8 @@ type DeploymentManagerService struct {
 }
 
 // Set the values of the environment variables.
-
+// TODO Why we need environment variables?
+// Deprecated: Use the config elements
 func setEnvironmentVars(config *Config) {
     if pkg.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP); pkg.MANAGER_CLUSTER_IP == "" {
         log.Fatal().Msgf("%s variable was not set", utils.MANAGER_ClUSTER_IP)
@@ -78,12 +63,15 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
 
     setEnvironmentVars(config)
 
+    vErr := config.Validate()
+    if vErr != nil {
+        log.Fatal().Str("err", vErr.DebugReport()).Msg("invalid configuration")
+    }
+
+    config.Print()
+
     // login
-    // TODO this is hardcoded
-    log.Warn().Msg("!!!!!!!! We are using a hardcoded port for the login service")
-    loginAddress := fmt.Sprintf("%s:%s",pkg.MANAGER_CLUSTER_IP, "31683")
-    log.Debug().Msgf("login to %s", loginAddress)
-    clusterAPILoginHelper := login_helper.NewLogin(loginAddress, config.Email, config.Password)
+    clusterAPILoginHelper := login_helper.NewLogin(config.LoginHostname, int(config.LoginPort), config.UseTLSForLogin, config.Email, config.Password)
     err := clusterAPILoginHelper.Login()
     if err != nil {
         log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
@@ -99,7 +87,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Build connection with conductor
-    log.Debug().Msgf("connect with clustesr api address at %s", config.ClusterAPIAddress)
+    log.Debug().Msgf("connect with cluster api address at %s", config.ClusterAPIAddress)
     conn, errCond := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
     if err != nil {
         log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ClusterAPIAddress)

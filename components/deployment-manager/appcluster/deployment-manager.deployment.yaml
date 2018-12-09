@@ -32,6 +32,12 @@ spec:
         - "--local"
         - "--depMgrAddress=deployment-manager.nalej.svc.cluster.local:5200"
         - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
+        - "--clusterAPIHostname=$(CLUSTER_API_HOST)"
+        - "--clusterAPIPort=443"
+        - "--useTLSForClusterAPI=true"
+        - "--loginHostname=$(LOGIN_API_HOST)"
+        - "--loginPort=443"
+        - "--useTLSForLogin=true"
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"
         - "--debug"
@@ -51,6 +57,16 @@ spec:
             configMapKeyRef:
               name: cluster-config
               key: cluster_id
+        - name: CLUSTER_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: cluster_api_hostname
+        - name: LOGIN_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: login_api_hostname
         - name: EMAIL
           valueFrom:
             secretKeyRef:
