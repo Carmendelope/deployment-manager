@@ -26,6 +26,8 @@ type Config struct {
 	LoginPort uint32
 	// UseTLSForLogin defines if TLS should be used to connect to the Login API.
 	UseTLSForLogin bool
+	// ClusterPublicHostname contains the public host where the application cluster can be reached from the outside. Required for the ingresses.
+	ClusterPublicHostname string
 	// DeploymentManager address
 	DeploymentMgrAddress string
 	// is kubernetes locally available
@@ -58,6 +60,10 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("email and password must be set")
 	}
 
+	if conf.ClusterPublicHostname == "" {
+		return derrors.NewInvalidArgumentError("clusterPublicHostname must be set")
+	}
+
 	return nil
 }
 
@@ -68,6 +74,7 @@ func (conf *Config) Print() {
 	log.Info().Bool("local", conf.Local).Msg("Kubernetes is local")
 	log.Info().Str("URL", conf.ClusterAPIHostname).Uint32("port", conf.ClusterAPIPort).Bool("TLS", conf.UseTLSForClusterAPI).Msg("Cluster API on management cluster")
 	log.Info().Str("URL", conf.LoginHostname).Uint32("port", conf.LoginPort).Bool("TLS", conf.UseTLSForLogin).Msg("Login API on management cluster")
+	log.Info().Str("URL", conf.ClusterPublicHostname).Msg("Cluster public hostname")
 	if conf.ClusterAPIAddress != "" {
 		log.Warn().Str("address", conf.ClusterAPIAddress).Msg("Deprecated Cluster API address is set")
 	}

@@ -118,7 +118,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Instantiate deployment manager service
-    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper)
+    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper, config.ClusterPublicHostname)
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)

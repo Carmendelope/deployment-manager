@@ -65,7 +65,7 @@ type DeployableKubernetesStage struct {
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
     targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
-    deploymentId string, appInstanceId string, appName string) *DeployableKubernetesStage {
+    deploymentId string, appInstanceId string, appName string, clusterPublicHostname string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client: client,
         stage: stage,
@@ -74,7 +74,7 @@ func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConduc
         services: NewDeployableService(client, stage, targetNamespace),
         deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
             organizationName, deploymentId, appInstanceId, appName),
-        ingresses: NewDeployableIngress(client, stage, targetNamespace),
+        ingresses: NewDeployableIngress(client, stage, targetNamespace, clusterPublicHostname),
     }
 }
 

@@ -38,6 +38,7 @@ spec:
         - "--loginHostname=$(LOGIN_API_HOST)"
         - "--loginPort=443"
         - "--useTLSForLogin=true"
+        - "--clusterPublicHostname=$(CLUSTER_PUBLIC_HOSTNAME)"
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"
         - "--debug"
@@ -67,6 +68,11 @@ spec:
             configMapKeyRef:
               name: cluster-config
               key: login_api_hostname
+        - name: CLUSTER_PUBLIC_HOSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: cluster_public_hostname
         - name: EMAIL
           valueFrom:
             secretKeyRef:

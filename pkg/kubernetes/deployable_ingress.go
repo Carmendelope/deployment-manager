@@ -24,11 +24,12 @@ type DeployableIngress struct {
 func NewDeployableIngress(
 	client *kubernetes.Clientset,
 	stage *grpc_conductor_go.DeploymentStage,
-	targetNamespace string) *DeployableIngress {
+	targetNamespace string, clusterPublicHostname string) *DeployableIngress {
 	return &DeployableIngress{
 		client:          client.ExtensionsV1beta1().Ingresses(targetNamespace),
 		stage: stage,
 		targetNamespace: targetNamespace,
+		clusterPublicHostname: clusterPublicHostname,
 		ingresses:       make(map[string][]*v1beta1.Ingress, 0),
 	}
 }
