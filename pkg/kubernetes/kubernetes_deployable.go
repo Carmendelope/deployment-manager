@@ -33,7 +33,8 @@ const (
     // Grace period in seconds to delete a deployable.
     DeleteGracePeriod = 10
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejregistry.azurecr.io/nalej/zt-agent:v0.1.0"
+    // ZTAgentImageName = "nalejregistry.azurecr.io/nalej/zt-agent:v0.1.0"
+    ZTAgentImageName = "nalejops/zt-agent:v0.1.0"
 )
 
 
@@ -201,7 +202,7 @@ func(d *DeployableDeployments) Build() error {
 
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
-                Name: service.Name,
+                Name: pkg.FormatName(service.Name),
                 Namespace: d.targetNamespace,
                 Labels: service.Labels,
                 Annotations: map[string] string {
@@ -220,7 +221,7 @@ func(d *DeployableDeployments) Build() error {
                     Spec: apiv1.PodSpec{
                         Containers: []apiv1.Container{
                             {
-                                Name:  service.Name,
+                                Name:  pkg.FormatName(service.Name),
                                 Image: service.Image,
                                 Env:   getEnvVariables(service.EnvironmentVariables),
                                 Ports: getContainerPorts(service.ExposedPorts),
@@ -291,7 +292,7 @@ func(d *DeployableDeployments) Build() error {
             "app": service.Labels["app"],
         }
 
-        ztAgentName := fmt.Sprintf("zt-%s",service.Name)
+        ztAgentName := fmt.Sprintf("zt-%s",pkg.FormatName(service.Name))
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: ztAgentName,
@@ -323,7 +324,7 @@ func(d *DeployableDeployments) Build() error {
                                     "run",
                                     "--appInstanceId", d.appInstanceId,
                                     "--appName", d.appName,
-                                    "--serviceName", service.Name,
+                                    "--serviceName", pkg.FormatName(service.Name),
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
                                     "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
@@ -341,7 +342,7 @@ func(d *DeployableDeployments) Build() error {
                                     // Indicate the name of the k8s service
                                     apiv1.EnvVar{
                                         Name: "K8S_SERVICE_NAME",
-                                        Value: service.Name,
+                                        Value: pkg.FormatName(service.Name),
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
@@ -472,15 +473,15 @@ func(s *DeployableServices) Build() error {
             k8sService := apiv1.Service{
                 ObjectMeta: metav1.ObjectMeta{
                     Namespace: s.targetNamespace,
-                    Name: service.Name,
+                    Name: pkg.FormatName(service.Name),
                     Labels: service.Labels,
                     Annotations: map[string] string {
                         "nalej-service" : service.ServiceId,
                     },
                 },
                 Spec: apiv1.ServiceSpec{
-                    ExternalName: service.Name,
-                    Ports: getServicePorts(service.ExposedPorts),
+                    ExternalName: pkg.FormatName(service.Name),
+                    Ports: ports,
                     // TODO remove by default we use clusterip.
                     Type: apiv1.ServiceTypeNodePort,
                     Selector: service.Labels,
@@ -495,7 +496,7 @@ func(s *DeployableServices) Build() error {
                 "app": service.Labels["app"],
             }
 
-            ztServiceName := fmt.Sprintf("zt-%s",service.Name)
+            ztServiceName := fmt.Sprintf("zt-%s",pkg.FormatName(service.Name))
             ztService := apiv1.Service{
                 ObjectMeta: metav1.ObjectMeta{
                     Namespace: s.targetNamespace,
@@ -515,10 +516,13 @@ func(s *DeployableServices) Build() error {
             }
             ztServices[service.ServiceId] = ztService
 
+            log.Debug().Interface("deployment", k8sService).Msg("generated deployment")
+
         } else {
             log.Debug().Msgf("No k8s service is generated for %s",service.ServiceId)
         }
     }
+
     // add the created services
     s.services = services
     s.ztAgents = ztServices
@@ -551,7 +555,7 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
 
 func(s *DeployableServices) Undeploy() error {
     for _, serv := range s.services {
-        err := s.client.Delete(serv.Name, metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
+        err := s.client.Delete(pkg.FormatName(serv.Name), metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
         if err != nil {
             log.Error().Err(err).Msgf("error deleting service %s",serv.Name)
             return err
@@ -636,8 +640,7 @@ func(n *DeployableNamespace) Undeploy() error {
 func getContainerPorts(ports []*pbConductor.Port) []apiv1.ContainerPort {
     obtained := make([]apiv1.ContainerPort, 0, len(ports))
     for _, p := range ports {
-        obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name,
-            HostPort: p.InternalPort})
+        obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})
     }
     return obtained
 }
@@ -645,8 +648,11 @@ func getContainerPorts(ports []*pbConductor.Port) []apiv1.ContainerPort {
 func getServicePorts(ports []*pbConductor.Port) []apiv1.ServicePort {
     obtained := make([]apiv1.ServicePort, 0, len(ports))
     for _, p := range ports {
-        obtained = append(obtained, apiv1.ServicePort{Name: p.Name,
-            Port: p.ExposedPort, TargetPort: intstr.IntOrString{IntVal: p.InternalPort}})
+        obtained = append(obtained, apiv1.ServicePort{
+            Name: p.Name,
+            Port: p.ExposedPort,
+            TargetPort: intstr.IntOrString{IntVal: p.InternalPort},
+        })
     }
     if len(obtained) == 0 {
         return nil

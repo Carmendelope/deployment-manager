@@ -6,25 +6,24 @@
 package network
 
 import (
-    "context"
     "fmt"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/derrors"
-    pbClientAPI "github.com/nalej/grpc-cluster-api-go"
+    "github.com/nalej/grpc-cluster-api-go"
     pbNetwork "github.com/nalej/grpc-network-go"
     "google.golang.org/grpc"
 )
 
 type Manager struct{
-    // Networking & DNS manager client
-    ClusterAPIClient pbClientAPI.NetworkManagerClient
+    // ClusterAPI to send information back related to the network manager.
+    ClusterAPIClient grpc_cluster_api_go.NetworkManagerClient
     // LoginHelper Helper
     ClusterAPILoginHelper *login_helper.LoginHelper
 }
 
 func NewManager(connection *grpc.ClientConn, helper *login_helper.LoginHelper) *Manager{
     // Network & DNS client
-    clusterAPIClient := pbClientAPI.NewNetworkManagerClient(connection)
+    clusterAPIClient := grpc_cluster_api_go.NewNetworkManagerClient(connection)
     return &Manager{
         ClusterAPIClient: clusterAPIClient,
         ClusterAPILoginHelper: helper,
@@ -38,7 +37,9 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId st
         MemberId: memberId,
     }
 
-    _, errAuth := m.ClusterAPIClient.AuthorizeMember(m.ClusterAPILoginHelper.Ctx, &req)
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, errAuth := m.ClusterAPIClient.AuthorizeMember(ctx, &req)
 
     if errAuth != nil {
         return derrors.NewGenericError("error authorizing network membership", errAuth)
@@ -63,7 +64,9 @@ func (m *Manager) RegisterNetworkEntry(organizationId string, organizationName s
         AppInstanceId: appInstanceId,
         ServiceName: serviceName,
     }
-    _, err := m.ClusterAPIClient.AddDNSEntry(context.Background(), &req)
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, err := m.ClusterAPIClient.AddDNSEntry(ctx, &req)
 
     return err
 }

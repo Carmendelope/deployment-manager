@@ -8,13 +8,13 @@
 package monitor
 
 import (
-    "context"
     "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/login-helper"
+    "github.com/nalej/grpc-cluster-api-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
-    pbClusterAPI "github.com/nalej/grpc-cluster-api-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/pkg"
 )
 
 const (
@@ -27,12 +27,15 @@ const (
 )
 
 type MonitorHelper struct {
-    client pbConductor.ConductorMonitorClient
+    // Client
+    Client grpc_cluster_api_go.ConductorClient
+    // LoginHelper Helper
+    ClusterAPILoginHelper *login_helper.LoginHelper
 }
 
-func NewMonitorHelper(conn *grpc.ClientConn) *MonitorHelper {
-    client := pbClusterAPI.NewConductorClient(conn)
-    return &MonitorHelper{client}
+func NewMonitorHelper(conn *grpc.ClientConn, loginHelper *login_helper.LoginHelper) *MonitorHelper {
+    client := grpc_cluster_api_go.NewConductorClient(conn)
+    return &MonitorHelper{client, loginHelper}
 }
 
 func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
@@ -46,7 +49,10 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
         ClusterId: pkg.CLUSTER_ID,
         AppInstanceId: appInstanceId,
     }
-    _, err := m.client.UpdateDeploymentFragmentStatus(context.Background(), &req)
+
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, err := m.Client.UpdateDeploymentFragmentStatus(ctx, &req)
     if err != nil {
         log.Error().Err(err).Msgf("error updating fragment status")
     }
@@ -69,7 +75,9 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
             Status: entities.ServiceStatusToGRPC[status]},
             },
     }
-    _, err := m.client.UpdateServiceStatus(context.Background(), &req)
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+    _, err := m.Client.UpdateServiceStatus(ctx, &req)
     if err != nil {
         log.Error().Err(err).Msgf("error updating service status")
     }

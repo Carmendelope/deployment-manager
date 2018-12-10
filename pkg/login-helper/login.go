@@ -11,16 +11,16 @@ import (
 
 type LoginHelper struct {
 	Connection
+	useTLS bool
 	email      string
 	password   string
-	Ctx        context.Context
-	CancelFunc context.CancelFunc
+	Credentials *Credentials
 }
 
 // NewLogin creates a new LoginHelper structure.
-func NewLogin(address string, email string, password string) *LoginHelper {
+func NewLogin(hostname string, port int, useTLS bool, email string, password string) *LoginHelper {
 	return &LoginHelper{
-		Connection: *NewConnection(address),
+		Connection: *NewConnection(hostname, port, useTLS),
 		email: email,
 		password: password,
 	}
@@ -44,16 +44,16 @@ func (l *LoginHelper) Login() derrors.Error {
 		return conversions.ToDerror(lErr)
 	}
 	log.Debug().Str("token", response.Token).Msg("LoginHelper success")
-	credentials := NewCredentials(DefaultPath, response.Token, response.RefreshToken)
-	sErr := credentials.Store()
+	l.Credentials = NewCredentials(DefaultPath, response.Token, response.RefreshToken)
+	sErr := l.Credentials.Store()
 	if sErr != nil {
 		return sErr
 	}
 
-	// create context
-	ctx, cFunc :=  credentials.GetContext()
-	l.Ctx = ctx
-	l.CancelFunc = cFunc
 	return nil
+}
+
+func (l *LoginHelper) GetContext() (context.Context, context.CancelFunc) {
+	return l.Credentials.GetContext()
 }
 

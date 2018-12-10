@@ -7,6 +7,7 @@
 package service
 
 import (
+    "crypto/tls"
     "fmt"
     "github.com/nalej/deployment-manager/pkg"
     "github.com/nalej/deployment-manager/pkg/handler"
@@ -14,31 +15,17 @@ import (
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/deployment-manager/pkg/network"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/derrors"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/nalej/grpc-utils/pkg/tools"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials"
     "google.golang.org/grpc/reflection"
     "net"
     "os"
     "strconv"
 )
-
-// Configuration structure
-type Config struct {
-    // listening port
-    Port uint32
-    // ClusterAPIAddress address
-    ClusterAPIAddress string
-    // DeploymentManager address
-    DeploymentMgrAddress string
-    // is kubernetes locally available
-    Local bool
-    // Username/email
-    Email string
-    // Password
-    Password string
-}
 
 type DeploymentManagerService struct {
     // Manager with the logic for incoming requests
@@ -52,7 +39,8 @@ type DeploymentManagerService struct {
 }
 
 // Set the values of the environment variables.
-
+// TODO Why we need environment variables?
+// Deprecated: Use the config elements
 func setEnvironmentVars(config *Config) {
     if pkg.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP); pkg.MANAGER_CLUSTER_IP == "" {
         log.Fatal().Msgf("%s variable was not set", utils.MANAGER_ClUSTER_IP)
@@ -74,13 +62,38 @@ func setEnvironmentVars(config *Config) {
 }
 
 
+func getClusterAPIConnection(hostname string, port int) (*grpc.ClientConn, derrors.Error) {
+    // Build connection with cluster API
+    tlsConfig := &tls.Config{
+        ServerName:   hostname,
+        InsecureSkipVerify: true,
+    }
+    targetAddress := fmt.Sprintf("%s:%d", hostname, port)
+    log.Debug().Str("address", targetAddress).Msg("creating connection")
+
+    creds := credentials.NewTLS(tlsConfig)
+
+    log.Debug().Interface("creds", creds.Info()).Msg("Secure credentials")
+    sConn, dErr := grpc.Dial(targetAddress, grpc.WithTransportCredentials(creds))
+    if dErr != nil {
+        return nil, derrors.AsError(dErr, "cannot create connection with the cluster API service")
+    }
+    return sConn, nil
+}
+
 func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, error) {
 
     setEnvironmentVars(config)
 
+    vErr := config.Validate()
+    if vErr != nil {
+        log.Fatal().Str("err", vErr.DebugReport()).Msg("invalid configuration")
+    }
+
+    config.Print()
+
     // login
-    log.Debug().Msgf("login to %s", utils.MANAGER_ClUSTER_IP)
-    clusterAPILoginHelper := login_helper.NewLogin(utils.MANAGER_ClUSTER_IP, config.Email, config.Password)
+    clusterAPILoginHelper := login_helper.NewLogin(config.LoginHostname, int(config.LoginPort), config.UseTLSForLogin, config.Email, config.Password)
     err := clusterAPILoginHelper.Login()
     if err != nil {
         log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
@@ -96,32 +109,22 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Build connection with conductor
-    log.Debug().Msgf("connect with conductor at %s", config.ClusterAPIAddress)
-    conn, errCond := grpc.Dial(config.ClusterAPIAddress, grpc.WithInsecure())
-    if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with conductor at %s", config.ClusterAPIAddress)
+    log.Debug().Str("hostname", config.ClusterAPIHostname).Msg("connecting with cluster api")
+    clusterAPIConn, errCond := getClusterAPIConnection(config.ClusterAPIHostname, int(config.Port))
+    if errCond != nil {
+        log.Panic().Err(err).Str("hostname", config.ClusterAPIHostname).Msg("impossible to connect with cluster api")
         panic(err.Error())
         return nil, errCond
     }
 
     // Instantiate deployment manager service
-    mgr := handler.NewManager(conn,&exec)
-
-    // Build connection with networking manager
-    log.Debug().Msgf("connect with network manager at %s", config.ClusterAPIAddress)
-    connNet, errNM := grpc.Dial(config.ClusterAPIAddress,grpc.WithInsecure())
-    if err != nil {
-        log.Panic().Err(err).Msgf("impossible to connect with networking manager at %s", config.ClusterAPIAddress)
-        panic(err.Error())
-        return nil, errNM
-    }
+    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper)
 
     // Instantiate network manager service
-    net := network.NewManager(connNet, clusterAPILoginHelper)
+    net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
     // Instantiate target server
     server := tools.NewGenericGRPCServer(config.Port)
-
 
     instance := DeploymentManagerService{mgr: mgr, net: net, server: server, configuration: *config}
 

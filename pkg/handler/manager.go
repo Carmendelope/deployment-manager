@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"time"
+    "github.com/nalej/deployment-manager/pkg/login-helper"
 )
 
 const (
@@ -40,8 +41,8 @@ type Manager struct {
     conductorAddress string
 }
 
-func NewManager(conductorConnection *grpc.ClientConn, executor *executor.Executor) *Manager {
-    monitor := monitor.NewMonitorHelper(conductorConnection)
+func NewManager(conductorConnection *grpc.ClientConn, executor *executor.Executor, loginHelper *login_helper.LoginHelper) *Manager {
+    monitor := monitor.NewMonitorHelper(conductorConnection, loginHelper)
     return &Manager{executor: *executor, monitor: monitor}
 }
 

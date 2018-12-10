@@ -8,7 +8,7 @@ package main
 
 import (
     "github.com/nalej/deployment-manager/cmd/deployment-manager-cli/cmd"
-    "github.com/nalej/golang-template/version"
+    "github.com/nalej/deployment-manager/version"
 )
 
 var MainVersion string
