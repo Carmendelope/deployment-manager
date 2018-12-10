@@ -42,7 +42,7 @@ type Executor interface {
     //  return:
     //   deployable entity or error if any
     BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, ztNetworkId string,
-        organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string) (Deployable, error)
+        organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string, clusterPublicHostname string) (Deployable, error)
 
     // Execute a deployment stage for the current platform.
     //  params:

@@ -39,11 +39,20 @@ type Manager struct {
     monitor *monitor.MonitorHelper
     // Conductor address
     conductorAddress string
+    // Cluster Public Hostname for the ingresses
+    clusterPublicHostname string
 }
 
-func NewManager(conductorConnection *grpc.ClientConn, executor *executor.Executor, loginHelper *login_helper.LoginHelper) *Manager {
+func NewManager(
+    conductorConnection *grpc.ClientConn,
+    executor *executor.Executor,
+    loginHelper *login_helper.LoginHelper, clusterPublicHostname string) *Manager {
     monitor := monitor.NewMonitorHelper(conductorConnection, loginHelper)
-    return &Manager{executor: *executor, monitor: monitor}
+    return &Manager{
+        executor: *executor,
+        monitor: monitor,
+        clusterPublicHostname: clusterPublicHostname,
+    }
 }
 
 
@@ -76,7 +85,7 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
         deployable, err := m.executor.BuildNativeDeployable(stage, namespace, request.ZtNetworkId,
             request.Fragment.OrganizationId, request.Fragment.OrganizationName,request.Fragment.DeploymentId,
-            request.Fragment.AppInstanceId, request.Fragment.AppName)
+            request.Fragment.AppInstanceId, request.Fragment.AppName, m.clusterPublicHostname)
 
         if err != nil {
             log.Error().Err(err).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
