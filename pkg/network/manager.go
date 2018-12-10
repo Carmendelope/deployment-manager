@@ -9,21 +9,21 @@ import (
     "fmt"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/derrors"
-    pbClientAPI "github.com/nalej/grpc-cluster-api-go"
+    "github.com/nalej/grpc-cluster-api-go"
     pbNetwork "github.com/nalej/grpc-network-go"
     "google.golang.org/grpc"
 )
 
 type Manager struct{
-    // Networking & DNS manager client
-    ClusterAPIClient pbClientAPI.NetworkManagerClient
+    // ClusterAPI to send information back related to the network manager.
+    ClusterAPIClient grpc_cluster_api_go.NetworkManagerClient
     // LoginHelper Helper
     ClusterAPILoginHelper *login_helper.LoginHelper
 }
 
 func NewManager(connection *grpc.ClientConn, helper *login_helper.LoginHelper) *Manager{
     // Network & DNS client
-    clusterAPIClient := pbClientAPI.NewNetworkManagerClient(connection)
+    clusterAPIClient := grpc_cluster_api_go.NewNetworkManagerClient(connection)
     return &Manager{
         ClusterAPIClient: clusterAPIClient,
         ClusterAPILoginHelper: helper,
