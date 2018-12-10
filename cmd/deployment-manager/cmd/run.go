@@ -43,6 +43,7 @@ func init() {
 	runCmd.Flags().String("loginHostname", "", "Hostname of the login service")
 	runCmd.Flags().Uint32("loginPort", 31683, "port where the login service is listening")
 	runCmd.Flags().Bool("useTLSForLogin", true, "Use TLS to connect to the Login API")
+	runCmd.Flags().String("clusterPublicHostname", "", "Cluster Public Hostname for the ingresses")
 	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	viper.BindPFlags(runCmd.Flags())
@@ -59,6 +60,7 @@ func Run() {
 		LoginHostname:        viper.GetString("loginHostname"),
 		LoginPort:            uint32(viper.GetInt32("loginPort")),
 		UseTLSForLogin:       viper.GetBool("useTLSForLogin"),
+		ClusterPublicHostname: viper.GetString("clusterPublicHostname"),
 		DeploymentMgrAddress: viper.GetString("depMgrAddress"),
 		Local:                viper.GetBool("local"),
 		Email:                viper.GetString("email"),
