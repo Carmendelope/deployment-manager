@@ -54,6 +54,8 @@ type DeployableKubernetesStage struct {
     deployments *DeployableDeployments
     // collection of services
     services *DeployableServices
+    // Collection of ingresses to be deployed
+    ingresses *DeployableIngress
 }
 
 // Instantiate a new set of resources for a stage to be deployed.
@@ -72,6 +74,7 @@ func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConduc
         services: NewDeployableService(client, stage, targetNamespace),
         deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
             organizationName, deploymentId, appInstanceId, appName),
+        ingresses: NewDeployableIngress(client, stage, targetNamespace),
     }
 }
 
@@ -83,13 +86,19 @@ func (d DeployableKubernetesStage) Build() error {
     // Build deployments
     err := d.deployments.Build()
     if err != nil {
-        log.Error().Err(err).Msgf("impossible to create deployments for stageId %s", d.stage.StageId)
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create deployments")
         return err
     }
     // Build services
     err = d.services.Build()
     if err != nil {
-        log.Error().Err(err).Msgf("impossible to create services for stageId %s", d.stage.StageId)
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create services for")
+        return err
+    }
+
+    err = d.ingresses.Build()
+    if err != nil{
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create ingresses")
         return err
     }
 
@@ -99,17 +108,24 @@ func (d DeployableKubernetesStage) Build() error {
 func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
 
     // Deploy deployments
-    log.Debug().Msgf("build deployments for stage %s",d.stage.StageId)
+    log.Debug().Str("stageId", d.stage.StageId).Msg("build deployments")
     err := d.deployments.Deploy(controller)
     if err != nil {
         return err
     }
     // Deploy services
-    log.Debug().Msgf("build services for stage %s",d.stage.StageId)
+    log.Debug().Str("stageId", d.stage.StageId).Msg("build services")
     err = d.services.Deploy(controller)
     if err != nil {
         return err
     }
+
+    log.Debug().Str("stageId", d.stage.StageId).Msg("build ingresses")
+    err = d.ingresses.Deploy(controller)
+    if err != nil {
+        return err
+    }
+
     return nil
 }
 
@@ -129,6 +145,10 @@ func (d DeployableKubernetesStage) Undeploy() error {
     }
     // Deploy services
     err = d.services.Undeploy()
+    if err != nil {
+        return err
+    }
+    err = d.ingresses.Undeploy()
     if err != nil {
         return err
     }

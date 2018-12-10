@@ -14,19 +14,22 @@ import (
 )
 
 type DeployableIngress struct {
-	client extV1Beta1.ExtensionsV1beta1Interface
-	stage * grpc_conductor_go.DeploymentStage
-	targetNamespace string
+	client                extV1Beta1.IngressInterface
+	stage                 *grpc_conductor_go.DeploymentStage
+	targetNamespace       string
 	clusterPublicHostname string
+	ingresses             map[string][]*v1beta1.Ingress
 }
 
 func NewDeployableIngress(
 	client *kubernetes.Clientset,
-	stage grpc_conductor_go.DeploymentStage,
-	targetNamespace string) * DeployableIngress {
+	stage *grpc_conductor_go.DeploymentStage,
+	targetNamespace string) *DeployableIngress {
 	return &DeployableIngress{
-		client: client.ExtensionsV1beta1(),
+		client:          client.ExtensionsV1beta1().Ingresses(targetNamespace),
+		stage: stage,
 		targetNamespace: targetNamespace,
+		ingresses:       make(map[string][]*v1beta1.Ingress, 0),
 	}
 }
 
@@ -34,11 +37,11 @@ func (di *DeployableIngress) GetId() string {
 	return di.stage.StageId
 }
 
-func (di * DeployableIngress) getHTTPIngress(organizationId string, serviceId string, serviceName string, port *grpc_application_go.Port) *v1beta1.Ingress {
+func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId string, serviceName string, port *grpc_application_go.Port) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
-	for _, endpoint := range port.Endpoints{
+	for _, endpoint := range port.Endpoints {
 		if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
 			toAdd := v1beta1.HTTPIngressPath{
 				Path: endpoint.Path,
@@ -48,7 +51,7 @@ func (di * DeployableIngress) getHTTPIngress(organizationId string, serviceId st
 				},
 			}
 			paths = append(paths, toAdd)
-		}else{
+		} else {
 			log.Warn().Interface("port", port).Msg("Ignoring endpoint, unsupported type")
 		}
 	}
@@ -67,16 +70,16 @@ func (di * DeployableIngress) getHTTPIngress(organizationId string, serviceId st
 		},
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:      fmt.Sprintf("ingress-%s", serviceId),
-			Namespace: "nalej",
+			Namespace: di.targetNamespace,
 			Labels: map[string]string{
 				"cluster":   "application",
 				"component": "ingress-nginx",
 			},
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
-				"organizationId": organizationId,
-				"serviceId": serviceId,
-				"portName": port.Name,
+				"organizationId":              organizationId,
+				"serviceId":                   serviceId,
+				"portName":                    port.Name,
 			},
 		},
 		Spec: v1beta1.IngressSpec{
@@ -94,7 +97,7 @@ func (di * DeployableIngress) getHTTPIngress(organizationId string, serviceId st
 	}
 }
 
-func (di * DeployableIngress) BuildIngressesForService(service *grpc_application_go.Service) []*v1beta1.Ingress {
+func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.Service) []*v1beta1.Ingress {
 
 	ingresses := make([]*v1beta1.Ingress, 0)
 	for _, p := range service.ExposedPorts {
@@ -106,19 +109,46 @@ func (di * DeployableIngress) BuildIngressesForService(service *grpc_application
 }
 
 func (di *DeployableIngress) Build() error {
-	ingresses := make(map[string] []*v1beta1.Ingress, 0)
 	for _, service := range di.stage.Services {
-		ingresses[service.ServiceId] = di.BuildIngressesForService(service)
+		di.ingresses[service.ServiceId] = di.BuildIngressesForService(service)
 	}
 	return nil
 }
 
 func (di *DeployableIngress) Deploy(controller executor.DeploymentController) error {
-	panic("implement me")
+	numCreated := 0
+	for serviceId, ingresses := range di.ingresses {
+		for _, toCreate := range ingresses {
+			created, err := di.client.Create(toCreate)
+			if err != nil {
+				log.Error().Err(err).Interface("toCreate", toCreate).Msg("cannot create ingress")
+				return err
+			}
+			log.Debug().Str("serviceId", serviceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
+			numCreated++
+			// TODO Check that the ingress actually creates.
+			//controller.AddMonitoredResource(string(created.GetUID()), serviceId, di.stage.StageId)
+		}
+	}
+	log.Debug().Int("created", numCreated).Msg("ingresses have been created")
+	return nil
 }
 
 func (di *DeployableIngress) Undeploy() error {
-	panic("implement me")
+	deleted := 0
+	for serviceId, ingresses := range di.ingresses {
+		for _, toDelete := range ingresses {
+			err := di.client.Delete(toDelete.Name, metaV1.NewDeleteOptions(DeleteGracePeriod))
+			if err != nil {
+				log.Error().Str("serviceId", serviceId).Interface("toDelete", toDelete).Msg("cannot delete ingress")
+				return err
+
+			}
+			log.Debug().Str("serviceId", serviceId).Str("Name", toDelete.Name).Msg("Ingress has been deleted")
+		}
+		deleted++
+	}
+	log.Debug().Int("deleted", deleted).Msg("Ingresses has been deleted")
+	return nil
+
 }
-
-
