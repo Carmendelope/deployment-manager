@@ -85,7 +85,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 		},
 		Spec: v1beta1.IngressSpec{
 			Rules: []v1beta1.IngressRule{
-				v1beta1.IngressRule{
+				{
 					Host: ingressHostname,
 					IngressRuleValue: v1beta1.IngressRuleValue{
 						HTTP: &v1beta1.HTTPIngressRuleValue{
@@ -98,12 +98,15 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 	}
 }
 
+// TODO Check the rules to build the ingresses.
 func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.Service) []*v1beta1.Ingress {
-
 	ingresses := make([]*v1beta1.Ingress, 0)
 	for _, p := range service.ExposedPorts {
 		toAdd := di.getHTTPIngress(service.OrganizationId, service.ServiceId, service.Name, p)
-		ingresses = append(ingresses, toAdd)
+		if toAdd != nil{
+			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
+			ingresses = append(ingresses, toAdd)
+		}
 	}
 	log.Debug().Int("number", len(ingresses)).Str("serviceName", service.Name).Msg("Ingresses prepared for service")
 	return ingresses
@@ -111,8 +114,12 @@ func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_
 
 func (di *DeployableIngress) Build() error {
 	for _, service := range di.stage.Services {
-		di.ingresses[service.ServiceId] = di.BuildIngressesForService(service)
+		toAdd := di.BuildIngressesForService(service)
+		if toAdd != nil && len(toAdd) > 0 {
+			di.ingresses[service.ServiceId] = di.BuildIngressesForService(service)
+		}
 	}
+	log.Debug().Interface("ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
 	return nil
 }
 
@@ -120,6 +127,7 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 	numCreated := 0
 	for serviceId, ingresses := range di.ingresses {
 		for _, toCreate := range ingresses {
+			log.Debug().Interface("toCreate", toCreate).Msg("Creating ingress")
 			created, err := di.client.Create(toCreate)
 			if err != nil {
 				log.Error().Err(err).Interface("toCreate", toCreate).Msg("cannot create ingress")

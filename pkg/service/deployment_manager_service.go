@@ -69,7 +69,7 @@ func getClusterAPIConnection(hostname string, port int) (*grpc.ClientConn, derro
         InsecureSkipVerify: true,
     }
     targetAddress := fmt.Sprintf("%s:%d", hostname, port)
-    log.Debug().Str("address", targetAddress).Msg("creating connection")
+    log.Debug().Str("address", targetAddress).Msg("creating cluster API connection")
 
     creds := credentials.NewTLS(tlsConfig)
 
@@ -110,7 +110,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
 
     // Build connection with conductor
     log.Debug().Str("hostname", config.ClusterAPIHostname).Msg("connecting with cluster api")
-    clusterAPIConn, errCond := getClusterAPIConnection(config.ClusterAPIHostname, int(config.Port))
+    clusterAPIConn, errCond := getClusterAPIConnection(config.ClusterAPIHostname, int(config.ClusterAPIPort))
     if errCond != nil {
         log.Panic().Err(err).Str("hostname", config.ClusterAPIHostname).Msg("impossible to connect with cluster api")
         panic(err.Error())

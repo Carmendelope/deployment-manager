@@ -185,9 +185,8 @@ func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentSt
 }
 
 func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
-    log.Info().Msgf("undeploy app %s", request.AppInstanceId)
-
     targetNS := pkg.GetNamespace(request.OrganizationId, request.AppInstanceId)
+    log.Info().Str("app_instance_id", request.AppInstanceId).Str("targetNS", targetNS).Msg("undeploy app namespace")
 
     ns := NewDeployableNamespace(k.Client, "not necessary", targetNS)
     err := ns.Build()

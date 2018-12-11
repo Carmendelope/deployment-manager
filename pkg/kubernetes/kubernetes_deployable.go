@@ -108,21 +108,24 @@ func (d DeployableKubernetesStage) Build() error {
 func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
 
     // Deploy deployments
-    log.Debug().Str("stageId", d.stage.StageId).Msg("build deployments")
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy deployments")
     err := d.deployments.Deploy(controller)
     if err != nil {
+        log.Error().Err(err).Msg("error deploying deployments, aborting")
         return err
     }
     // Deploy services
-    log.Debug().Str("stageId", d.stage.StageId).Msg("build services")
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy services")
     err = d.services.Deploy(controller)
     if err != nil {
+        log.Error().Err(err).Msg("error deploying services, aborting")
         return err
     }
 
-    log.Debug().Str("stageId", d.stage.StageId).Msg("build ingresses")
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy ingresses")
     err = d.ingresses.Deploy(controller)
     if err != nil {
+        log.Error().Err(err).Msg("error deploying ingresses, aborting")
         return err
     }
 
@@ -629,7 +632,7 @@ func(n *DeployableNamespace) Build() error {
 }
 
 func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) error {
-    retrieved, err := n.client.Get(n.targetNamespace,metav1.GetOptions{IncludeUninitialized: true})
+    retrieved, err := n.client.Get(n.targetNamespace, metav1.GetOptions{IncludeUninitialized: true})
 
     if retrieved.Name!="" {
         n.namespace = *retrieved
@@ -647,7 +650,16 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     return err
 }
 
+func (n *DeployableNamespace) exists() bool{
+    _, err := n.client.Get(n.targetNamespace, metav1.GetOptions{IncludeUninitialized: true})
+    return err == nil
+}
+
 func(n *DeployableNamespace) Undeploy() error {
+    if !n.exists(){
+        log.Warn().Str("targetNamespace", n.targetNamespace).Msg("Target namespace does not exists, considering undeploy successful")
+        return nil
+    }
     err := n.client.Delete(n.targetNamespace, metav1.NewDeleteOptions(DeleteGracePeriod))
     return err
 }
