@@ -317,7 +317,6 @@
   name = "github.com/nalej/grpc-utils"
   packages = [
     "pkg/conversions",
-    "pkg/test",
     "pkg/tools",
   ]
   pruneopts = ""
@@ -618,7 +617,6 @@
     "stats",
     "status",
     "tap",
-    "test/bufconn",
   ]
   pruneopts = ""
   revision = "df014850f6dee74ba2fc94874043a9f3f75fbfd8"
@@ -827,7 +825,6 @@
     "github.com/nalej/grpc-login-api-go",
     "github.com/nalej/grpc-network-go",
     "github.com/nalej/grpc-utils/pkg/conversions",
-    "github.com/nalej/grpc-utils/pkg/test",
     "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
@@ -839,7 +836,6 @@
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
-    "google.golang.org/grpc/test/bufconn",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
@@ -852,6 +848,7 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/typed/apps/v1",
     "k8s.io/client-go/kubernetes/typed/core/v1",
+    "k8s.io/client-go/kubernetes/typed/extensions/v1beta1",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
