@@ -6,7 +6,6 @@
 package network
 
 import (
-    "fmt"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/derrors"
     "github.com/nalej/grpc-cluster-api-go"
@@ -53,7 +52,8 @@ func (m *Manager) RegisterNetworkEntry(organizationId string, organizationName s
     networkId string, serviceName string, ip string) error {
 
     // Create the FQDN for this service
-    fqdn := fmt.Sprintf("%s-%s",serviceName,organizationName)
+    //fqdn := fmt.Sprintf("%s-%s",serviceName,organizationName)
+    fqdn := GetNetworkingName(serviceName, organizationName, appInstanceId)
 
     req := pbNetwork.AddDNSEntryRequest{
         NetworkId: networkId,
