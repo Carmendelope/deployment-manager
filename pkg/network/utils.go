@@ -13,6 +13,6 @@ import(
 
 // Return the networking name for a given service.
 func GetNetworkingName(serviceName string, organizationName string, appInstanceId string) string {
-    name := fmt.Sprintf("%s-%s-%s.service.nalej", pkg.FormatName(serviceName), pkg.FormatName(organizationName), appInstanceId[0:5])
+    name := fmt.Sprintf("%s-%s-%s", pkg.FormatName(serviceName), pkg.FormatName(organizationName), appInstanceId[0:5])
     return name
 }

@@ -19,11 +19,14 @@ import (
     "github.com/nalej/deployment-manager/pkg/utils"
     "fmt"
     "github.com/nalej/deployment-manager/pkg/network"
+    "strings"
 )
 
 const (
     // Name of the Docker ZT agent image
     ZTAgentImageName = "nalejops/zt-agent:v0.1.0"
+    // Prefix defining Nalej services
+    NalejServicePrefix = "NALEJ_SERV_"
 )
 
 
@@ -330,35 +333,47 @@ func(d *DeployableDeployments) Undeploy() error {
 //   nalejVariables set of variables for nalej services
 //  return:
 //   list of environment variables
-func (d *DeployableDeployments) getNalejEnvVariables() [] apiv1.EnvVar {
-    vars := make([]apiv1.EnvVar,0)
-    for service_id, service := range d.stage.Services {
-        aux := apiv1.EnvVar{
-            // Create a variable like NALEJ_SERV_MYSQL: mysql-org1
-            //Name: fmt.Sprintf("NALEJ_SERV_%s", strings.ToUpper(pkg.FormatName(service.Name))),
-            Name: fmt.Sprintf("NALEJ_SERV_%d", service_id),
-            Value: network.GetNetworkingName(service.Name, d.organizationName, d.appInstanceId),
-        }
-        vars = append(vars, aux)
+func (d *DeployableDeployments) getNalejEnvVariables() map[string]string {
+    vars := make(map[string]string,0)
+    for _, service := range d.stage.Services {
+        name := fmt.Sprintf("%s%s", NalejServicePrefix,service.ServiceId)
+        netName := network.GetNetworkingName(service.Name, d.organizationName, d.appInstanceId)
+        value := fmt.Sprintf("%s.service.nalej",netName)
+        vars[name] = value
     }
     log.Debug().Interface("variables", vars).Msg("Nalej common variables")
     return vars
 }
 
 
-// Transform a service map of environment variables to the corresponding K8s API structure.
+// Transform a service map of environment variables to the corresponding K8s API structure. Any user-defined
+// environment variable starting by NALEJ_SERV_ will be replaced if possible.
 //  params:
 //   variables to be used
 //  return:
 //   list of k8s environment variables
-func (d *DeployableDeployments) getEnvVariables(nalejVariables []apiv1.EnvVar, variables map[string]string) []apiv1.EnvVar {
+func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string, variables map[string]string) []apiv1.EnvVar {
     result := make([]apiv1.EnvVar, 0)
     for k, v := range variables {
-        log.Debug().Str(k,v).Msg("user defined variable")
-        result = append(result, apiv1.EnvVar{Name: k, Value: v})
+        if strings.HasPrefix(k,NalejServicePrefix) {
+            log.Warn().Str("UserEnvironmentVariable", k).Msg("reserved variable name will be ignored")
+        } else {
+            toAdd := apiv1.EnvVar{ Name: k, Value: v}
+            if strings.HasPrefix(v,NalejServicePrefix) {
+                // Check if we know this variable
+                nalejValue, found := nalejVariables[v]
+                if found {
+                    toAdd.Value = nalejValue
+                } else {
+                    log.Warn().Str("formerValue", v).Msg("not found nalej service")
+                }
+            }
+            log.Debug().Str("formerKey", k).Str("formerValue",v).Interface("apiv1EnvVar",toAdd).Msg("environmentVariable")
+            result = append(result, toAdd)
+        }
     }
-    for _, e := range nalejVariables {
-        result = append(result, e)
+    for k, v := range nalejVariables {
+        result = append(result, apiv1.EnvVar{Name:k, Value: v})
     }
     log.Debug().Interface("nalej_variables", result).Str("appId", d.appInstanceId).Msg("generated variables for service")
     return result
