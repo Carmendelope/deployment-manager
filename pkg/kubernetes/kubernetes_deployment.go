@@ -52,6 +52,8 @@ type DeployableDeployments struct{
     appInstanceId string
     // app nalej name
     appName string
+    // DNS ips
+    dnsHosts []string
     // map of deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
@@ -62,7 +64,7 @@ type DeployableDeployments struct{
 
 func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
     targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
-    deploymentId string, appInstanceId string, appName string) *DeployableDeployments {
+    deploymentId string, appInstanceId string, appName string, dnsHosts []string) *DeployableDeployments {
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
@@ -73,6 +75,7 @@ func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.De
         deploymentId: deploymentId,
         appInstanceId: appInstanceId,
         appName: appName,
+        dnsHosts: dnsHosts,
         deployments: make(map[string]appsv1.Deployment,0),
         ztAgents: make(map[string]appsv1.Deployment,0),
     }
@@ -116,6 +119,11 @@ func(d *DeployableDeployments) Build() error {
                         Labels: service.Labels,
                     },
                     Spec: apiv1.PodSpec{
+                        // Set POD DNS policies
+                        DNSPolicy: apiv1.DNSNone,
+                        DNSConfig: &apiv1.PodDNSConfig{
+                            Nameservers: d.dnsHosts,
+                        },
                         Containers: []apiv1.Container{
                             // User defined container
                             {

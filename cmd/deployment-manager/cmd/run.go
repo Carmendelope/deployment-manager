@@ -46,6 +46,7 @@ func init() {
 	runCmd.Flags().String("clusterPublicHostname", "", "Cluster Public Hostname for the ingresses")
 	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
+	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
 	viper.BindPFlags(runCmd.Flags())
 }
 
@@ -65,6 +66,7 @@ func Run() {
 		Local:                viper.GetBool("local"),
 		Email:                viper.GetString("email"),
 		Password:             viper.GetString("password"),
+		DNS:                  viper.GetString("dns"),
 	}
 
 	log.Info().Msg("launching deployment manager...")

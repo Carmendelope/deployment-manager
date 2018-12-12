@@ -36,6 +36,8 @@ type Config struct {
 	Email string
 	// Password to log into the managment cluster.
 	Password string
+	// List of DNS entries separated by commas
+	DNS string
 }
 
 func (conf *Config) Validate() derrors.Error {
@@ -64,6 +66,10 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("clusterPublicHostname must be set")
 	}
 
+	if conf.DNS == "" {
+		return derrors.NewInvalidArgumentError("dns list must be set")
+	}
+
 	return nil
 }
 
@@ -79,4 +85,5 @@ func (conf *Config) Print() {
 		log.Warn().Str("address", conf.ClusterAPIAddress).Msg("Deprecated Cluster API address is set")
 	}
 	log.Info().Str("Email", conf.Email).Str("password", strings.Repeat("*", len(conf.Password))).Msg("Application cluster credentials")
+	log.Info().Str("DNS", conf.DNS).Msg("List of DNS ips")
 }
