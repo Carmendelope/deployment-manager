@@ -25,6 +25,7 @@ import (
     "net"
     "os"
     "strconv"
+    "strings"
 )
 
 type DeploymentManagerService struct {
@@ -118,7 +119,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Instantiate deployment manager service
-    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper, config.ClusterPublicHostname)
+    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper, config.ClusterPublicHostname, strings.Split(config.DNS,","))
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)

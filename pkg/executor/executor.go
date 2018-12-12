@@ -39,10 +39,12 @@ type Executor interface {
     //   deploymentId identifier for the specific deployment
     //   appInstanceId identifier of the application instance
     //   appName name of the nalej application
+    //   dnsHosts array of dns hosts
     //  return:
     //   deployable entity or error if any
     BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, ztNetworkId string,
-        organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string, clusterPublicHostname string) (Deployable, error)
+        organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string,
+        clusterPublicHostname string, dnsHosts []string) (Deployable, error)
 
     // Execute a deployment stage for the current platform.
     //  params:

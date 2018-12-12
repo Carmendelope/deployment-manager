@@ -41,17 +41,20 @@ type Manager struct {
     conductorAddress string
     // Cluster Public Hostname for the ingresses
     clusterPublicHostname string
+    // Dns hosts
+    dnsHosts []string
 }
 
 func NewManager(
     conductorConnection *grpc.ClientConn,
     executor *executor.Executor,
-    loginHelper *login_helper.LoginHelper, clusterPublicHostname string) *Manager {
+    loginHelper *login_helper.LoginHelper, clusterPublicHostname string, dnsHosts []string) *Manager {
     monitor := monitor.NewMonitorHelper(conductorConnection, loginHelper)
     return &Manager{
         executor: *executor,
         monitor: monitor,
         clusterPublicHostname: clusterPublicHostname,
+        dnsHosts: dnsHosts,
     }
 }
 
@@ -80,12 +83,13 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
             request.Fragment.FragmentId))
     }
 
+
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
         deployable, err := m.executor.BuildNativeDeployable(stage, namespace, request.ZtNetworkId,
             request.Fragment.OrganizationId, request.Fragment.OrganizationName,request.Fragment.DeploymentId,
-            request.Fragment.AppInstanceId, request.Fragment.AppName, m.clusterPublicHostname)
+            request.Fragment.AppInstanceId, request.Fragment.AppName, m.clusterPublicHostname, m.dnsHosts)
 
         if err != nil {
             log.Error().Err(err).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
@@ -192,4 +196,3 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
 
     return errors.New(fmt.Sprintf("exceeded number of retries for stage %s in fragment %s", stage.StageId, fragment.FragmentId))
 }
-

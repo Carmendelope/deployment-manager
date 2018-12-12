@@ -41,6 +41,7 @@ spec:
         - "--clusterPublicHostname=$(CLUSTER_PUBLIC_HOSTNAME)"
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"
+        - "--dns=$(DNS_HOSTS)"
         - "--debug"
         env:
         - name: MANAGER_CLUSTER_IP
@@ -83,6 +84,11 @@ spec:
             secretKeyRef:
               name: cluster-user-credentials
               key: password
+        - name: DNS_HOSTS
+          valueFrom:
+            secretKeyRef:
+              name: cluster-config
+              key: dns_public_ips
         ports:
         - name: api-port
           containerPort: 5200
