@@ -15,6 +15,7 @@ import (
 
 type DeployableIngress struct {
 	client                extV1Beta1.IngressInterface
+	appInstanceId string
 	stage                 *grpc_conductor_go.DeploymentStage
 	targetNamespace       string
 	clusterPublicHostname string
@@ -23,10 +24,12 @@ type DeployableIngress struct {
 
 func NewDeployableIngress(
 	client *kubernetes.Clientset,
+	appInstanceId string,
 	stage *grpc_conductor_go.DeploymentStage,
 	targetNamespace string, clusterPublicHostname string) *DeployableIngress {
 	return &DeployableIngress{
 		client:          client.ExtensionsV1beta1().Ingresses(targetNamespace),
+		appInstanceId: appInstanceId,
 		stage: stage,
 		targetNamespace: targetNamespace,
 		clusterPublicHostname: clusterPublicHostname,
@@ -62,7 +65,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 		return nil
 	}
 
-	ingressHostname := fmt.Sprintf("%s.%s", serviceId, di.clusterPublicHostname)
+	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", serviceId, di.appInstanceId[0:5], di.clusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -79,6 +82,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
 				"organizationId":              organizationId,
+				"appInstanceId":				di.appInstanceId,
 				"serviceId":                   serviceId,
 				"portName":                    port.Name,
 			},

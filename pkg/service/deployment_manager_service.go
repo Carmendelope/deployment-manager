@@ -118,8 +118,10 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         return nil, errCond
     }
 
+    nalejDNSForPods := strings.Split(config.DNS, ",")
+    nalejDNSForPods = append(nalejDNSForPods, "8.8.8.8")
     // Instantiate deployment manager service
-    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper, config.ClusterPublicHostname, strings.Split(config.DNS,","))
+    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper, config.ClusterPublicHostname, nalejDNSForPods)
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)
