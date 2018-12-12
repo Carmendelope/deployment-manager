@@ -51,7 +51,7 @@ func GetNamespace(organizationId string, appInstanceId string) string {
 	return target
 }
 
-// Format a string to
+// Format a string removing white spaces and going lowercase
 func FormatName(name string) string {
 	aux := strings.ToLower(name)
 	// replace any space
