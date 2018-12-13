@@ -46,10 +46,10 @@ type Manager struct {
 }
 
 func NewManager(
-    conductorConnection *grpc.ClientConn,
+    clusterApiConnection *grpc.ClientConn,
     executor *executor.Executor,
     loginHelper *login_helper.LoginHelper, clusterPublicHostname string, dnsHosts []string) *Manager {
-    monitor := monitor.NewMonitorHelper(conductorConnection, loginHelper)
+    monitor := monitor.NewMonitorHelper(clusterApiConnection, loginHelper)
     return &Manager{
         executor: *executor,
         monitor: monitor,

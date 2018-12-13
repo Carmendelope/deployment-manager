@@ -43,6 +43,7 @@ func (h *Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
 	}
 
 	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
+	log.Debug().Interface("executeResult", response).Msg("executed fragment responds")
 
 	return &response, nil
 }
