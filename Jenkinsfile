@@ -7,6 +7,7 @@ pipeline {
     agent { node { label 'golang' } }
     options {
         checkoutToSubdirectory("${packagePath}")
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     stages {
