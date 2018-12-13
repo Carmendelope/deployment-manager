@@ -15,7 +15,7 @@ import (
     "github.com/rs/zerolog/log"
     "k8s.io/client-go/kubernetes/typed/apps/v1"
     "k8s.io/client-go/kubernetes"
-    "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/utils"
     "fmt"
     "github.com/nalej/deployment-manager/pkg/network"
@@ -25,12 +25,12 @@ import (
 const (
     // Name of the Docker ZT agent image
     ZTAgentImageName = "nalejops/zt-agent:v0.1.0"
-    // Prefix defining Nalej services
+    // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
 )
 
 
-// Deployable deployments
+// Deployable Deployments
 //-----------------------
 
 type DeployableDeployments struct{
@@ -54,7 +54,7 @@ type DeployableDeployments struct{
     appName string
     // DNS ips
     dnsHosts []string
-    // map of deployments ready to be deployed
+    // map of Deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
     // map of agents deployed for every service
@@ -102,7 +102,7 @@ func(d *DeployableDeployments) Build() error {
 
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
-                Name: pkg.FormatName(service.Name),
+                Name: common.FormatName(service.Name),
                 Namespace: d.targetNamespace,
                 Labels: service.Labels,
                 Annotations: map[string] string {
@@ -127,7 +127,7 @@ func(d *DeployableDeployments) Build() error {
                         Containers: []apiv1.Container{
                             // User defined container
                             {
-                                Name:  pkg.FormatName(service.Name),
+                                Name:  common.FormatName(service.Name),
                                 Image: service.Image,
                                 Env:   d.getEnvVariables(nalejVars,service.EnvironmentVariables),
                                 Ports: d.getContainerPorts(service.ExposedPorts),
@@ -143,7 +143,7 @@ func(d *DeployableDeployments) Build() error {
                                     "--serviceName", service.Name,
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
-                                    "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
+                                    "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
                                     "--organizationId", d.organizationId,
                                     "--organizationName", d.organizationName,
                                     "--networkId", d.ztNetworkId,
@@ -209,7 +209,7 @@ func(d *DeployableDeployments) Build() error {
             "app": service.Labels["app"],
         }
 
-        ztAgentName := fmt.Sprintf("zt-%s",pkg.FormatName(service.Name))
+        ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: ztAgentName,
@@ -241,10 +241,10 @@ func(d *DeployableDeployments) Build() error {
                                     "run",
                                     "--appInstanceId", d.appInstanceId,
                                     "--appName", d.appName,
-                                    "--serviceName", pkg.FormatName(service.Name),
+                                    "--serviceName", common.FormatName(service.Name),
                                     "--deploymentId", d.deploymentId,
                                     "--fragmentId", d.stage.FragmentId,
-                                    "--managerAddr", pkg.DEPLOYMENT_MANAGER_ADDR,
+                                    "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
                                     "--organizationId", d.organizationId,
                                     "--organizationName", d.organizationName,
                                     "--networkId", d.ztNetworkId,
@@ -259,7 +259,7 @@ func(d *DeployableDeployments) Build() error {
                                     // Indicate the name of the k8s service
                                     {
                                         Name: "K8S_SERVICE_NAME",
-                                        Value: pkg.FormatName(service.Name),
+                                        Value: common.FormatName(service.Name),
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
@@ -348,7 +348,7 @@ func(d *DeployableDeployments) Undeploy() error {
 
 // Get the set of Nalej environment variables designed to help users.
 //  params:
-//   nalejVariables set of variables for nalej services
+//   nalejVariables set of variables for nalej Services
 //  return:
 //   list of environment variables
 func (d *DeployableDeployments) getNalejEnvVariables() map[string]string {

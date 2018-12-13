@@ -9,7 +9,6 @@ package service
 import (
     "crypto/tls"
     "fmt"
-    "github.com/nalej/deployment-manager/pkg"
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/deployment-manager/pkg/login-helper"
@@ -26,6 +25,7 @@ import (
     "os"
     "strconv"
     "strings"
+    "github.com/nalej/deployment-manager/pkg/common"
 )
 
 type DeploymentManagerService struct {
@@ -43,23 +43,23 @@ type DeploymentManagerService struct {
 // TODO Why we need environment variables?
 // Deprecated: Use the config elements
 func setEnvironmentVars(config *Config) {
-    if pkg.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP); pkg.MANAGER_CLUSTER_IP == "" {
+    if common.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP); common.MANAGER_CLUSTER_IP == "" {
         log.Fatal().Msgf("%s variable was not set", utils.MANAGER_ClUSTER_IP)
     }
 
-    if pkg.MANAGER_CLUSTER_PORT = os.Getenv(utils.MANAGER_CLUSTER_PORT); pkg.MANAGER_CLUSTER_PORT == "" {
+    if common.MANAGER_CLUSTER_PORT = os.Getenv(utils.MANAGER_CLUSTER_PORT); common.MANAGER_CLUSTER_PORT == "" {
         log.Fatal().Msgf("%s variable was not set", utils.MANAGER_CLUSTER_PORT)
-        _, err :=  strconv.Atoi(pkg.MANAGER_CLUSTER_PORT)
+        _, err :=  strconv.Atoi(common.MANAGER_CLUSTER_PORT)
         if err != nil {
             log.Fatal().Msgf("%s must be a port number", utils.MANAGER_CLUSTER_PORT)
         }
     }
 
-    if pkg.CLUSTER_ID = os.Getenv(utils.CLUSTER_ID); pkg.CLUSTER_ID == "" {
+    if common.CLUSTER_ID = os.Getenv(utils.CLUSTER_ID); common.CLUSTER_ID == "" {
         log.Fatal().Msgf("%s variable was not set", utils.CLUSTER_ID)
     }
 
-    pkg.DEPLOYMENT_MANAGER_ADDR = config.DeploymentMgrAddress
+    common.DEPLOYMENT_MANAGER_ADDR = config.DeploymentMgrAddress
 }
 
 

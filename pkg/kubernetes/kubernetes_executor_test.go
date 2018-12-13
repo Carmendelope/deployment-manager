@@ -91,11 +91,11 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
                 Specs: &pbApplication.DeploySpecs{Replicas: 2},
             }
 
-            services :=[]*pbConductor.Service{&serv1,&serv2}
+            Services :=[]*pbConductor.Service{&serv1,&serv2}
 
             stage = pbConductor.DeploymentStage{
                 StageId: "error_stage_001",
-                Services: services,
+                Services: Services,
             }
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",
@@ -134,7 +134,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
     })
 
 
-    ginkgo.Context("run a stage with two services", func(){
+    ginkgo.Context("run a stage with two Services", func(){
         var serv1 pbApplication.Service
         var serv2 pbApplication.Service
         var stage pbConductor.DeploymentStage
@@ -171,11 +171,11 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
                 Specs: &pbApplication.DeploySpecs{Replicas: 2},
             }
 
-            services :=[]*pbConductor.Service{&serv1,&serv2}
+            Services :=[]*pbConductor.Service{&serv1,&serv2}
 
             stage = pbConductor.DeploymentStage{
                 StageId: "stage_001",
-                Services: services,
+                Services: Services,
             }
             fragment = pbConductor.DeploymentFragment{
                 FragmentId: "fragment_001",

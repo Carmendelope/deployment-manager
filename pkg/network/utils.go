@@ -8,11 +8,11 @@ package network
 
 import(
     "fmt"
-    "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/common"
 )
 
 // Return the networking name for a given service.
 func GetNetworkingName(serviceName string, organizationName string, appInstanceId string) string {
-    name := fmt.Sprintf("%s-%s-%s", pkg.FormatName(serviceName), pkg.FormatName(organizationName), appInstanceId[0:5])
+    name := fmt.Sprintf("%s-%s-%s", common.FormatName(serviceName), common.FormatName(organizationName), appInstanceId[0:5])
     return name
 }

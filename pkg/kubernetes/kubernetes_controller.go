@@ -39,20 +39,20 @@ type KubernetesController struct {
 func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages,
     namespace string) executor.DeploymentController {
 
-    // Watch deployments
+    // Watch Deployments
     deploymentsListWatcher := cache.NewListWatchFromClient(
         kExecutor.Client.ExtensionsV1beta1().RESTClient(),
-        "deployments", namespace, fields.Everything())
+        "Deployments", namespace, fields.Everything())
     // Create the observer with the corresponding helping functions.
     depObserver := NewKubernetesObserver(deploymentsListWatcher,
         func() runtime.Object{return &v1beta1.Deployment{}}, checkDeployments,
         pendingStages)
 
 
-    // Watch services
+    // Watch Services
     servicesListWatcher := cache.NewListWatchFromClient(
         kExecutor.Client.CoreV1().RESTClient(),
-        "services", namespace, fields.Everything())
+        "Services", namespace, fields.Everything())
     // Create the observer with the corresponding helping functions.
     servObserver := NewKubernetesObserver(servicesListWatcher,
         func() runtime.Object{return &v1.Service{}}, checkServicesDeployed,
@@ -91,9 +91,9 @@ func (c *KubernetesController) SetResourceStatus(uid string, status entities.Nal
 // Run this controller with its corresponding observers
 func (c *KubernetesController) Run() {
     log.Debug().Msgf("time to run K8s controller")
-    // Run services controller
+    // Run Services controller
     go c.services.Run(1)
-    // Run deployments controller
+    // Run Deployments controller
     go c.deployments.Run(1)
     // Run namespaces controller
     go c.namespaces.Run(1)

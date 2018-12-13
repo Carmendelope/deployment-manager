@@ -7,8 +7,8 @@
 package main
 
 import (
-    "github.com/nalej/deployment-manager/cmd/deployment-manager/cmd"
     "github.com/nalej/deployment-manager/version"
+    "github.com/nalej/deployment-manager/cmd/deployment-manager/cmd"
 )
 
 var MainVersion string

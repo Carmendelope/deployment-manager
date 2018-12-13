@@ -114,7 +114,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 	}
 }
 
-// TODO Check the rules to build the ingresses.
+// TODO Check the rules to build the Ingresses.
 func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.Service) []*v1beta1.Ingress {
 	ingresses := make([]*v1beta1.Ingress, 0)
 	for _, p := range service.ExposedPorts {
@@ -135,7 +135,7 @@ func (di *DeployableIngress) Build() error {
 			di.ingresses[service.ServiceId] = di.BuildIngressesForService(service)
 		}
 	}
-	log.Debug().Interface("ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
+	log.Debug().Interface("Ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
 	return nil
 }
 
@@ -155,7 +155,7 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			//controller.AddMonitoredResource(string(created.GetUID()), serviceId, di.stage.StageId)
 		}
 	}
-	log.Debug().Int("created", numCreated).Msg("ingresses have been created")
+	log.Debug().Int("created", numCreated).Msg("Ingresses have been created")
 	return nil
 }
 

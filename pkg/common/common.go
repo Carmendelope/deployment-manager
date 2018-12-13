@@ -3,7 +3,7 @@
  *
  */
 
-package pkg
+package common
 
 import (
 	"fmt"
@@ -13,7 +13,10 @@ import (
 const(
 	// Maximum namespace length
 	NamespaceLength = 63
+	// buzzword to check all services
+	AllServices = "all"
 )
+
 
 // Set of common functions for all the structures.
 
