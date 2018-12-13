@@ -6,7 +6,6 @@ import (
 	"github.com/nalej/grpc-authx-go"
 	"github.com/nalej/grpc-login-api-go"
 	"github.com/nalej/grpc-utils/pkg/conversions"
-	"github.com/rs/zerolog/log"
 )
 
 type LoginHelper struct {
@@ -43,7 +42,7 @@ func (l *LoginHelper) Login() derrors.Error {
 	if lErr != nil {
 		return conversions.ToDerror(lErr)
 	}
-	log.Debug().Str("token", response.Token).Msg("LoginHelper success")
+	// log.Debug().Str("token", response.Token).Msg("LoginHelper success")
 	l.Credentials = NewCredentials(DefaultPath, response.Token, response.RefreshToken)
 	sErr := l.Credentials.Store()
 	if sErr != nil {

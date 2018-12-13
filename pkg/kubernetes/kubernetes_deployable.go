@@ -59,7 +59,7 @@ func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConduc
         services: NewDeployableService(client, stage, targetNamespace),
         deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
             organizationName, deploymentId, appInstanceId, appName, dnsHosts),
-        ingresses: NewDeployableIngress(client, stage, targetNamespace, clusterPublicHostname),
+        ingresses: NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
     }
 }
 
