@@ -193,6 +193,16 @@ func(d *DeployableDeployments) Build() error {
                 },
             },
         }
+
+        if service.Credentials != nil {
+            log.Debug().Msg("Adding credentials to the deployment")
+            deployment.Spec.Template.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+                apiv1.LocalObjectReference{
+                    Name: service.ServiceId,
+                },
+            }
+        }
+
         // Set a different set of labels to identify this agent
         ztAgentLabels := map[string]string {
             "agent": "zt-agent",
