@@ -41,6 +41,18 @@ func (di *DeployableIngress) GetId() string {
 	return di.stage.StageId
 }
 
+func (di * DeployableIngress) GetIngressesEndpoints() map[string][]string{
+	result := make(map[string][]string, 0)
+	for serviceId, ingresses := range di.ingresses{
+		endpoints := make([]string, 0)
+		for _, endpoint := range ingresses {
+			endpoints = append(endpoints, endpoint.Spec.Rules[0].Host)
+		}
+		result[serviceId] = endpoints
+	}
+	return result
+}
+
 func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId string, serviceName string, port *grpc_application_go.Port) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
