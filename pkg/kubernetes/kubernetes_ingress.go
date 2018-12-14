@@ -151,8 +151,7 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", serviceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			// TODO Check that the ingress actually creates.
-			//controller.AddMonitoredResource(string(created.GetUID()), serviceId, di.stage.StageId)
+			controller.AddMonitoredResource(string(created.GetUID()), serviceId, di.stage.StageId)
 		}
 	}
 	log.Debug().Int("created", numCreated).Msg("Ingresses have been created")
