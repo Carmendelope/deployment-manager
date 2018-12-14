@@ -40,6 +40,8 @@ func NewMonitorHelper(conn *grpc.ClientConn, loginHelper *login_helper.LoginHelp
 
 func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
     appInstanceId string, status entities.FragmentStatus) {
+    log.Debug().Str("fragmentId", fragmentId).Str("deploymentId", deploymentId).Str("organizationId",organizationId).
+        Msg("send update fragment status")
     //TODO find how to populate the cluster id entry
     req := pbConductor.DeploymentFragmentUpdateRequest{
         OrganizationId: organizationId,
@@ -54,8 +56,9 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
     defer cancel()
     _, err := m.Client.UpdateDeploymentFragmentStatus(ctx, &req)
     if err != nil {
-        log.Error().Err(err).Msgf("error updating fragment status")
+        log.Error().Err(err).Msg("error updating fragment status")
     }
+
 }
 
 
