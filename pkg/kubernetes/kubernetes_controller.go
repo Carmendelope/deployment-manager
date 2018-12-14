@@ -120,6 +120,7 @@ func (c *KubernetesController) Stop() {
     defer close(c.deployments.stopCh)
     defer close(c.services.stopCh)
     defer close(c.namespaces.stopCh)
+    defer close(c.ingresses.stopCh)
 }
 
 
