@@ -7,6 +7,7 @@ pipeline {
     agent { node { label 'golang' } }
     options {
         checkoutToSubdirectory("${packagePath}")
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     stages {
@@ -62,16 +63,23 @@ pipeline {
                 container("golang") {
                     dir("${packagePath}") {
                         script {
-                            testResults = sh(returnStdout: true, script: "make test").trim()
-                            echo testResults
+                            testStatus = sh(returnStatus: true, script: "make test &> testOutput")
+                            testOutput = readFile("testOutput")
+                            echo testOutput
                             if (env.CHANGE_ID) {
                                 for (comment in pullRequest.comments) {
                                     if (comment.user == "nalej-jarvis") {
                                         comment.delete()
                                     }
                                 }
-                                commentContent = "### J.A.R.V.I.S. CI Test results\n\n```\n${testResults}\n```"
+                                commentContent = "### J.A.R.V.I.S. CI Test results\n\n```\n${testOutput}\n```"
                                 pullRequest.comment(commentContent)
+                                if (testStatus != 0) {
+                                    pullRequest.comment("Tests failed. IRIS will be notified. Shame on you...")
+                                }
+                            }
+                            if (testStatus != 0) {
+                                error("Tests failed.")
                             }
                         }
                     }
