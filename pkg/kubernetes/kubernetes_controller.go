@@ -63,7 +63,7 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
 
     // Watch Ingresses
     ingressesListsWatcher := cache.NewListWatchFromClient(
-        kExecutor.Client.CoreV1().RESTClient(),
+        kExecutor.Client.ExtensionsV1beta1().RESTClient(),
         "Ingresses", namespace, fields.Everything())
     // Create the observer with the corresponding helping functions.
     ingrObserver := NewKubernetesObserver(ingressesListsWatcher,
