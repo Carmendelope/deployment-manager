@@ -30,6 +30,8 @@ type KubernetesController struct {
     services *KubernetesObserver
     // Namespaces controller
     namespaces *KubernetesObserver
+    // Ingress observer
+    ingresses *KubernetesObserver
     // Pending checks to run
     pendingStages *executor.PendingStages
 }
@@ -39,24 +41,35 @@ type KubernetesController struct {
 func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages,
     namespace string) executor.DeploymentController {
 
-    // Watch deployments
+    // Watch Deployments
     deploymentsListWatcher := cache.NewListWatchFromClient(
         kExecutor.Client.ExtensionsV1beta1().RESTClient(),
-        "deployments", namespace, fields.Everything())
+        "Deployments", namespace, fields.Everything())
     // Create the observer with the corresponding helping functions.
     depObserver := NewKubernetesObserver(deploymentsListWatcher,
         func() runtime.Object{return &v1beta1.Deployment{}}, checkDeployments,
         pendingStages)
 
 
-    // Watch services
+    // Watch Services
     servicesListWatcher := cache.NewListWatchFromClient(
         kExecutor.Client.CoreV1().RESTClient(),
-        "services", namespace, fields.Everything())
+        "Services", namespace, fields.Everything())
     // Create the observer with the corresponding helping functions.
     servObserver := NewKubernetesObserver(servicesListWatcher,
         func() runtime.Object{return &v1.Service{}}, checkServicesDeployed,
         pendingStages)
+
+
+    // Watch Ingresses
+    ingressesListsWatcher := cache.NewListWatchFromClient(
+        kExecutor.Client.ExtensionsV1beta1().RESTClient(),
+        "Ingresses", namespace, fields.Everything())
+    // Create the observer with the corresponding helping functions.
+    ingrObserver := NewKubernetesObserver(ingressesListsWatcher,
+        func() runtime.Object{return &v1beta1.Ingress{}}, checkIngressDeployed,
+        pendingStages)
+
 
     // Watch namespaces
     namespacesListWatcher := cache.NewListWatchFromClient(
@@ -68,9 +81,11 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
         pendingStages)
 
 
+
     return &KubernetesController{
         deployments: depObserver,
         services: servObserver,
+        ingresses: ingrObserver,
         namespaces: namespaceObserver,
         pendingStages: pendingStages,
     }
@@ -91,10 +106,12 @@ func (c *KubernetesController) SetResourceStatus(uid string, status entities.Nal
 // Run this controller with its corresponding observers
 func (c *KubernetesController) Run() {
     log.Debug().Msgf("time to run K8s controller")
-    // Run services controller
+    // Run Services controller
     go c.services.Run(1)
-    // Run deployments controller
+    // Run Deployments controller
     go c.deployments.Run(1)
+    // Run ingresses controller
+    go c.ingresses.Run(1)
     // Run namespaces controller
     go c.namespaces.Run(1)
 }
@@ -103,6 +120,7 @@ func (c *KubernetesController) Stop() {
     defer close(c.deployments.stopCh)
     defer close(c.services.stopCh)
     defer close(c.namespaces.stopCh)
+    defer close(c.ingresses.stopCh)
 }
 
 
@@ -318,7 +336,7 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
 func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages){
-    // TODO determine what do we expect from a service to be deployed
+    // TODO determine what do we expect from a namespace to be deployed
     dep := stored.(*v1.Namespace)
 
     // This namespace will only be correct if it is active
@@ -328,6 +346,34 @@ func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages
             pending.RemoveResource(string(dep.GetUID()))
         }
     } else {
-        log.Debug().Msgf("namespace %s,%s is not monitored", dep.GetName(),string(dep.GetUID()))
+        log.Debug().Str("item",dep.GetName()).Str("UID",string(dep.GetUID())).Msg("namespace is not monitored")
+    }
+}
+
+// Helping function to check if an ingress is deployed or not. If so, it should
+// update the pending checks by removing it from the list of tasks.
+//  params:
+//   stored object stored in the pipeline.
+//   pending list of pending checks.
+// TODO link this checker with the corresponding objects.
+func checkIngressDeployed(stored interface{}, pending *executor.PendingStages){
+    dep := stored.(*v1beta1.Ingress)
+
+    // This namespace will only be correct if it is active
+    if pending.IsMonitoredResource(string(dep.GetUID())){
+        // It considers the ingress to be ready when all the entries have ip and hostname
+        ready := true
+        for _, ing := range dep.Status.LoadBalancer.Ingress {
+            if ing.Hostname != "" && ing.IP != "" {
+                ready = true
+                break
+            }
+        }
+        if ready {
+            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
+            pending.RemoveResource(string(dep.GetUID()))
+        }
+    } else {
+        log.Debug().Str("item",dep.GetName()).Str("UID",string(dep.GetUID())).Msg("ingress is not monitored")
     }
 }

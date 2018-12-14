@@ -86,7 +86,7 @@ spec:
               key: password
         - name: DNS_HOSTS
           valueFrom:
-            secretKeyRef:
+            configMapKeyRef:
               name: cluster-config
               key: dns_public_ips
         ports:

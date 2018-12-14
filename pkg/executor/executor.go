@@ -8,16 +8,16 @@ package executor
 
 import (
 	"github.com/nalej/deployment-manager/internal/entities"
-	"github.com/nalej/deployment-manager/pkg/monitor"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 )
+
+
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
 // platform. These translators are in charge of defining how the platform-specific entities have to be
 // created/deployed in order to follow the deployment plan.
 type Executor interface {
-
 
     // Execute any initial preparation to deploy a fragment.
     //  params:
@@ -27,7 +27,7 @@ type Executor interface {
     //  return:
     //   error if any
     PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
-        monitor *monitor.MonitorHelper) (Deployable, error)
+        monitor Monitor) (Deployable, error)
 
     // Build a deployable object that can be executed into the current platform using its native description.
     //  params:
@@ -55,7 +55,7 @@ type Executor interface {
     //  return:
     //   deployable object or error if any
     DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
-        monitor *monitor.MonitorHelper) error
+        monitor Monitor) error
 
     // This operation should be executed after the failed deployment of a deployment stage. The target platform must
     // be ready to retry again the deployment of this stage. This means, that other deployable entities deployed
@@ -84,6 +84,17 @@ type Executor interface {
     //   error if any
     UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
+}
+
+// A monitor system to inform the cluster API about the current status
+type Monitor interface {
+    // Update the status of a fragment
+    UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
+        appInstanceId string, status entities.FragmentStatus)
+
+    // Update the status of a service
+    UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
+        status entities.NalejServiceStatus, toDeploy Deployable)
 }
 
 

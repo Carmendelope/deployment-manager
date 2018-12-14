@@ -11,12 +11,12 @@ import (
     v12 "k8s.io/client-go/kubernetes/typed/core/v1"
     "k8s.io/client-go/kubernetes"
     "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg"
+    "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "fmt"
 )
 
-// Deployable services
+// Deployable Services
 //--------------------
 
 type DeployableServices struct {
@@ -59,14 +59,14 @@ func(s *DeployableServices) Build() error {
             k8sService := apiv1.Service{
                 ObjectMeta: metav1.ObjectMeta{
                     Namespace: s.targetNamespace,
-                    Name: pkg.FormatName(service.Name),
+                    Name: common.FormatName(service.Name),
                     Labels: service.Labels,
                     Annotations: map[string] string {
                         "nalej-service" : service.ServiceId,
                     },
                 },
                 Spec: apiv1.ServiceSpec{
-                    ExternalName: pkg.FormatName(service.Name),
+                    ExternalName: common.FormatName(service.Name),
                     Ports: ports,
                     // TODO remove by default we use clusterip.
                     Type: apiv1.ServiceTypeNodePort,
@@ -82,7 +82,7 @@ func(s *DeployableServices) Build() error {
                 "app": service.Labels["app"],
             }
 
-            ztServiceName := fmt.Sprintf("zt-%s",pkg.FormatName(service.Name))
+            ztServiceName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
             ztService := apiv1.Service{
                 ObjectMeta: metav1.ObjectMeta{
                     Namespace: s.targetNamespace,
@@ -109,7 +109,7 @@ func(s *DeployableServices) Build() error {
         }
     }
 
-    // add the created services
+    // add the created Services
     s.services = services
     s.ztAgents = ztServices
     return nil
@@ -126,7 +126,7 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
         controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
     }
 
-    // Create services for agents
+    // Create Services for agents
     for serviceId, serv := range s.ztAgents {
         created, err := s.client.Create(&serv)
         if err != nil {
@@ -141,7 +141,7 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
 
 func(s *DeployableServices) Undeploy() error {
     for _, serv := range s.services {
-        err := s.client.Delete(pkg.FormatName(serv.Name), metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
+        err := s.client.Delete(common.FormatName(serv.Name), metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
         if err != nil {
             log.Error().Err(err).Msgf("error deleting service %s",serv.Name)
             return err

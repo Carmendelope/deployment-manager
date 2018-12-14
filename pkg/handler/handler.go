@@ -38,8 +38,9 @@ func (h *Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
 	err := h.m.Execute(request)
 	if err != nil {
 		log.Error().Err(err).Str("requestId", request.RequestId).Msg("failed to execute fragment request")
-		response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
-		return &response, err
+		res := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
+		// TODO include error description in message
+		return &res, err
 	}
 
 	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}

@@ -9,15 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
-	"github.com/nalej/deployment-manager/pkg"
 	"github.com/nalej/deployment-manager/pkg/executor"
-	"github.com/nalej/deployment-manager/pkg/monitor"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"time"
     "github.com/nalej/deployment-manager/pkg/login-helper"
+    "github.com/nalej/deployment-manager/pkg/monitor"
+    "github.com/nalej/deployment-manager/pkg/common"
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 type Manager struct {
     executor executor.Executor
     // Helper monitor
-    monitor *monitor.MonitorHelper
+    monitor executor.Monitor
     // Conductor address
     conductorAddress string
     // Cluster Public Hostname for the ingresses
@@ -66,7 +66,7 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
         request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_DEPLOYING)
 
-    namespace := pkg.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
+    namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
     preDeployable, prepError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace, m.monitor)
     if prepError != nil {
         log.Error().Err(prepError).Msgf("failed environment preparation for fragment %s",

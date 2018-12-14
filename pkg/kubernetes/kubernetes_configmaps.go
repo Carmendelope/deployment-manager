@@ -83,7 +83,7 @@ func (dc *DeployableConfigMaps) Build() error {
 			dc.configmaps[service.ServiceId] = toAdd
 		}
 	}
-	log.Debug().Interface("configmaps", dc.configmaps).Msg("configmap have been build and are ready to deploy")
+	log.Debug().Interface("Configmaps", dc.configmaps).Msg("configmap have been build and are ready to deploy")
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (dc *DeployableConfigMaps) Deploy(controller executor.DeploymentController)
 			numCreated++
 		}
 	}
-	log.Debug().Int("created", numCreated).Msg("configmaps have been created")
+	log.Debug().Int("created", numCreated).Msg("Configmaps have been created")
 	return nil
 }
 

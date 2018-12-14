@@ -70,7 +70,7 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_appl
 	}
 }
 
-// This function returns an array in case we support other secrets in the future.
+// This function returns an array in case we support other Secrets in the future.
 func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.Service) []*v1.Secret {
 	if service.Credentials == nil{
 		return nil
@@ -88,7 +88,7 @@ func (ds*DeployableSecrets) Build() error {
 			ds.secrets[service.ServiceId] = toAdd
 		}
 	}
-	log.Debug().Interface("secrets", ds.secrets).Msg("secrets have been build and are ready to deploy")
+	log.Debug().Interface("Secrets", ds.secrets).Msg("Secrets have been build and are ready to deploy")
 	return nil
 }
 
@@ -106,7 +106,7 @@ func (ds*DeployableSecrets) Deploy(controller executor.DeploymentController) err
 			numCreated++
 		}
 	}
-	log.Debug().Int("created", numCreated).Msg("secrets have been created")
+	log.Debug().Int("created", numCreated).Msg("Secrets have been created")
 	return nil
 }
 
@@ -120,11 +120,11 @@ func (ds*DeployableSecrets) Undeploy() error {
 				return err
 
 			}
-			log.Debug().Str("serviceId", serviceId).Str("Name", toDelete.Name).Msg("secrets has been deleted")
+			log.Debug().Str("serviceId", serviceId).Str("Name", toDelete.Name).Msg("Secrets has been deleted")
 		}
 		deleted++
 	}
-	log.Debug().Int("deleted", deleted).Msg("secrets have been deleted")
+	log.Debug().Int("deleted", deleted).Msg("Secrets have been deleted")
 	return nil
 }
 

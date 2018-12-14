@@ -11,7 +11,7 @@ import (
     "k8s.io/client-go/kubernetes"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg/monitor"
+    "github.com/nalej/deployment-manager/pkg/common"
 )
 
 // Deployable namespace
@@ -63,8 +63,8 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     }
     log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
     n.namespace = *created
-    // The namespace is a special case that covers all the services
-    controller.AddMonitoredResource(string(created.GetUID()), monitor.AllServices,n.fragmentId)
+    // The namespace is a special case that covers all the Services
+    controller.AddMonitoredResource(string(created.GetUID()), common.AllServices,n.fragmentId)
     return err
 }
 

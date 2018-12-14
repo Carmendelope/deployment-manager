@@ -35,16 +35,16 @@ type DeployableKubernetesStage struct {
     targetNamespace string
     // ZeroTier network id
     ztNetworkId string
-    // collection of deployments
-    deployments *DeployableDeployments
-    // collection of services
-    services *DeployableServices
-    // Collection of ingresses to be deployed
-    ingresses *DeployableIngress
+    // collection of Deployments
+    Deployments *DeployableDeployments
+    // collection of Services
+    Services *DeployableServices
+    // Collection of Ingresses to be deployed
+    Ingresses *DeployableIngress
     // Collection of maps to be deployed.
-    configmaps *DeployableConfigMaps
-    // Collection of secrets to be deployed.
-    secrets * DeployableSecrets
+    Configmaps *DeployableConfigMaps
+    // Collection of Secrets to be deployed.
+    Secrets * DeployableSecrets
 }
 
 // Instantiate a new set of resources for a stage to be deployed.
@@ -56,16 +56,16 @@ func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConduc
     targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
     deploymentId string, appInstanceId string, appName string, clusterPublicHostname string, dnsHosts []string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
-        client: client,
-        stage: stage,
+        client:          client,
+        stage:           stage,
         targetNamespace: targetNamespace,
-        ztNetworkId: ztNetworkId,
-        services: NewDeployableService(client, stage, targetNamespace),
-        deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
+        ztNetworkId:     ztNetworkId,
+        Services:        NewDeployableService(client, stage, targetNamespace),
+        Deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
             organizationName, deploymentId, appInstanceId, appName, dnsHosts),
-        ingresses: NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
-        configmaps: NewDeployableConfigMaps(client, stage, targetNamespace),
-        secrets: NewDeployableSecrets(client, stage, targetNamespace),
+        Ingresses:  NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
+        Configmaps: NewDeployableConfigMaps(client, stage, targetNamespace),
+        Secrets:    NewDeployableSecrets(client, stage, targetNamespace),
     }
 }
 
@@ -74,34 +74,34 @@ func(d DeployableKubernetesStage) GetId() string {
 }
 
 func (d DeployableKubernetesStage) Build() error {
-    // Build deployments
-    err := d.deployments.Build()
+    // Build Deployments
+    err := d.Deployments.Build()
     if err != nil {
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create deployments")
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create Deployments")
         return err
     }
-    // Build services
-    err = d.services.Build()
+    // Build Services
+    err = d.Services.Build()
     if err != nil {
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create services for")
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create Services for")
         return err
     }
 
-    err = d.ingresses.Build()
+    err = d.Ingresses.Build()
     if err != nil{
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create ingresses")
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create Ingresses")
         return err
     }
 
-    err = d.configmaps.Build()
+    err = d.Configmaps.Build()
     if err != nil{
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create configmaps")
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create Configmaps")
         return err
     }
 
-    err = d.secrets.Build()
+    err = d.Secrets.Build()
     if err != nil{
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create secrets")
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create Secrets")
         return err
     }
 
@@ -110,41 +110,41 @@ func (d DeployableKubernetesStage) Build() error {
 
 func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
 
-    // Deploy secrets
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy secrets")
-    err := d.secrets.Deploy(controller)
+    // Deploy Secrets
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Secrets")
+    err := d.Secrets.Deploy(controller)
     if err != nil {
-        log.Error().Err(err).Msg("error deploying secrets, aborting")
+        log.Error().Err(err).Msg("error deploying Secrets, aborting")
         return err
     }
 
-    // Deploy configmaps
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy configmaps")
-    err = d.configmaps.Deploy(controller)
+    // Deploy Configmaps
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Configmaps")
+    err = d.Configmaps.Deploy(controller)
     if err != nil {
-        log.Error().Err(err).Msg("error deploying configmaps, aborting")
+        log.Error().Err(err).Msg("error deploying Configmaps, aborting")
         return err
     }
 
-    // Deploy deployments
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy deployments")
-    err = d.deployments.Deploy(controller)
+    // Deploy Deployments
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Deployments")
+    err = d.Deployments.Deploy(controller)
     if err != nil {
-        log.Error().Err(err).Msg("error deploying deployments, aborting")
+        log.Error().Err(err).Msg("error deploying Deployments, aborting")
         return err
     }
-    // Deploy services
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy services")
-    err = d.services.Deploy(controller)
+    // Deploy Services
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Services")
+    err = d.Services.Deploy(controller)
     if err != nil {
-        log.Error().Err(err).Msg("error deploying services, aborting")
+        log.Error().Err(err).Msg("error deploying Services, aborting")
         return err
     }
 
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy ingresses")
-    err = d.ingresses.Deploy(controller)
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Ingresses")
+    err = d.Ingresses.Deploy(controller)
     if err != nil {
-        log.Error().Err(err).Msg("error deploying ingresses, aborting")
+        log.Error().Err(err).Msg("error deploying Ingresses, aborting")
         return err
     }
 
@@ -160,25 +160,25 @@ func (d DeployableKubernetesStage) Undeploy() error {
         return err
     }
     */
-    // Deploy deployments
-    err := d.deployments.Undeploy()
+    // Deploy Deployments
+    err := d.Deployments.Undeploy()
     if err != nil {
         return err
     }
-    // Deploy services
-    err = d.services.Undeploy()
+    // Deploy Services
+    err = d.Services.Undeploy()
     if err != nil {
         return err
     }
-    err = d.ingresses.Undeploy()
+    err = d.Ingresses.Undeploy()
     if err != nil {
         return err
     }
-    err = d.configmaps.Undeploy()
+    err = d.Configmaps.Undeploy()
     if err != nil {
         return err
     }
-    err = d.secrets.Undeploy()
+    err = d.Secrets.Undeploy()
     if err != nil {
         return err
     }

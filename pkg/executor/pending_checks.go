@@ -12,8 +12,8 @@ import (
     "time"
     "fmt"
     "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/pkg/common"
 )
 
 
@@ -34,6 +34,8 @@ type PendingStages struct {
     InstanceId string
     // fragment id for these stages
     FragmentId string
+    // Main deployable object
+    ToDeploy Deployable
     // nalej stage -> num pending checks
     stagePendingChecks map[string]int
     // platform resource uid -> parent stage
@@ -48,17 +50,18 @@ type PendingStages struct {
     serviceStatus map[string]entities.NalejServiceStatus
     mu               sync.RWMutex
     // conductor monitor client
-    monitor *monitor.MonitorHelper
+    monitor Monitor
 }
 
 
 // Create a new set of pending stages with a monitor helper to inform conductor about the current status.
-func NewPendingStages(organizationId string, instanceId string, fragmentId string,
-    monitor *monitor.MonitorHelper) *PendingStages {
+func NewPendingStages(organizationId string, instanceId string, fragmentId string, toDeploy Deployable,
+    monitor Monitor) *PendingStages {
     return &PendingStages{
         OrganizationId:     organizationId,
         InstanceId:         instanceId,
         FragmentId:         fragmentId,
+        ToDeploy:           toDeploy,
         stagePendingChecks: make(map[string]int,0),
         resourceStage:      make(map[string]string,0),
         resourceService:    make(map[string]string,0),
@@ -203,6 +206,7 @@ func (p *PendingStages) ServiceHasPendingChecks(serviceId string) bool {
 // params:
 //  uid native resource identifier
 //  status of the native resource
+//  endpoints optional array of endpoints
 func (p *PendingStages) SetResourceStatus(uid string, status entities.NalejServiceStatus) {
     p.mu.Lock()
     defer p.mu.Unlock()
@@ -231,7 +235,8 @@ func (p *PendingStages) SetResourceStatus(uid string, status entities.NalejServi
     //log.Debug().Msgf("finally service %s has status %v", serviceId, finalStatus)
     p.serviceStatus[serviceId] = finalStatus
     // Do not communicate updates regarding all services.
-    if serviceId != monitor.AllServices {
-        p.monitor.UpdateServiceStatus(p.FragmentId,p.OrganizationId, p.InstanceId, serviceId,p.serviceStatus[serviceId])
+    if serviceId != common.AllServices {
+        p.monitor.UpdateServiceStatus(p.FragmentId,p.OrganizationId, p.InstanceId,
+            serviceId,p.serviceStatus[serviceId],p.ToDeploy)
     }
 }
