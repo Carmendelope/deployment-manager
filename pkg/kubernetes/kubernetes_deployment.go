@@ -203,6 +203,36 @@ func(d *DeployableDeployments) Build() error {
             }
         }
 
+        if service.Configs != nil && len(service.Configs) > 0 {
+            log.Debug().Msg("Adding config maps")
+            log.Debug().Msg("Creating volumes")
+            configVolumes := make([]apiv1.Volume, 0)
+            cmVolumeMounts := make([]apiv1.VolumeMount, 0)
+            for _, cf := range service.Configs{
+                v := &apiv1.Volume{
+                    Name:         fmt.Sprintf("cv-%s", cf.ConfigFileId),
+                    VolumeSource: apiv1.VolumeSource{
+                        ConfigMap:             &apiv1.ConfigMapVolumeSource{
+                            LocalObjectReference: apiv1.LocalObjectReference{
+                                Name: cf.ConfigFileId,
+                            },
+                        },
+                    },
+                }
+                configVolumes = append(configVolumes, *v)
+                mountPath, _ := GetConfigMapPath(cf.MountPath)
+                vm := &apiv1.VolumeMount{
+                    Name:             fmt.Sprintf("cv-%s", cf.ConfigFileId),
+                    ReadOnly:         true,
+                    MountPath:        mountPath,
+                }
+                cmVolumeMounts = append(cmVolumeMounts, *vm)
+            }
+            deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
+            log.Debug().Msg("Linking configmap volumes")
+            deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
+        }
+
         // Set a different set of labels to identify this agent
         ztAgentLabels := map[string]string {
             "agent": "zt-agent",
