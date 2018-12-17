@@ -131,8 +131,11 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
     }
 
     // run the controller
+    log.Debug().Msg("Run controller")
     k8sController.Run()
+    log.Debug().Msg("Awaiting pending checks")
     stageErr := checks.WaitPendingChecks(stage.StageId)
+    log.Debug().Msg("Stopping controller")
     k8sController.Stop()
     return stageErr
 
