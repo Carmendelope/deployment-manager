@@ -15,6 +15,7 @@ import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	coreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"strings"
 )
 
 type DeployableConfigMaps struct {
@@ -40,8 +41,18 @@ func (dc *DeployableConfigMaps) GetId() string {
 	return dc.stage.StageId
 }
 
+func GetConfigMapPath(mountPath string) (string, string) {
+	index := strings.LastIndex(mountPath, "/")
+	if index == -1 {
+		return "/", mountPath
+	}
+	return mountPath [0: index + 1], mountPath [index + 1: len(mountPath)]
+}
+
 func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating config map...")
+	_, file := GetConfigMapPath(cf.MountPath)
+	log.Debug().Str("file", file).Msg("Config map content")
 	return &v1.ConfigMap{
 		TypeMeta: v12.TypeMeta{
 			Kind:       "ConfigMap",
@@ -56,7 +67,7 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_app
 			},
 		},
 		BinaryData: map[string][]byte{
-			"data": cf.Content,
+			file: cf.Content,
 		},
 	}
 }
