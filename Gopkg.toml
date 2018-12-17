@@ -62,9 +62,9 @@
     name="github.com/nalej/grpc-utils"
     version="v1.2.0"
 
-[[constraint]]
-    name="github.com/nalej/grpc-infrastructure-go"
-    version="v0.0.30"
+#[[constraint]]
+#    name="github.com/nalej/grpc-infrastructure-go"
+#    version="v0.0.30"
 
 [[constraint]]
     name = "github.com/nalej/grpc-conductor-go"

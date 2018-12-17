@@ -41,6 +41,7 @@ func (dc *DeployableConfigMaps) GetId() string {
 }
 
 func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_application_go.ConfigFile) *v1.ConfigMap {
+	log.Debug().Interface("configMap", cf).Msg("generating config map...")
 	return &v1.ConfigMap{
 		TypeMeta: v12.TypeMeta{
 			Kind:       "ConfigMap",
