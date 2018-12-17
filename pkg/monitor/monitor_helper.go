@@ -17,6 +17,8 @@ import (
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
+    "google.golang.org/grpc/codes"
+    grpc_status "google.golang.org/grpc/status"
 )
 
 const (
@@ -54,7 +56,23 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
 
     ctx, cancel := m.ClusterAPILoginHelper.GetContext()
     defer cancel()
+
     _, err := m.Client.UpdateDeploymentFragmentStatus(ctx, &req)
+    if err != nil {
+        st := grpc_status.Convert(err).Code()
+        if st == codes.Unauthenticated {
+            errLogin := m.ClusterAPILoginHelper.RerunAuthentication()
+            if errLogin != nil {
+                log.Error().Err(errLogin).Msg("error during reauthentication")
+            }
+            ctx2, cancel2 := m.ClusterAPILoginHelper.GetContext()
+            defer cancel2()
+            _, err = m.Client.UpdateDeploymentFragmentStatus(ctx2, &req)
+        } else {
+            log.Error().Err(err).Msgf("error updating service status")
+        }
+    }
+
     if err != nil {
         log.Error().Err(err).Msg("error updating fragment status")
     }
@@ -96,10 +114,25 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
             },
         },
     }
+
+
     ctx, cancel := m.ClusterAPILoginHelper.GetContext()
     defer cancel()
+
     _, err := m.Client.UpdateServiceStatus(ctx, &req)
     if err != nil {
-        log.Error().Err(err).Msgf("error updating service status")
+        st := grpc_status.Convert(err).Code()
+        if st == codes.Unauthenticated {
+            errLogin := m.ClusterAPILoginHelper.RerunAuthentication()
+            if errLogin != nil {
+                log.Error().Err(errLogin).Msg("error during reauthentication")
+            }
+            ctx2, cancel2 := m.ClusterAPILoginHelper.GetContext()
+            defer cancel2()
+            _, err = m.Client.UpdateServiceStatus(ctx2, &req)
+        } else {
+            log.Error().Err(err).Msgf("error updating service status")
+        }
+
     }
 }
