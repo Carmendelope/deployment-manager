@@ -382,9 +382,10 @@ func(d *DeployableDeployments) Undeploy() error {
 //  return:
 //   list of environment variables
 func (d *DeployableDeployments) getNalejEnvVariables() map[string]string {
+    // TODO these variables should be generated for the whole fragment
     vars := make(map[string]string,0)
     for _, service := range d.stage.Services {
-        name := fmt.Sprintf("%s%s", NalejServicePrefix,service.ServiceId)
+        name := fmt.Sprintf("%s%s", NalejServicePrefix,strings.ToUpper(service.ServiceId))
         netName := network.GetNetworkingName(service.Name, d.organizationName, d.appInstanceId)
         value := fmt.Sprintf("%s.service.nalej",netName)
         vars[name] = value
@@ -404,18 +405,15 @@ func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string
     result := make([]apiv1.EnvVar, 0)
     for k, v := range variables {
         if strings.HasPrefix(k,NalejServicePrefix) {
+            // The key cannot have the NalejServicePrefix, that is a reserved word
             log.Warn().Str("UserEnvironmentVariable", k).Msg("reserved variable name will be ignored")
         } else {
-            toAdd := apiv1.EnvVar{ Name: k, Value: v}
-            if strings.HasPrefix(v,NalejServicePrefix) {
-                // Check if we know this variable
-                nalejValue, found := nalejVariables[v]
-                if found {
-                    toAdd.Value = nalejValue
-                } else {
-                    log.Warn().Str("formerValue", v).Msg("not found nalej service")
-                }
+            newValue := v
+            // check if we have to replace a NALEJ_SERVICE variable
+            for nalejK, nalejVariable := range nalejVariables {
+                newValue = strings.Replace(newValue, nalejK, nalejVariable, -1)
             }
+            toAdd := apiv1.EnvVar{ Name: k, Value: newValue}
             log.Debug().Str("formerKey", k).Str("formerValue",v).Interface("apiv1EnvVar",toAdd).Msg("environmentVariable")
             result = append(result, toAdd)
         }
