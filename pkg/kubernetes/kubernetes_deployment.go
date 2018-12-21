@@ -131,6 +131,7 @@ func(d *DeployableDeployments) Build() error {
                                 Image: service.Image,
                                 Env:   d.getEnvVariables(nalejVars,service.EnvironmentVariables),
                                 Ports: d.getContainerPorts(service.ExposedPorts),
+                                ImagePullPolicy: "Always",
                             },
                             // ZT sidecar container
                             {
