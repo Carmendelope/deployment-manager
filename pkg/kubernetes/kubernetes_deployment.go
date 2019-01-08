@@ -28,7 +28,7 @@ const (
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
-    DefaultImagePullPolicy = "Always"
+    DefaultImagePullPolicy = apiv1.PullAlways
 )
 
 
