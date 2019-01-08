@@ -28,6 +28,8 @@ const (
 
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
+    // Default imagePullPolicy
+    DefaultImagePullPolicy = apiv1.PullAlways
 )
 
 
@@ -132,6 +134,7 @@ func(d *DeployableDeployments) Build() error {
                                 Image: service.Image,
                                 Env:   d.getEnvVariables(nalejVars,service.EnvironmentVariables),
                                 Ports: d.getContainerPorts(service.ExposedPorts),
+                                ImagePullPolicy: DefaultImagePullPolicy,
                             },
                             // ZT sidecar container
                             {
