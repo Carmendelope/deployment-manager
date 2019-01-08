@@ -27,6 +27,8 @@ const (
     ZTAgentImageName = "nalejops/zt-agent:v0.1.0"
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
+    // Default imagePullPolicy
+    DefaultImagePullPolicy = "Always"
 )
 
 
@@ -131,7 +133,7 @@ func(d *DeployableDeployments) Build() error {
                                 Image: service.Image,
                                 Env:   d.getEnvVariables(nalejVars,service.EnvironmentVariables),
                                 Ports: d.getContainerPorts(service.ExposedPorts),
-                                ImagePullPolicy: "Always",
+                                ImagePullPolicy: DefaultImagePullPolicy,
                             },
                             // ZT sidecar container
                             {
