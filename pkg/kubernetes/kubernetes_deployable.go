@@ -33,6 +33,8 @@ type DeployableKubernetesStage struct {
     stage *pbConductor.DeploymentStage
     // namespace name descriptor
     targetNamespace string
+    // Nalej defined variables
+    nalejVariables map[string]string
     // ZeroTier network id
     ztNetworkId string
     // collection of Deployments
@@ -52,17 +54,21 @@ type DeployableKubernetesStage struct {
 //   Client k8s api Client
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
-func NewDeployableKubernetesStage (client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
-    deploymentId string, appInstanceId string, appName string, clusterPublicHostname string, dnsHosts []string) *DeployableKubernetesStage {
+func NewDeployableKubernetesStage (
+    client *kubernetes.Clientset, stage *pbConductor.DeploymentStage, targetNamespace string,
+    nalejVariables map[string]string, ztNetworkId string, organizationId string,
+    organizationName string, deploymentId string, appInstanceId string,
+    appName string, clusterPublicHostname string, dnsHosts []string) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client:          client,
         stage:           stage,
         targetNamespace: targetNamespace,
+        nalejVariables:  nalejVariables,
         ztNetworkId:     ztNetworkId,
         Services:        NewDeployableService(client, stage, targetNamespace),
-        Deployments: NewDeployableDeployment(client, stage, targetNamespace,ztNetworkId, organizationId,
-            organizationName, deploymentId, appInstanceId, appName, dnsHosts),
+        Deployments: NewDeployableDeployment(
+                        client, stage, targetNamespace, nalejVariables, ztNetworkId, organizationId,
+                        organizationName, deploymentId, appInstanceId, appName, dnsHosts),
         Ingresses:  NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
         Configmaps: NewDeployableConfigMaps(client, stage, targetNamespace),
         Secrets:    NewDeployableSecrets(client, stage, targetNamespace),

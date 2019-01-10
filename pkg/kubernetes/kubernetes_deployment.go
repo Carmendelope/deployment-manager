@@ -7,25 +7,23 @@
 package kubernetes
 
 import (
+    "fmt"
+    "github.com/nalej/deployment-manager/pkg/common"
+    "github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/nalej/deployment-manager/pkg/utils"
     pbConductor "github.com/nalej/grpc-conductor-go"
+    "github.com/rs/zerolog/log"
     appsv1 "k8s.io/api/apps/v1"
     apiv1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "github.com/nalej/deployment-manager/pkg/executor"
-    "github.com/rs/zerolog/log"
-    "k8s.io/client-go/kubernetes/typed/apps/v1"
     "k8s.io/client-go/kubernetes"
-    "github.com/nalej/deployment-manager/pkg/common"
-    "github.com/nalej/deployment-manager/pkg/utils"
-    "fmt"
-    "github.com/nalej/deployment-manager/pkg/network"
+    "k8s.io/client-go/kubernetes/typed/apps/v1"
     "strings"
 )
 
 const (
     // Name of the Docker ZT agent image
     ZTAgentImageName = "nalejops/zt-agent:v0.1.1"
-
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
@@ -43,6 +41,8 @@ type DeployableDeployments struct{
     stage *pbConductor.DeploymentStage
     // namespace name descriptor
     targetNamespace string
+    // nalej generated variables
+    nalejVariables map[string]string
     // zero-tier network id
     ztNetworkId string
     // organization id
@@ -65,13 +65,16 @@ type DeployableDeployments struct{
     ztAgents map[string]appsv1.Deployment
 }
 
-func NewDeployableDeployment(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string, ztNetworkId string, organizationId string, organizationName string,
-    deploymentId string, appInstanceId string, appName string, dnsHosts []string) *DeployableDeployments {
+func NewDeployableDeployment(
+    client *kubernetes.Clientset, stage *pbConductor.DeploymentStage, targetNamespace string,
+    nalejVariables map[string]string, ztNetworkId string, organizationId string,
+    organizationName string, deploymentId string, appInstanceId string,
+    appName string, dnsHosts []string) *DeployableDeployments {
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(targetNamespace),
         stage: stage,
         targetNamespace: targetNamespace,
+        nalejVariables: nalejVariables,
         ztNetworkId: ztNetworkId,
         organizationId: organizationId,
         organizationName: organizationName,
@@ -92,9 +95,6 @@ func(d *DeployableDeployments) Build() error {
 
     deployments:= make(map[string]appsv1.Deployment,0)
     agents:= make(map[string]appsv1.Deployment,0)
-
-    // Create the list of Nalej variables
-    nalejVars := d.getNalejEnvVariables()
 
     for serviceIndex, service := range d.stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
@@ -132,7 +132,7 @@ func(d *DeployableDeployments) Build() error {
                             {
                                 Name:  common.FormatName(service.Name),
                                 Image: service.Image,
-                                Env:   d.getEnvVariables(nalejVars,service.EnvironmentVariables),
+                                Env:   d.getEnvVariables(d.nalejVariables,service.EnvironmentVariables),
                                 Ports: d.getContainerPorts(service.ExposedPorts),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                             },
@@ -380,23 +380,24 @@ func(d *DeployableDeployments) Undeploy() error {
     return nil
 }
 
-// Get the set of Nalej environment variables designed to help users.
-//  params:
-//   nalejVariables set of variables for nalej Services
-//  return:
-//   list of environment variables
-func (d *DeployableDeployments) getNalejEnvVariables() map[string]string {
-    // TODO these variables should be generated for the whole fragment
-    vars := make(map[string]string,0)
-    for _, service := range d.stage.Services {
-        name := fmt.Sprintf("%s%s", NalejServicePrefix,strings.ToUpper(service.ServiceId))
-        netName := network.GetNetworkingName(service.Name, d.organizationName, d.appInstanceId)
-        value := fmt.Sprintf("%s.service.nalej",netName)
-        vars[name] = value
-    }
-    log.Debug().Interface("variables", vars).Msg("Nalej common variables")
-    return vars
-}
+
+//// Get the set of Nalej environment variables designed to help users.
+////  params:
+////   nalejVariables set of variables for nalej Services
+////  return:
+////   list of environment variables
+//func (d *DeployableDeployments) getNalejEnvVariables() map[string]string {
+//    // TODO these variables should be generated for the whole fragment
+//    vars := make(map[string]string,0)
+//    for _, service := range d.stage.Services {
+//        name := fmt.Sprintf("%s%s", NalejServicePrefix,strings.ToUpper(service.ServiceId))
+//        netName := network.GetNetworkingName(service.Name, d.organizationName, d.appInstanceId)
+//        value := fmt.Sprintf("%s.service.nalej",netName)
+//        vars[name] = value
+//    }
+//    log.Debug().Interface("variables", vars).Msg("Nalej common variables")
+//    return vars
+//}
 
 
 // Transform a service map of environment variables to the corresponding K8s API structure. Any user-defined
