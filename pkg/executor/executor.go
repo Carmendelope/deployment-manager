@@ -33,6 +33,7 @@ type Executor interface {
     //  params:
     //   stage to be deployed
     //   namespace where the stage has to be deployed
+    //   nalejVariables map of variables defined by the nalej environment
     //   ztNetworkId identifier for the zero-tier network these deployables will use
     //   organizationId identifier for the organization
     //   organizationName required for human readable naming
@@ -42,9 +43,9 @@ type Executor interface {
     //   dnsHosts array of dns hosts
     //  return:
     //   deployable entity or error if any
-    BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, ztNetworkId string,
-        organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string,
-        clusterPublicHostname string, dnsHosts []string) (Deployable, error)
+    BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, nalejVaribles map[string]string,
+        ztNetworkId string, organizationId string, organizationName string, deploymentId string, appInstanceId string,
+        appName string, clusterPublicHostname string, dnsHosts []string) (Deployable, error)
 
     // Execute a deployment stage for the current platform.
     //  params:

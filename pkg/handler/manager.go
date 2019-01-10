@@ -87,9 +87,10 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
-        deployable, err := m.executor.BuildNativeDeployable(stage, namespace, request.ZtNetworkId,
-            request.Fragment.OrganizationId, request.Fragment.OrganizationName,request.Fragment.DeploymentId,
-            request.Fragment.AppInstanceId, request.Fragment.AppName, m.clusterPublicHostname, m.dnsHosts)
+        deployable, err := m.executor.BuildNativeDeployable(
+            stage, namespace, request.Fragment.NalejVariables, request.ZtNetworkId, request.Fragment.OrganizationId,
+            request.Fragment.OrganizationName,request.Fragment.DeploymentId, request.Fragment.AppInstanceId,
+            request.Fragment.AppName, m.clusterPublicHostname, m.dnsHosts)
 
         if err != nil {
             log.Error().Err(err).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
