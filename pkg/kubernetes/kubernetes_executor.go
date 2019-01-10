@@ -51,7 +51,8 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
     return &toReturn, err
 }
 
-func(k *KubernetesExecutor) BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, ztNetworkId string,
+func(k *KubernetesExecutor) BuildNativeDeployable(
+    stage *pbConductor.DeploymentStage, namespace string, nalejVariables map[string]string, ztNetworkId string,
     organizationId string, organizationName string, deploymentId string, appInstanceId string, appName string,
     clusterPublicHostname string, dnsHosts []string) (executor.Deployable, error){
 
@@ -60,7 +61,7 @@ func(k *KubernetesExecutor) BuildNativeDeployable(stage *pbConductor.DeploymentS
 
     var resources executor.Deployable
     // Build the structures to be executed. If any of then cannot be built, we have a failure.
-    k8sDeploy := NewDeployableKubernetesStage(k.Client, stage, namespace, ztNetworkId, organizationId,
+    k8sDeploy := NewDeployableKubernetesStage(k.Client, stage, namespace, nalejVariables, ztNetworkId, organizationId,
         organizationName, deploymentId, appInstanceId, appName, clusterPublicHostname, dnsHosts)
     resources = k8sDeploy
 
