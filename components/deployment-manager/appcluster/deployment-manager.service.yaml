@@ -10,7 +10,6 @@ spec:
   selector:
     cluster: application
     component: deployment-manager
-  type: NodePort
   ports:
   - protocol: TCP
     port: 5200
