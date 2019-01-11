@@ -207,15 +207,9 @@ func(d *DeployableDeployments) Build() error {
             }
         }
 
-        log.Debug().Msg("*****************************************************")
-        log.Debug().Msg("cheking if args are informed")
-        log.Debug().Msg("*****************************************************")
-
-        // TODO HERE!!
         if service.RunArguments != nil {
-            log.Debug().Msg("run arguments find...")
+            log.Debug().Msg("Adding arguments")
             deployment.Spec.Template.Spec.Containers[0].Args = service.RunArguments
-            log.Debug().Msg("run arguments added...")
         }
 
         if service.Configs != nil && len(service.Configs) > 0 {
