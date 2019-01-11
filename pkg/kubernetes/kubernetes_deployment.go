@@ -207,6 +207,11 @@ func(d *DeployableDeployments) Build() error {
             }
         }
 
+        if service.RunArguments != nil {
+            log.Debug().Msg("Adding arguments")
+            deployment.Spec.Template.Spec.Containers[0].Args = service.RunArguments
+        }
+
         if service.Configs != nil && len(service.Configs) > 0 {
             log.Debug().Msg("Adding config maps")
             log.Debug().Msg("Creating volumes")
