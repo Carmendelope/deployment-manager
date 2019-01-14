@@ -72,7 +72,7 @@
 
 [[constraint]]
     name = "github.com/nalej/grpc-application-go"
-    version="v0.0.39"
+    version="v0.0.40"
 
 [[constraint]]
     name = "github.com/nalej/grpc-deployment-manager-go"
