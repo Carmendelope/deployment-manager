@@ -23,7 +23,7 @@ import (
 
 const (
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejops/zt-agent:v0.1.1"
+    ZTAgentImageName = "nalejops/zt-agent:v0.1.1-test"
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
@@ -159,8 +159,31 @@ func(d *DeployableDeployments) Build() error {
                                         Value: "false",
                                     },
                                 },
+                                LivenessProbe: &apiv1.Probe{
+                                    InitialDelaySeconds: 20,
+                                    PeriodSeconds:       60,
+                                    TimeoutSeconds:      20,
+                                    Handler: apiv1.Handler{
+                                        Exec: &apiv1.ExecAction{
+                                            Command: []string{
+                                                "./nalej/zt-agent",
+                                                "check",
+                                                "--appInstanceId", d.appInstanceId,
+                                                "--appName", d.appName,
+                                                "--serviceName", service.Name,
+                                                "--deploymentId", d.deploymentId,
+                                                "--fragmentId", d.stage.FragmentId,
+                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--organizationId", d.organizationId,
+                                                "--organizationName", d.organizationName,
+                                                "--networkId", d.ztNetworkId,
+                                            },
+                                        },
+                                    },
+                                },
                                 // The proxy exposes the same ports of the deployment
                                 Ports: d.getContainerPorts(service.ExposedPorts),
+                                ImagePullPolicy: DefaultImagePullPolicy,
                                 SecurityContext:
                                 &apiv1.SecurityContext{
                                     RunAsUser: privilegedUser,
@@ -301,8 +324,36 @@ func(d *DeployableDeployments) Build() error {
                                         Value: common.FormatName(service.Name),
                                     },
                                 },
+                                /*
+                                // ZT requires port 9993 so this check will fail
+                                //
+                                LivenessProbe: &apiv1.Probe{
+                                    InitialDelaySeconds: 20,
+                                    PeriodSeconds: 60,
+                                    TimeoutSeconds: 20,
+                                    Handler: apiv1.Handler{
+                                        Exec: &apiv1.ExecAction{
+                                            Command: []string{
+                                                "./nalej/zt-agent",
+                                                "check",
+                                                "--appInstanceId", d.appInstanceId,
+                                                "--appName", d.appName,
+                                                "--serviceName", service.Name,
+                                                "--deploymentId", d.deploymentId,
+                                                "--fragmentId", d.stage.FragmentId,
+                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--organizationId", d.organizationId,
+                                                "--organizationName", d.organizationName,
+                                                "--networkId", d.ztNetworkId,
+                                            },
+                                        },
+                                    },
+                                },
+                                */
+
                                 // The proxy exposes the same ports of the deployment
                                 Ports: d.getContainerPorts(service.ExposedPorts),
+                                ImagePullPolicy: DefaultImagePullPolicy,
                                 SecurityContext:
                                 &apiv1.SecurityContext{
                                     RunAsUser: privilegedUser,
