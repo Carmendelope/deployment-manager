@@ -16,7 +16,6 @@ import (
     appsv1 "k8s.io/api/apps/v1"
     apiv1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/intstr"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/kubernetes/typed/apps/v1"
     "strings"
@@ -165,9 +164,20 @@ func(d *DeployableDeployments) Build() error {
                                     PeriodSeconds:       60,
                                     TimeoutSeconds:      20,
                                     Handler: apiv1.Handler{
-                                        HTTPGet: &apiv1.HTTPGetAction{
-                                            Path: "/health",
-                                            Port: intstr.IntOrString{IntVal: 80},
+                                        Exec: &apiv1.ExecAction{
+                                            Command: []string{
+                                                "./nalej/zt-agent",
+                                                "check",
+                                                "--appInstanceId", d.appInstanceId,
+                                                "--appName", d.appName,
+                                                "--serviceName", service.Name,
+                                                "--deploymentId", d.deploymentId,
+                                                "--fragmentId", d.stage.FragmentId,
+                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--organizationId", d.organizationId,
+                                                "--organizationName", d.organizationName,
+                                                "--networkId", d.ztNetworkId,
+                                            },
                                         },
                                     },
                                 },
@@ -310,21 +320,32 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                 },
                                 /*
-                                // Liveness probe in zt sidecars has to be revisited until we approach
-                                // the redirection of all the incoming requests. This http solution
-                                // will simply fail.
+                                // ZT requires port 9993 so this check will fail
+                                //
                                 LivenessProbe: &apiv1.Probe{
                                     InitialDelaySeconds: 20,
                                     PeriodSeconds: 60,
                                     TimeoutSeconds: 20,
                                     Handler: apiv1.Handler{
-                                      HTTPGet: &apiv1.HTTPGetAction{
-                                          Path: "/health",
-                                          Port: intstr.IntOrString{IntVal: 80},
-                                      },
+                                        Exec: &apiv1.ExecAction{
+                                            Command: []string{
+                                                "./nalej/zt-agent",
+                                                "check",
+                                                "--appInstanceId", d.appInstanceId,
+                                                "--appName", d.appName,
+                                                "--serviceName", service.Name,
+                                                "--deploymentId", d.deploymentId,
+                                                "--fragmentId", d.stage.FragmentId,
+                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--organizationId", d.organizationId,
+                                                "--organizationName", d.organizationName,
+                                                "--networkId", d.ztNetworkId,
+                                            },
+                                        },
                                     },
                                 },
                                 */
+
                                 // The proxy exposes the same ports of the deployment
                                 Ports: d.getContainerPorts(service.ExposedPorts),
                                 ImagePullPolicy: DefaultImagePullPolicy,
