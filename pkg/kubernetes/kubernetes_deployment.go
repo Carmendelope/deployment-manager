@@ -23,7 +23,7 @@ import (
 
 const (
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejops/zt-agent:v0.1.1"
+    ZTAgentImageName = "nalejops/zt-agent:v0.2.0"
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
@@ -265,7 +265,7 @@ func(d *DeployableDeployments) Build() error {
             deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
         }
 
-        // Set a different set of labels to identify this agent
+        // Set a different set of labels to identify this agentdeployment-manager-dc8f8c9b4-96n2g
         ztAgentLabels := map[string]string {
             "agent": "zt-agent",
             "app": service.Labels["app"],
@@ -324,13 +324,10 @@ func(d *DeployableDeployments) Build() error {
                                         Value: common.FormatName(service.Name),
                                     },
                                 },
-                                /*
-                                // ZT requires port 9993 so this check will fail
-                                //
                                 LivenessProbe: &apiv1.Probe{
                                     InitialDelaySeconds: 20,
-                                    PeriodSeconds: 60,
-                                    TimeoutSeconds: 20,
+                                    PeriodSeconds:       60,
+                                    TimeoutSeconds:      20,
                                     Handler: apiv1.Handler{
                                         Exec: &apiv1.ExecAction{
                                             Command: []string{
@@ -349,8 +346,6 @@ func(d *DeployableDeployments) Build() error {
                                         },
                                     },
                                 },
-                                */
-
                                 // The proxy exposes the same ports of the deployment
                                 Ports: d.getContainerPorts(service.ExposedPorts),
                                 ImagePullPolicy: DefaultImagePullPolicy,
