@@ -29,6 +29,8 @@ const (
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
     DefaultImagePullPolicy = apiv1.PullAlways
+    //Default storage size
+    DefaultStorageAllocationSize = int64(100*1024*1024)
 )
 
 
@@ -271,6 +273,9 @@ func(d *DeployableDeployments) Build() error {
             volumeMounts := make([]apiv1.VolumeMount,0)
 
             for i,storage := range service.Storage {
+                if storage.Size == 0 {
+                    storage.Size = DefaultStorageAllocationSize
+                }
                 v := &apiv1.Volume {
                     Name: fmt.Sprintf("vol-1%d",i),
                     VolumeSource: apiv1.VolumeSource{
