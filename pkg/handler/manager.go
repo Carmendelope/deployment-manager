@@ -6,18 +6,17 @@
 package handler
 
 import (
-	"errors"
-	"fmt"
-	"github.com/nalej/deployment-manager/internal/entities"
-	"github.com/nalej/deployment-manager/pkg/executor"
-	pbConductor "github.com/nalej/grpc-conductor-go"
-	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc"
-	"time"
-    "github.com/nalej/deployment-manager/pkg/login-helper"
-    "github.com/nalej/deployment-manager/pkg/monitor"
+    "errors"
+    "fmt"
+    "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/common"
+    "github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/nalej/deployment-manager/pkg/login-helper"
+    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/rs/zerolog/log"
+    "google.golang.org/grpc"
+    "time"
 )
 
 const (
@@ -35,8 +34,6 @@ const (
 
 type Manager struct {
     executor executor.Executor
-    // Helper monitor
-    monitor executor.Monitor
     // Conductor address
     conductorAddress string
     // Cluster Public Hostname for the ingresses
@@ -49,10 +46,8 @@ func NewManager(
     clusterApiConnection *grpc.ClientConn,
     executor *executor.Executor,
     loginHelper *login_helper.LoginHelper, clusterPublicHostname string, dnsHosts []string) *Manager {
-    monitor := monitor.NewMonitorHelper(clusterApiConnection, loginHelper)
     return &Manager{
         executor: *executor,
-        monitor: monitor,
         clusterPublicHostname: clusterPublicHostname,
         dnsHosts: dnsHosts,
     }
@@ -132,8 +127,6 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         // Done
         log.Info().Msgf("executed fragment %s stage %d / %d",request.Fragment.FragmentId, stageNumber+1, len(request.Fragment.Stages))
     }
-    m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
-        request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_DONE)
     return nil
 }
 

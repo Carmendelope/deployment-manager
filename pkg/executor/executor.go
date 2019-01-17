@@ -7,9 +7,10 @@
 package executor
 
 import (
-	"github.com/nalej/deployment-manager/internal/entities"
-	pbConductor "github.com/nalej/grpc-conductor-go"
-	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
+    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 )
 
 
@@ -23,11 +24,9 @@ type Executor interface {
     //  params:
     //   fragment to be deployed
     //   namespace the fragment belongs to
-    //   monitor to overview the deployment
     //  return:
     //   error if any
-    PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
-        monitor Monitor) (Deployable, error)
+    PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string) (Deployable, error)
 
     // Build a deployable object that can be executed into the current platform using its native description.
     //  params:
@@ -52,11 +51,9 @@ type Executor interface {
     //   toDeploy items to be deployed
     //   fragment to the stage belongs to
     //   stage to be executed
-    //   monitor to inform about system information
     //  return:
     //   deployable object or error if any
-    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
-        monitor Monitor) error
+    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) error
 
     // This operation should be executed after the failed deployment of a deployment stage. The target platform must
     // be ready to retry again the deployment of this stage. This means, that other deployable entities deployed
@@ -85,6 +82,16 @@ type Executor interface {
     //   error if any
     UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
+    // Generate a events controller for a given namespace.
+    //  params:
+    //   namespace to be supervised
+    //   monitored data structure to monitor incoming events
+    StartControlEvents(namespace string, monitored monitor.MonitoredInstances)
+
+    // Stop the control of events for a given namespace.
+    //  params:
+    //   namespace to stop the control
+    StopControlEvents(namespace string)
 }
 
 // A monitor system to inform the cluster API about the current status
@@ -95,7 +102,7 @@ type Monitor interface {
 
     // Update the status of a service
     UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
-        status entities.NalejServiceStatus, toDeploy Deployable)
+        status entities.NalejServiceStatus, toDeploy Deployable, info string)
 }
 
 
@@ -128,5 +135,12 @@ type DeploymentController interface {
    // params:
    //  uid native identifier
    //  status of the resource
-   SetResourceStatus(uid string, status entities.NalejServiceStatus)
+   //  info relevant textual information
+   SetResourceStatus(uid string, status entities.NalejServiceStatus, info string)
+
+   // Start checking events
+   Run()
+
+   // Stop checking events
+   Stop()
 }

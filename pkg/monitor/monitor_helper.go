@@ -1,9 +1,9 @@
 /*
- *  Copyright (C) 2018 Nalej Group - All Rights Reserved
+ *  Copyright (C) 2019 Nalej Group - All Rights Reserved
  *
  */
 
- // Helping structures to communicate the current status of deployments to the conductor monitor.
+ // The helping monitor informs conductor monitoring about the current status of deploying/deployed applications.
 
 package monitor
 
@@ -19,13 +19,12 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "google.golang.org/grpc/codes"
     grpc_status "google.golang.org/grpc/status"
+    "time"
 )
 
-const (
-    // Maximum size of a batch of messages to be sent
-    MessageBatchSize = 5
-    // Time between notifications in milliseconds
-    NotificationsSleep = 3000
+const(
+    // Time to sleep between checks
+    CheckSleepTime = 15
 )
 
 type MonitorHelper struct {
@@ -33,11 +32,26 @@ type MonitorHelper struct {
     Client grpc_cluster_api_go.ConductorClient
     // LoginHelper Helper
     ClusterAPILoginHelper *login_helper.LoginHelper
+    // Structure containing monitored entries
+    Monitored *executor.PendingStages
 }
 
-func NewMonitorHelper(conn *grpc.ClientConn, loginHelper *login_helper.LoginHelper) executor.Monitor {
+func NewMonitorHelper(conn *grpc.ClientConn, loginHelper *login_helper.LoginHelper,
+    monitored *executor.PendingStages) executor.Monitor {
     client := grpc_cluster_api_go.NewConductorClient(conn)
-    return &MonitorHelper{client, loginHelper}
+    return &MonitorHelper{Client: client, ClusterAPILoginHelper: loginHelper, Monitored: monitored}
+}
+
+// This function periodically informs conductor about the status of deployed and on deployment services.
+func (m *MonitorHelper) Run() {
+    log.Info().Msg("Start monitor helper...")
+    tick := time.Tick(time.Second * CheckSleepTime)
+    for {
+        select {
+        case <-tick:
+            // TODO Send the status
+        }
+    }
 }
 
 func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
@@ -81,10 +95,10 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
 
 
 func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
-    status entities.NalejServiceStatus, toDeploy executor.Deployable) {
+    status entities.NalejServiceStatus, toDeploy executor.Deployable, info string) {
     // TODO report information if an only if a considerable bunch of updates are available
     // TODO improve performance by sending a bunch of updates at the same time
-    // TODO remove the depdency with K8s deployable
+    // TODO remove the dependency with K8s deployable
     log.Debug().Msgf("send update service status with %s, %s, %v",fragmentId, serviceId, status)
 
     var endpoints [] string
@@ -111,6 +125,7 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
             Status: entities.ServiceStatusToGRPC[status],
             ClusterId: common.CLUSTER_ID,
             Endpoints: endpoints,
+            Info: info,
             },
         },
     }

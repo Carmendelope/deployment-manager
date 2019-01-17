@@ -8,6 +8,7 @@ package kubernetes
 
 import (
     "fmt"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
     "time"
     "k8s.io/apimachinery/pkg/runtime"
     utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -33,12 +34,12 @@ type KubernetesController struct {
     // Ingress observer
     ingresses *KubernetesObserver
     // Pending checks to run
-    pendingStages *executor.PendingStages
+    monitoredInstances monitor.MonitoredInstances
 }
 
 
 // Create a new kubernetes controller for a given namespace.
-func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *executor.PendingStages,
+func NewKubernetesController(kExecutor *KubernetesExecutor, monitoredInstances monitor.MonitoredInstances,
     namespace string) executor.DeploymentController {
 
     // Watch Deployments
@@ -48,7 +49,7 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
     // Create the observer with the corresponding helping functions.
     depObserver := NewKubernetesObserver(deploymentsListWatcher,
         func() runtime.Object{return &v1beta1.Deployment{}}, checkDeployments,
-        pendingStages)
+        monitoredInstances)
 
 
     // Watch Services
@@ -58,7 +59,7 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
     // Create the observer with the corresponding helping functions.
     servObserver := NewKubernetesObserver(servicesListWatcher,
         func() runtime.Object{return &v1.Service{}}, checkServicesDeployed,
-        pendingStages)
+        monitoredInstances)
 
 
     // Watch Ingresses
@@ -68,7 +69,7 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
     // Create the observer with the corresponding helping functions.
     ingrObserver := NewKubernetesObserver(ingressesListsWatcher,
         func() runtime.Object{return &v1beta1.Ingress{}}, checkIngressDeployed,
-        pendingStages)
+        monitoredInstances)
 
 
     // Watch namespaces
@@ -78,16 +79,15 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
     // Create the observer with the corresponding helping functions.
     namespaceObserver := NewKubernetesObserver(namespacesListWatcher,
         func()runtime.Object{return &v1.Namespace{}}, checkNamespacesDeployed,
-        pendingStages)
-
+        monitoredInstances)
 
 
     return &KubernetesController{
-        deployments: depObserver,
-        services: servObserver,
-        ingresses: ingrObserver,
-        namespaces: namespaceObserver,
-        pendingStages: pendingStages,
+        deployments:        depObserver,
+        services:           servObserver,
+        ingresses:          ingrObserver,
+        namespaces:         namespaceObserver,
+        monitoredInstances: monitoredInstances,
     }
 }
 
@@ -95,12 +95,14 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, pendingStages *execu
 
 // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
 func (c *KubernetesController) AddMonitoredResource(uid string, serviceId string, stageId string) {
-    c.pendingStages.AddMonitoredResource(uid,serviceId,stageId)
+    // TODO
+
+    //c.monitoredInstances.AddMonitoredResource(uid,serviceId,stageId)
 }
 
 // Set the status of a native resource
-func (c *KubernetesController) SetResourceStatus(uid string, status entities.NalejServiceStatus) {
-    c.pendingStages.SetResourceStatus(uid, status)
+func (c *KubernetesController) SetResourceStatus(uid string, status entities.NalejServiceStatus, info string) {
+    c.monitoredInstances.SetResourceStatus(uid, status, info)
 }
 
 // Run this controller with its corresponding observers
@@ -129,8 +131,8 @@ type KubernetesObserver struct {
     queue    workqueue.RateLimitingInterface
     informer cache.Controller
     // function to determine how entities have to be checked to be deployed
-    checkingFunc func(interface{},*executor.PendingStages)
-    pendingChecks *executor.PendingStages
+    checkingFunc       func(interface{},monitor.MonitoredInstances)
+    monitoredInstances monitor.MonitoredInstances
     // channel to control pod stop
     stopCh chan struct{}
 }
@@ -144,7 +146,7 @@ type KubernetesObserver struct {
 //  return:
 //   a pointer to a kubernetes observer
 func NewKubernetesObserver (watcher *cache.ListWatch, targetFunc func()runtime.Object,
-    checkingFunc func(interface{},*executor.PendingStages), checks *executor.PendingStages) *KubernetesObserver {
+    checkingFunc func(interface{},monitor.MonitoredInstances), checks monitor.MonitoredInstances) *KubernetesObserver {
 
     // create the workqueue
     queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -177,12 +179,12 @@ func NewKubernetesObserver (watcher *cache.ListWatch, targetFunc func()runtime.O
     }, cache.Indexers{})
 
     return &KubernetesObserver{
-        informer: informer,
-        indexer:  indexer,
-        queue:    queue,
-        checkingFunc: checkingFunc,
-        pendingChecks: checks,
-        stopCh:  make(chan struct{}),
+        informer:           informer,
+        indexer:            indexer,
+        queue:              queue,
+        checkingFunc:       checkingFunc,
+        monitoredInstances: checks,
+        stopCh:             make(chan struct{}),
     }
 }
 
@@ -221,7 +223,7 @@ func (c *KubernetesObserver) updatePendingChecks(key string) error {
     } else {
         // Note that you also have to check the uid if you have a local controlled resource, which
         // is dependent on the actual instance, to detect that a Pod was recreated with the same name
-        c.checkingFunc(obj,c.pendingChecks)
+        c.checkingFunc(obj,c.monitoredInstances)
     }
     return nil
 }
@@ -286,23 +288,25 @@ func (c *KubernetesObserver) runWorker() {
 //  params:
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
-func checkDeployments(stored interface{}, pending *executor.PendingStages){
+func checkDeployments(stored interface{}, pending monitor.MonitoredInstances){
     dep := stored.(*v1beta1.Deployment)
     //log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
     // This deployment is monitored, and all its replicas are available
     if pending.IsMonitoredResource(string(dep.GetUID())){
         // if there are enough replicas, we assume this is working
         if (dep.Status.UnavailableReplicas == 0){
-            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
-            pending.RemoveResource(string(dep.GetUID()))
+            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"")
         } else {
             foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
-            pending.SetResourceStatus(string(dep.GetUID()), foundStatus)
-            if foundStatus == entities.NALEJ_SERVICE_RUNNING {
-                pending.RemoveResource(string(dep.GetUID()))
+            // Generate an information string if possible
+            info := ""
+            if len(dep.Status.Conditions) != 0 {
+                for _, condition := range dep.Status.Conditions {
+                    info = fmt.Sprintf("%s %s",info,condition)
+                }
             }
+            pending.SetResourceStatus(string(dep.GetUID()), foundStatus, info)
         }
-
     } else {
         log.Info().Msgf("deployment %s,%s is not monitored", dep.GetName(),string(dep.GetUID()))
     }
@@ -314,17 +318,15 @@ func checkDeployments(stored interface{}, pending *executor.PendingStages){
 //  params:
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
-func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
+func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstances){
     // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Service)
-
     // This deployment is monitored.
     if pending.IsMonitoredResource(string(dep.GetUID())) {
         // K8S API does not offer any direct method to check if a service is already up an running
         // The ServiceStatus is almost empty and only contains pointer the load ingress values.
         // TODO check if there is a way to get more information for service status
-        pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
-        pending.RemoveResource(string(dep.GetUID()))
+        pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"")
     } else {
         log.Warn().Msgf("service %s,%s is not monitored", dep.GetName(),string(dep.GetUID()))
     }
@@ -335,15 +337,14 @@ func checkServicesDeployed(stored interface{}, pending *executor.PendingStages){
 //  params:
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
-func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages){
+func checkNamespacesDeployed(stored interface{}, pending monitor.MonitoredInstances){
     // TODO determine what do we expect from a namespace to be deployed
     dep := stored.(*v1.Namespace)
 
     // This namespace will only be correct if it is active
     if pending.IsMonitoredResource(string(dep.GetUID())){
         if dep.Status.Phase == v1.NamespaceActive {
-            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
-            pending.RemoveResource(string(dep.GetUID()))
+            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"")
         }
     } else {
         log.Debug().Str("item",dep.GetName()).Str("UID",string(dep.GetUID())).Msg("namespace is not monitored")
@@ -356,9 +357,8 @@ func checkNamespacesDeployed(stored interface{}, pending *executor.PendingStages
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
 // TODO link this checker with the corresponding objects.
-func checkIngressDeployed(stored interface{}, pending *executor.PendingStages){
+func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances){
     dep := stored.(*v1beta1.Ingress)
-
     // This namespace will only be correct if it is active
     if pending.IsMonitoredResource(string(dep.GetUID())){
         // It considers the ingress to be ready when all the entries have ip and hostname
@@ -370,8 +370,7 @@ func checkIngressDeployed(stored interface{}, pending *executor.PendingStages){
             }
         }
         if ready {
-            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING)
-            pending.RemoveResource(string(dep.GetUID()))
+            pending.SetResourceStatus(string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"")
         }
     } else {
         log.Debug().Str("item",dep.GetName()).Str("UID",string(dep.GetUID())).Msg("ingress is not monitored")
