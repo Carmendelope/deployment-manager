@@ -18,6 +18,7 @@ import (
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/kubernetes/typed/apps/v1"
+    "k8s.io/apimachinery/pkg/api/resource"
     "strings"
 )
 
@@ -263,6 +264,32 @@ func(d *DeployableDeployments) Build() error {
             deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
             log.Debug().Msg("Linking configmap volumes")
             deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
+        }
+        if service.Storage != nil && len(service.Storage) > 0 {
+            // Set VolumeMounts and Volumes based on storage type
+            volumes := make([]apiv1.Volume,0)
+            volumeMounts := make([]apiv1.VolumeMount,0)
+
+            for i,storage := range service.Storage {
+                v := &apiv1.Volume {
+                    Name: fmt.Sprintf("vol-1%d",i),
+                    VolumeSource: apiv1.VolumeSource{
+                        EmptyDir:&apiv1.EmptyDirVolumeSource{
+                            Medium: apiv1.StorageMediumDefault,
+                            SizeLimit:resource.NewQuantity(storage.Size,resource.BinarySI),
+                        },
+                    },
+                }
+                volumes = append(volumes,*v)
+                vm := &apiv1.VolumeMount{
+                    Name: v.Name,
+                    MountPath:storage.MountPath,
+                }
+                volumeMounts = append(volumeMounts, *vm)
+            }
+            deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,volumes...)
+            deployment.Spec.Template.Spec.Containers[0].VolumeMounts =
+                append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
         }
 
         // Set a different set of labels to identify this agent
