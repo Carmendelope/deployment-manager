@@ -5,13 +5,12 @@
 package kubernetes
 
 import (
-    apiv1 "k8s.io/api/core/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    v12 "k8s.io/client-go/kubernetes/typed/core/v1"
-    "k8s.io/client-go/kubernetes"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg/common"
+    apiv1 "k8s.io/api/core/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/kubernetes"
+    v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // Deployable namespace
@@ -64,7 +63,8 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
     n.namespace = *created
     // The namespace is a special case that covers all the Services
-    controller.AddMonitoredResource(string(created.GetUID()), common.AllServices,n.fragmentId)
+    //res := entities.NewMonitoredPlatformResource(string(created.GetUID()), common.AllServices, common.AllServices,"")
+    //controller.AddMonitoredResource(res)
     return err
 }
 

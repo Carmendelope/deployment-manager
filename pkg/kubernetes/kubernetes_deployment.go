@@ -8,6 +8,7 @@ package kubernetes
 
 import (
     "fmt"
+    "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
@@ -405,7 +406,8 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             return err
         }
         log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
-        controller.AddMonitoredResource(string(deployed.GetUID()), serviceId, d.stage.StageId)
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.stage.StageId, serviceId, "")
+        controller.AddMonitoredResource(res)
     }
     // same approach for agents
     for serviceId, dep := range d.ztAgents {
@@ -415,7 +417,8 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             return err
         }
         log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
-        controller.AddMonitoredResource(string(deployed.GetUID()), serviceId, d.stage.StageId)
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.stage.StageId, serviceId, "")
+        controller.AddMonitoredResource(res)
     }
     return nil
 }

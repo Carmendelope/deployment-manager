@@ -9,12 +9,12 @@ package monitor
 
 import (
     "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/grpc-cluster-api-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "google.golang.org/grpc/codes"
@@ -33,11 +33,11 @@ type MonitorHelper struct {
     // LoginHelper Helper
     ClusterAPILoginHelper *login_helper.LoginHelper
     // Structure containing monitored entries
-    Monitored *executor.PendingStages
+    Monitored monitor.MonitoredInstances
 }
 
 func NewMonitorHelper(conn *grpc.ClientConn, loginHelper *login_helper.LoginHelper,
-    monitored *executor.PendingStages) executor.Monitor {
+    monitored monitor.MonitoredInstances) executor.Monitor {
     client := grpc_cluster_api_go.NewConductorClient(conn)
     return &MonitorHelper{Client: client, ClusterAPILoginHelper: loginHelper, Monitored: monitored}
 }
@@ -50,10 +50,12 @@ func (m *MonitorHelper) Run() {
         select {
         case <-tick:
             // TODO Send the status
+            m.SendServiceStatus()
         }
     }
 }
 
+/*
 func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
     appInstanceId string, status entities.FragmentStatus) {
     log.Debug().Str("fragmentId", fragmentId).Str("deploymentId", deploymentId).Str("organizationId",organizationId).
@@ -90,10 +92,55 @@ func (m *MonitorHelper) UpdateFragmentStatus(organizationId string,deploymentId 
     if err != nil {
         log.Error().Err(err).Msg("error updating fragment status")
     }
+}
+*/
 
+func (m *MonitorHelper) SendServiceStatus() {
+    notificationPending := m.Monitored.GetServicesUnnotifiedStatus()
+    for i, pending := range notificationPending {
+        req := pbConductor.DeploymentServiceUpdateRequest{
+            OrganizationId: pending.OrganizationId,
+            FragmentId: pending.FragmentId,
+            ClusterId: common.CLUSTER_ID,
+            List: []*pbConductor.ServiceUpdate{
+                {ApplicationInstanceId: pending.InstanceId,
+                    ServiceInstanceId: pending.ServiceID,
+                    OrganizationId: pending.OrganizationId,
+                    Status: entities.ServiceStatusToGRPC[pending.Status],
+                    ClusterId: common.CLUSTER_ID,
+                    Endpoints: pending.Endpoints,
+                    Info: pending.Info,
+                },
+            },
+        }
+        log.Debug().Int("numUpdate",i).Int("totalUpdates",len(notificationPending)).Msg("sending update")
+        m.sendUpdateService(req)
+    }
+    m.Monitored.ResetServicesUnnotifiedStatus()
 }
 
+func (m *MonitorHelper) sendUpdateService(req pbConductor.DeploymentServiceUpdateRequest) {
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
 
+    _, err := m.Client.UpdateServiceStatus(ctx, &req)
+    if err != nil {
+        st := grpc_status.Convert(err).Code()
+        if st == codes.Unauthenticated {
+            errLogin := m.ClusterAPILoginHelper.RerunAuthentication()
+            if errLogin != nil {
+                log.Error().Err(errLogin).Msg("error during reauthentication")
+            }
+            ctx2, cancel2 := m.ClusterAPILoginHelper.GetContext()
+            defer cancel2()
+            _, err = m.Client.UpdateServiceStatus(ctx2, &req)
+        } else {
+            log.Error().Err(err).Msgf("error updating service status")
+        }
+    }
+}
+
+/*
 func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
     status entities.NalejServiceStatus, toDeploy executor.Deployable, info string) {
     // TODO report information if an only if a considerable bunch of updates are available
@@ -151,3 +198,4 @@ func (m *MonitorHelper) UpdateServiceStatus(fragmentId string, organizationId st
 
     }
 }
+*/

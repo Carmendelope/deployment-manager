@@ -23,22 +23,27 @@ import (
 type MemoryMonitoredInstances struct {
     // Monitored resources for a given stage
     // nalej stage -> monitored services
-    monitoredStages map[string]MonitoredStageEntry
+    monitoredStages map[string]entities.MonitoredStageEntry
     // Set of platform resources monitored
     // resource uid -> resource data
-    monitoredPlatformResources map[string]MonitoredPlatformResource
+    monitoredPlatformResources map[string]entities.MonitoredPlatformResource
     // Mutex
     mu sync.RWMutex
 }
 
 // Constructor to instantiate a basic memory monitored instances object.
-func NewMemoryMonitoredInstances() MemoryMonitoredInstances {
-    return MemoryMonitoredInstances{
-        monitoredStages: make(map[string]MonitoredStageEntry,0),
-        monitoredPlatformResources: make(map[string]MonitoredPlatformResource,0),
+func NewMemoryMonitoredInstances() MonitoredInstances {
+    return &MemoryMonitoredInstances{
+        monitoredStages: make(map[string]entities.MonitoredStageEntry,0),
+        monitoredPlatformResources: make(map[string]entities.MonitoredPlatformResource,0),
     }
 }
 
+func (p *MemoryMonitoredInstances) AddStage(toAdd entities.MonitoredStageEntry) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.monitoredStages[toAdd.StageID] = toAdd
+}
 
 // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
 // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
@@ -57,7 +62,7 @@ func(p *MemoryMonitoredInstances) WaitPendingChecks(stageId string, checkingSlee
             pendingStages := p.StageHasPendingChecks(stageId)
             if !pendingStages {
                 log.Info().Str("stageID",stageId).Msg("stage %s has no pendingStages checks. Exit checking stage")
-                return nil
+                return errors.New(fmt.Sprintf("stage %s has no pendingStages checks. Exit checking stage", stageId))
             }
         }
     }
@@ -66,14 +71,14 @@ func(p *MemoryMonitoredInstances) WaitPendingChecks(stageId string, checkingSlee
 
 
 // Add a new resource pending to be checked.
-func(p *MemoryMonitoredInstances) AddPendingResource(newResource MonitoredPlatformResource) {
+func(p *MemoryMonitoredInstances) AddPendingResource(newResource entities.MonitoredPlatformResource) {
     p.mu.Lock()
     defer p.mu.Unlock()
 
     // Get all the monitored entries for the stage
     stageData, found := p.monitoredStages[newResource.StageID]
     if !found {
-        log.Error().Str("stageID", stageId).Msg("stage not monitored")
+        log.Error().Str("stageID", newResource.StageID).Msg("stage not monitored")
         return
     }
     stageData.AddPendingResource(newResource)
@@ -158,21 +163,63 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(uid string, status entities
         return
     }
 
+    // If this is running remove one check
+    if resource.Status == entities.NALEJ_SERVICE_RUNNING {
+        service.NumPendingChecks = service.NumPendingChecks - 1
+    }
+
     // Update service status
     // get the worst status found in the resources required by this service
+    previousStatus := service.Status
     var finalStatus entities.NalejServiceStatus
     finalStatus = entities.NALEJ_SERVICE_ERROR
+    newServiceInfo := service.Info
     //log.Debug().Msgf("check service %s with resources %v", serviceId, p.resourceService[serviceId])
     for _,res := range service.Resources {
         //log.Debug().Msgf("--> resource %s has status %v",resourceId, p.resourceStatus[resourceId])
         if res.Status == entities.NALEJ_SERVICE_ERROR {
             finalStatus = entities.NALEJ_SERVICE_ERROR
+            newServiceInfo = res.Info
             break
         } else if res.Status < finalStatus {
             finalStatus = res.Status
+            info = res.Info
         }
+    }
+    if finalStatus != previousStatus {
+        service.NewStatus = true
     }
     log.Debug().Str("serviceID", service.ServiceID).Str("status",string(finalStatus)).Msg("service changed status")
     service.Status = finalStatus
+    service.Info = newServiceInfo
+}
 
+// Return the list of services with a new status to be notified.
+// returns:
+//  array with the collection of entities with a service with a status pending of notification
+func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] entities.MonitoredServiceEntry {
+    toNotify := make([]entities.MonitoredServiceEntry,0)
+    for _, stage := range p.monitoredStages {
+        // for every monitored stage
+        for _, x := range stage.Services {
+            // for every monitored service
+            if x.NewStatus {
+                toNotify = append(toNotify, x)
+            }
+        }
+    }
+    return toNotify
+}
+
+// Set to already notified all services.
+func (p *MemoryMonitoredInstances) ResetServicesUnnotifiedStatus() {
+    for _, stage := range p.monitoredStages {
+        // for every monitored stage
+        for _, x := range stage.Services {
+            // for every monitored service
+            if x.NewStatus {
+                x.NewStatus = false
+            }
+        }
+    }
 }

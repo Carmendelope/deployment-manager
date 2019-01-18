@@ -24,9 +24,11 @@ type Executor interface {
     //  params:
     //   fragment to be deployed
     //   namespace the fragment belongs to
+    //   instances structure controlling monitored instances
     //  return:
     //   error if any
-    PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string) (Deployable, error)
+    PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
+        instances monitor.MonitoredInstances) (Deployable, error)
 
     // Build a deployable object that can be executed into the current platform using its native description.
     //  params:
@@ -53,7 +55,8 @@ type Executor interface {
     //   stage to be executed
     //  return:
     //   deployable object or error if any
-    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) error
+    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
+        monitoredInstances monitor.MonitoredInstances) error
 
     // This operation should be executed after the failed deployment of a deployment stage. The target platform must
     // be ready to retry again the deployment of this stage. This means, that other deployable entities deployed
@@ -82,11 +85,13 @@ type Executor interface {
     //   error if any
     UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
-    // Generate a events controller for a given namespace.
+    // Generate an events controller for a given namespace and start watching.
     //  params:
     //   namespace to be supervised
     //   monitored data structure to monitor incoming events
-    StartControlEvents(namespace string, monitored monitor.MonitoredInstances)
+    //  return:
+    //   deployment controller in charge of this namespace
+    StartControlEvents(namespace string, monitored monitor.MonitoredInstances) DeploymentController
 
     // Stop the control of events for a given namespace.
     //  params:
@@ -97,12 +102,18 @@ type Executor interface {
 // A monitor system to inform the cluster API about the current status
 type Monitor interface {
     // Update the status of a fragment
-    UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
-        appInstanceId string, status entities.FragmentStatus)
+    //UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
+    //    appInstanceId string, status entities.FragmentStatus)
 
     // Update the status of a service
-    UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
-        status entities.NalejServiceStatus, toDeploy Deployable, info string)
+    //UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
+    //    status entities.NalejServiceStatus, toDeploy Deployable, info string)
+
+    // Send information about statuses with new updates
+    SendServiceStatus()
+
+    // Run the service
+    Run()
 }
 
 
@@ -125,16 +136,15 @@ type DeploymentController interface {
     // Add a monitor resource in the native platform using its uid and connect it with the corresponding service
     // and deployment stage.
     // params:
-    //  uid native resource identifier
-    //  serviceId nalej service identifier
-    //  stageId for the deployment stage
-   AddMonitoredResource(uid string, serviceId string, stageId string)
+    //  resource
+   AddMonitoredResource(resource entities.MonitoredPlatformResource)
 
    // Sets the status of a resource in the system. The implementation is in charge of transforming the native
    // status value into a NalejServiceStatus
    // params:
    //  uid native identifier
    //  status of the resource
+   //  deployable object
    //  info relevant textual information
    SetResourceStatus(uid string, status entities.NalejServiceStatus, info string)
 

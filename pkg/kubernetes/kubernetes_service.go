@@ -5,6 +5,7 @@
 package kubernetes
 
 import (
+    "github.com/nalej/deployment-manager/internal/entities"
     pbConductor "github.com/nalej/grpc-conductor-go"
     apiv1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,7 +124,8 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
             return err
         }
         log.Debug().Msgf("created service with uid %s", created.GetUID())
-        controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
+        res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.stage.StageId, serviceId,"")
+        controller.AddMonitoredResource(res)
     }
 
     // Create Services for agents
@@ -134,7 +136,8 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
             return err
         }
         log.Debug().Msgf("created service agent with uid %s", created.GetUID())
-        controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
+        res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.stage.StageId, serviceId,"")
+        controller.AddMonitoredResource(res)
     }
     return nil
 }

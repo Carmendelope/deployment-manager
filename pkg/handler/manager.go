@@ -9,6 +9,7 @@ import (
     "errors"
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/login-helper"
@@ -40,16 +41,19 @@ type Manager struct {
     clusterPublicHostname string
     // Dns hosts
     dnsHosts []string
+    // Structure controlling monitored instances
+    monitored monitor.MonitoredInstances
 }
 
 func NewManager(
-    clusterApiConnection *grpc.ClientConn,
-    executor *executor.Executor,
-    loginHelper *login_helper.LoginHelper, clusterPublicHostname string, dnsHosts []string) *Manager {
+    clusterApiConnection *grpc.ClientConn, executor *executor.Executor,
+    loginHelper *login_helper.LoginHelper, clusterPublicHostname string,
+    dnsHosts []string, monitored monitor.MonitoredInstances) *Manager {
     return &Manager{
         executor: *executor,
         clusterPublicHostname: clusterPublicHostname,
         dnsHosts: dnsHosts,
+        monitored: monitored,
     }
 }
 
@@ -58,11 +62,8 @@ func NewManager(
 func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
     log.Debug().Msgf("execute plan with id %s",request.RequestId)
 
-    m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
-        request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_DEPLOYING)
-
     namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
-    preDeployable, prepError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace, m.monitor)
+    preDeployable, prepError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace,m.monitored)
     if prepError != nil {
         log.Error().Err(prepError).Msgf("failed environment preparation for fragment %s",
             request.Fragment.FragmentId)
@@ -92,6 +93,11 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
             return err
         }
 
+        // Add deployment stage to monitor entries
+        // Platform resources will be filled by the corresponding deployables
+        monitoringData := m.getMonitoringData(stage, request.Fragment)
+        m.monitored.AddStage(monitoringData)
+
         var executionErr error
         switch request.RollbackPolicy {
             case pbDeploymentMgr.RollbackPolicy_NONE:
@@ -110,8 +116,6 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         if executionErr != nil {
             log.Error().AnErr("error",err).Msgf("error deploying stage %d out of %d",stageNumber,
                 len(request.Fragment.Stages))
-            m.monitor.UpdateFragmentStatus(request.Fragment.OrganizationId,request.Fragment.DeploymentId,
-                request.Fragment.FragmentId, request.Fragment.AppInstanceId, entities.FRAGMENT_ERROR)
             // clear fragment operations
             log.Info().Msgf("clear fragment %s", request.Fragment.FragmentId)
 
@@ -132,6 +136,12 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
 
 func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Msgf("undeploy app instance with id %s",request.AppInstanceId)
+
+    targetNS := common.GetNamespace(request.OrganizationId, request.AppInstanceId)
+
+    log.Info().Str("namespace", targetNS).Msg("stop events controller")
+    m.executor.StopControlEvents(targetNS)
+    // TODO remove stage entries
 
 	err := m.executor.UndeployNamespace(request)
 	if err != nil {
@@ -154,14 +164,14 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
     toDeploy executor.Deployable, maxRetries int) error {
 
     // first attempt
-    err := m.executor.DeployStage(toDeploy, fragment, stage, m.monitor)
+    err := m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)
     if err == nil {
         // DONE
         return nil
     }
 
-    m.monitor.UpdateFragmentStatus(fragment.OrganizationId,fragment.DeploymentId, fragment.AppInstanceId,
-        fragment.FragmentId, entities.FRAGMENT_RETRYING)
+    //m.monitor.UpdateFragmentStatus(fragment.OrganizationId,fragment.DeploymentId, fragment.AppInstanceId,
+    //    fragment.FragmentId, entities.FRAGMENT_RETRYING)
 
 
     for retries := 0; retries < maxRetries; retries++ {
@@ -176,7 +186,7 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
             return err
         }
         // execute
-        err = m.executor.DeployStage(toDeploy, fragment, stage, m.monitor)
+        err = m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)
 
         if err != nil {
             log.Error().Err(err).Msgf("there was a problem when retrying stage %s from fragment %s",
@@ -189,4 +199,37 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
     }
 
     return errors.New(fmt.Sprintf("exceeded number of retries for stage %s in fragment %s", stage.StageId, fragment.FragmentId))
+}
+
+// Internal function that builds all the data structures to monitor a stage
+//  params:
+//   stage to be deployed
+//  returns:
+//   monitoring entry
+func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment *pbConductor.DeploymentFragment) entities.MonitoredStageEntry{
+    services := make(map[string]entities.MonitoredServiceEntry,0)
+    for  _,s := range stage.Services {
+        services[s.ServiceId] = entities.MonitoredServiceEntry{
+            FragmentId: fragment.FragmentId,
+            InstanceId: fragment.AppInstanceId,
+            OrganizationId: fragment.OrganizationId,
+            Info: "",
+            Endpoints: make([]string,0),
+            Status: entities.NALEJ_SERVICE_DEPLOYING,
+            NewStatus: true,
+            Resources: make(map[string]entities.MonitoredPlatformResource,0),
+            // This will be increased by the resources
+            NumPendingChecks: 0,
+            ServiceID: s.ServiceId,
+        }
+    }
+    toReturn := entities.MonitoredStageEntry{
+        OrganizationId: fragment.OrganizationId,
+        FragmentId: fragment.FragmentId,
+        InstanceId: fragment.AppInstanceId,
+        StageID: stage.StageId,
+        Services: services,
+        NumPendingChecks: len(services),
+    }
+    return toReturn
 }

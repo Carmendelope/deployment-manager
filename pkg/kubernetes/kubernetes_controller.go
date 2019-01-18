@@ -94,10 +94,8 @@ func NewKubernetesController(kExecutor *KubernetesExecutor, monitoredInstances m
 
 
 // Add a resource to be monitored indicating its id on the target platform (uid) and the stage identifier.
-func (c *KubernetesController) AddMonitoredResource(uid string, serviceId string, stageId string) {
-    // TODO
-
-    //c.monitoredInstances.AddMonitoredResource(uid,serviceId,stageId)
+func (c *KubernetesController) AddMonitoredResource(resource entities.MonitoredPlatformResource) {
+    c.monitoredInstances.AddPendingResource(resource)
 }
 
 // Set the status of a native resource

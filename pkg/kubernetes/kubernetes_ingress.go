@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-conductor-go"
@@ -151,7 +152,8 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", serviceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			controller.AddMonitoredResource(string(created.GetUID()), serviceId, di.stage.StageId)
+			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.stage.StageId, serviceId,"")
+			controller.AddMonitoredResource(res)
 		}
 	}
 	log.Debug().Int("created", numCreated).Msg("Ingresses have been created")
