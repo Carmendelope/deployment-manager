@@ -104,14 +104,16 @@ func(d *DeployableDeployments) Build() error {
         user0 := int64(0)
         privilegedUser := &user0
 
+        extendedLabels := service.Labels
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+        extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.stage.StageId
+        extendedLabels[utils.NALEJ_ANNOTATION_INSTANCE_ID] = d.appInstanceId
+
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: common.FormatName(service.Name),
                 Namespace: d.targetNamespace,
-                Labels: service.Labels,
-                Annotations: map[string] string {
-                    utils.NALEJ_SERVICE_NAME : service.ServiceId,
-                },
+                Labels: extendedLabels,
             },
             Spec: appsv1.DeploymentSpec{
                 Replicas: int32Ptr(service.Specs.Replicas),
@@ -266,20 +268,22 @@ func(d *DeployableDeployments) Build() error {
             deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
         }
 
-        // Set a different set of labels to identify this agentdeployment-manager-dc8f8c9b4-96n2g
-        ztAgentLabels := map[string]string {
+
+        ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
+        ztAgentLabels := map[string]string{
             "agent": "zt-agent",
             "app": service.Labels["app"],
         }
-
-        ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: ztAgentName,
                 Namespace: d.targetNamespace,
-                Labels: ztAgentLabels,
-                Annotations: map[string] string {
-                    utils.NALEJ_SERVICE_NAME : service.ServiceId,
+                Labels: map[string] string {
+                    utils.NALEJ_ANNOTATION_SERVICE_ID:  service.ServiceId,
+                    utils.NALEJ_ANNOTATION_STAGE_ID:    d.stage.StageId,
+                    utils.NALEJ_ANNOTATION_INSTANCE_ID: d.appInstanceId,
+                    "agent": "zt-agent",
+                    "app": service.Labels["app"],
                 },
             },
             Spec: appsv1.DeploymentSpec{
@@ -405,9 +409,10 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
             return err
         }
-        log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
-        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.stage.StageId, serviceId, "")
-        controller.AddMonitoredResource(res)
+        log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.appInstanceId).
+            Str("serviceID", serviceId).Msg("add nalej deployment resource to be monitored")
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.appInstanceId, serviceId, "")
+        controller.AddMonitoredResource(&res)
     }
     // same approach for agents
     for serviceId, dep := range d.ztAgents {
@@ -416,9 +421,10 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             log.Error().Err(err).Msgf("error creating deployment for zt-agent %s",dep.Name)
             return err
         }
-        log.Debug().Msgf("created deployment with uid %s", deployed.GetUID())
-        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.stage.StageId, serviceId, "")
-        controller.AddMonitoredResource(res)
+        log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.appInstanceId).
+            Str("serviceID", serviceId).Msg("add zt-agent deployment resource to be monitored")
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.appInstanceId, serviceId, "")
+        controller.AddMonitoredResource(&res)
     }
     return nil
 }

@@ -5,16 +5,13 @@
 
 package entities
 
-import (
-    "github.com/rs/zerolog/log"
-)
+import "github.com/rs/zerolog/log"
 
 // Set of entities used for monitoring services.
 
-// Local entity to manage stage monitored entries. A stage contains several services.
-type MonitoredStageEntry struct {
-    // Stage identifier
-    StageID string `json: "stage_id, omitempty"`
+
+// Local entity to manage a monitored app. This structure simply indicates what nalej services are running.
+type MonitoredAppEntry struct {
     // Organization Id these stages are running into
     OrganizationId string `json: "organization_id, omitempty"`
     // Instance Id these stages belong to
@@ -23,22 +20,22 @@ type MonitoredStageEntry struct {
     FragmentId string `json: "fragment_id, omitempty"`
     // Nalej Services
     // ServiceID -> UID -> Resource
-    Services map[string]MonitoredServiceEntry `json: "services, omitempty"`
+    Services map[string]*MonitoredServiceEntry `json: "services, omitempty"`
     // Number of pending checks to be done
     NumPendingChecks int `json: "num_pending_checks, omitempty"`
 }
 
-
-// Add a pending resource to a stage entry
-func (m *MonitoredStageEntry) AddPendingResource(toAdd MonitoredPlatformResource) {
-    service, found := m.Services[toAdd.ServiceID]
-    if !found {
-        log.Error().Str("serviceID",toAdd.ServiceID).Msg("unknown monitored service")
+// Add a new application entry. If the entry already exists, it adds the new services.
+func(m *MonitoredAppEntry) AppendServices(new *MonitoredAppEntry) {
+    for _, serv := range new.Services {
+        _, found := m.Services[serv.ServiceID]
+        if !found {
+            // This is new. Add it
+            m.Services[serv.ServiceID] = serv
+            m.NumPendingChecks = m.NumPendingChecks + 1
+        }
     }
-    service.AddPendingResource(toAdd)
-    m.NumPendingChecks = m.NumPendingChecks + 1
 }
-
 
 type MonitoredServiceEntry struct {
     // Organization Id these stages are running into
@@ -53,7 +50,7 @@ type MonitoredServiceEntry struct {
     NumPendingChecks int `json: "num_pending_checks, omitempty"`
     // Map of resources being monitored for this Nalej service.
     // UID -> resource data
-    Resources map[string]MonitoredPlatformResource `json: "resources, omitempty"`
+    Resources map[string]*MonitoredPlatformResource `json: "resources, omitempty"`
     // Resource status
     Status NalejServiceStatus `json: "status, omitempty"`
     // Flag indicating if a new status has been set without notification
@@ -65,16 +62,36 @@ type MonitoredServiceEntry struct {
 }
 
 // Add a pending resource to a monitored Nalej service entry
-func (m *MonitoredServiceEntry) AddPendingResource(toAdd MonitoredPlatformResource) {
+func (m *MonitoredServiceEntry) AddPendingResource(toAdd *MonitoredPlatformResource) {
+    _, found := m.Resources[toAdd.UID]
+    if found {
+        log.Debug().Interface("resource", toAdd).Msg("resource already exists")
+        return
+    }
     toAdd.Pending = true
     m.Resources[toAdd.UID] = toAdd
     m.NumPendingChecks = m.NumPendingChecks + 1
 }
 
+// Set a resource as no longer pending.
+func (m *MonitoredServiceEntry) RemovePendingResource(uid string) {
+    res, found := m.Resources[uid]
+    if !found {
+        log.Error().Str("serviceId", m.ServiceID).Str("uid",uid).
+            Msg("cannot remove pending resource from monitored service entry. Not found")
+        return
+    }
+
+    res.Pending = false
+    m.NumPendingChecks = m.NumPendingChecks - 1
+    log.Debug().Str("serviceId", m.ServiceID).Str("uid",uid).Int("numPendingChecks", m.NumPendingChecks).
+        Msg("the number of pending checks was modified")
+}
+
 
 type MonitoredPlatformResource struct {
     // Stage this resource belongs to
-    StageID string `json: "stage, omitempty"`
+    AppInstanceID string `json: "app_instance_id, omitempty"`
     // Service ID this resource belongs to
     ServiceID string `json: "service_id, omitempty"`
     // Local UID used for this resource
@@ -87,8 +104,8 @@ type MonitoredPlatformResource struct {
     Status NalejServiceStatus `json: "status, omitempty"`
 }
 
-func NewMonitoredPlatformResource(uid string, stageID string, serviceID string, info string) MonitoredPlatformResource {
+func NewMonitoredPlatformResource(uid string, appInstanceId string, serviceID string, info string) MonitoredPlatformResource {
     return MonitoredPlatformResource{
-        UID: uid, StageID: stageID, Info: info, Status:NALEJ_SERVICE_DEPLOYING, ServiceID: serviceID}
+        UID: uid, AppInstanceID: appInstanceId, Info: info, Status:NALEJ_SERVICE_SCHEDULED, ServiceID: serviceID, Pending: true}
 
 }

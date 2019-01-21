@@ -13,63 +13,71 @@ import (
 // This structure can be used to inform other solutions about the current deployment.
 
 type MonitoredInstances interface {
-    // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
+    // Check iteratively if the app has any pending resource to be deployed. This is done using the kubernetes controller.
     // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
     // params:
-    //  stageId
+    //  appInstanceId
     //  timecheck seconds between checks
     //  timeout seconds to wait until considering the task to be failed
     // return:
     //  error if any
-    WaitPendingChecks(stageId string, timecheck int, timeout int) error
+    WaitPendingChecks(appInstanceId string, timecheck int, timeout int) error
 
-    // Add the information for a stage to be monitored
-    //  params:
-    //   toAdd entry to be added
-    AddStage(toAdd entities.MonitoredStageEntry)
+    // Add a new app to be monitored. If the application already exists, the services are added to the current instance.
+    // params:
+    //  toAdd application to be added.
+    AddApp(toAdd *entities.MonitoredAppEntry)
 
     // Add a new resource pending to be checked.
     // params:
     //  newResource to be checked
-    AddPendingResource(newResource entities.MonitoredPlatformResource)
+    AddPendingResource(newResource *entities.MonitoredPlatformResource) bool
 
     // Remove a resource from the list.
     // params:
     //  uid internal platform identifier
     // returns:
     //  false if not found
-    RemovePendingResource(uid string) bool
+    RemovePendingResource(stageID string, serviceID, uid string) bool
 
     // Check if a platform resource is monitored
     // params:
     //  uid internal platform identifier
     // returns:
     //  true if the resource is monitored
-    IsMonitoredResource(uid string) bool
+    IsMonitoredResource(stageID string, serviceID, uid string) bool
 
-    // Check if a stage has pending checks
-    // params:
-    //  stageID
-    // returns:
-    //  true if there are pending entries
-    StageHasPendingChecks(stageID string) bool
 
     // Set the status of a resource. This function determines how to change the service status
     // depending on the combination of the statuses of its related resources.
     // params:
+    //  appInstanceId stage identifier
     //  uid native resource identifier
     //  status of the native resource
-    //  endpoints optional array of endpoints
     //  info textual information if proceeds
-    SetResourceStatus(uid string, status entities.NalejServiceStatus, info string)
+    //  endpoints optional array of endpoints
+    SetResourceStatus(appInstanceId string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
+        endpoints string)
 
     // Return the list of services with a new status to be notified.
     // returns:
     //  array with the collection of entities with a service with a status pending of notification
-    GetServicesUnnotifiedStatus() [] entities.MonitoredServiceEntry
+    GetServicesUnnotifiedStatus() [] *entities.MonitoredServiceEntry
 
     // Set to already notified all services.
     ResetServicesUnnotifiedStatus()
+
+    // Check the status of the services and set the app status and update entries accordingly.
+    //  params:
+    //   appInstanceID identifier of the application
+    UpdateAppStatus(appInstanceID string)
+
+    // Remove an existing app
+    // params:
+    //  appInstanceId app to be removed
+    // return:
+    //  true if the app was deleted
+    RemoveApp(appInstanceId string) bool
 
 }
 

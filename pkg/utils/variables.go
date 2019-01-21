@@ -18,7 +18,15 @@ const (
     CLUSTER_ID = "CLUSTER_ID"
 
     // Annotation to identify services deployed by nalej
-    NALEJ_SERVICE_NAME = "nalej-service"
+    NALEJ_ANNOTATION_SERVICE_ID = "nalej-service"
+
+    // Annotation for metadata to identify the stage for these deployments
+    NALEJ_ANNOTATION_STAGE_ID = "nalej-stage"
+    // Annotation for metadata to identify the stage for these deployments
+    NALEJ_ANNOTATION_INSTANCE_ID = "nalej-instance"
+    // Annotation for metadata to identify endpoints for ingress
+    NALEJ_ANNOTATION_INGRESS_ENDPOINT = "nalej-endpoint"
+
 
     // Environment variable indicating the conductor address
     IT_CONDUCTOR_ADDRESS = "IT_CONDUCTOR_ADDRESS"

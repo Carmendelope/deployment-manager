@@ -59,6 +59,9 @@ func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) Na
     }
     if error > 0 {
         result = NALEJ_SERVICE_ERROR
+    } else if len(kStatus.Conditions) == 0 {
+        // If no conditions were specified, we consider it as deploying
+        result = NALEJ_SERVICE_DEPLOYING
     } else if running == len(kStatus.Conditions) {
         result = NALEJ_SERVICE_RUNNING
     } else if progressing > 0 {

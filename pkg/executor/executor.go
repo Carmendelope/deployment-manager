@@ -85,13 +85,20 @@ type Executor interface {
     //   error if any
     UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
-    // Generate an events controller for a given namespace and start watching.
+    // Generate an events controller for a given namespace.
     //  params:
     //   namespace to be supervised
     //   monitored data structure to monitor incoming events
     //  return:
     //   deployment controller in charge of this namespace
-    StartControlEvents(namespace string, monitored monitor.MonitoredInstances) DeploymentController
+    AddEventsController(namespace string, monitored monitor.MonitoredInstances) DeploymentController
+
+    // Start an event controller for the namespace.
+    //  params:
+    //   namespace to be supervised
+    //  return:
+    //   deployment controller in charge of this namespace
+    StartControlEvents(namespace string) DeploymentController
 
     // Stop the control of events for a given namespace.
     //  params:
@@ -137,16 +144,19 @@ type DeploymentController interface {
     // and deployment stage.
     // params:
     //  resource
-   AddMonitoredResource(resource entities.MonitoredPlatformResource)
+   AddMonitoredResource(resource *entities.MonitoredPlatformResource)
 
    // Sets the status of a resource in the system. The implementation is in charge of transforming the native
    // status value into a NalejServiceStatus
    // params:
+   //  appInstanceID application
+   //  serviceID service identifier
    //  uid native identifier
    //  status of the resource
-   //  deployable object
    //  info relevant textual information
-   SetResourceStatus(uid string, status entities.NalejServiceStatus, info string)
+   //  endpoint for the resource
+   SetResourceStatus(appInstanceID string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
+       endpoint string)
 
    // Start checking events
    Run()

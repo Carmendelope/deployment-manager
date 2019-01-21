@@ -20,6 +20,7 @@ import (
 
 type DeployableConfigMaps struct {
 	client          coreV1.ConfigMapInterface
+	appInstanceID	string
 	stage           *grpc_conductor_go.DeploymentStage
 	targetNamespace string
 	configmaps      map[string][]*v1.ConfigMap
@@ -27,10 +28,12 @@ type DeployableConfigMaps struct {
 
 func NewDeployableConfigMaps(
 	client *kubernetes.Clientset,
+	appInstanceID string,
 	stage *grpc_conductor_go.DeploymentStage,
 	targetNamespace string) *DeployableConfigMaps {
 	return &DeployableConfigMaps{
 		client:          client.CoreV1().ConfigMaps(targetNamespace),
+		appInstanceID:	 appInstanceID,
 		stage:           stage,
 		targetNamespace: targetNamespace,
 		configmaps:      make(map[string][]*v1.ConfigMap, 0),
@@ -61,9 +64,10 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_app
 		ObjectMeta: v12.ObjectMeta{
 			Name:      cf.ConfigFileId,
 			Namespace: dc.targetNamespace,
-			Labels:    nil,
-			Annotations: map[string]string{
-				utils.NALEJ_SERVICE_NAME: serviceId,
+			Labels:    map[string]string{
+				utils.NALEJ_ANNOTATION_SERVICE_ID: serviceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:   dc.stage.StageId,
+				utils.NALEJ_ANNOTATION_INSTANCE_ID:dc.appInstanceID,
 			},
 		},
 		BinaryData: map[string][]byte{
