@@ -7,6 +7,7 @@ package kubernetes
 import (
 	"fmt"
 	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/common"
 	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
@@ -22,6 +23,7 @@ type DeployableStorage struct {
 	client          coreV1.PersistentVolumeClaimInterface
 	stage           *grpc_conductor_go.DeploymentStage
 	targetNamespace string
+	class    		string
 	pvcs      		map[string][]*v1.PersistentVolumeClaim
 }
 
@@ -29,10 +31,18 @@ func NewDeployableStorage(
 	client *kubernetes.Clientset,
 	stage *grpc_conductor_go.DeploymentStage,
 	targetNamespace string) *DeployableStorage {
+
+	sc := ""
+		// get storage classs name based on the environment
+	switch(common.CLUSTER_ENV) {
+	case "azure": sc = "managed-premium"
+	default: sc = ""
+	}
 	return &DeployableStorage{
 		client:          client.CoreV1().PersistentVolumeClaims(targetNamespace),
 		stage:           stage,
 		targetNamespace: targetNamespace,
+		class:			sc,
 		pvcs:      make(map[string][]*v1.PersistentVolumeClaim, 0),
 	}
 }
@@ -43,10 +53,8 @@ func (ds*DeployableStorage) GetId() string {
 
 
 func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
-	// TODO: Assumption is for azure only. This can change depending on AWS/Google or other cluster with custom storage
-	// If  storage class not created by cloud provider, then create one ourselves during startup
-	// Azure cluster provides default storage class
-	scn := "managed-premium"
+
+
 	if storage.Size == 0 {
 		storage.Size = DefaultStorageAllocationSize
 	}
@@ -62,7 +70,7 @@ func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_applicat
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce,},
-			StorageClassName: &scn,
+			StorageClassName: &ds.class,
 			Resources: v1.ResourceRequirements{ Requests:v1.ResourceList{v1.ResourceStorage:*sizeQuantity}},
 
 		},
@@ -84,6 +92,10 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			// TODO:Ideally we should return error and user should know why
 			log.Error().Str("serviceName", service.Name).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
 			// service will fail if we continue, as no PVC can be bound
+			continue
+		}
+		if ds.class == "" {
+			log.Error().Str("serviceName", service.Name).Str("storage class for", common.CLUSTER_ENV).Msg("not supported ")
 			continue
 		}
 		// construct PVC ID - based on serviceId and storage Index

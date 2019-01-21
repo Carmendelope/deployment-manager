@@ -59,6 +59,7 @@ func setEnvironmentVars(config *Config) {
         log.Fatal().Msgf("%s variable was not set", utils.CLUSTER_ID)
     }
 
+    common.CLUSTER_ENV = config.ClusterEnvironment
     common.DEPLOYMENT_MANAGER_ADDR = config.DeploymentMgrAddress
 }
 
