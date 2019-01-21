@@ -293,9 +293,8 @@ func(d *DeployableDeployments) Build() error {
                         Name: fmt.Sprintf("vol-1%d",i),
                         VolumeSource: apiv1.VolumeSource{
                             PersistentVolumeClaim:&apiv1.PersistentVolumeClaimVolumeSource{
-                                // claim name should be same as that was generated in generatePVC.
-                                // TODO: This needs to be passed by the descriptor
-                                ClaimName: fmt.Sprintf("%s-1%d",service.AppDescriptorId,i),
+                                // claim name should be same as pvcID that was generated in BuildStorageForServices.
+                                ClaimName: fmt.Sprintf("%s-%s-1%d",service.Name,service.ServiceId,i),
                             },
                         },
                     }
