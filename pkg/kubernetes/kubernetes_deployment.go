@@ -294,7 +294,7 @@ func(d *DeployableDeployments) Build() error {
                         VolumeSource: apiv1.VolumeSource{
                             PersistentVolumeClaim:&apiv1.PersistentVolumeClaimVolumeSource{
                                 // claim name should be same as pvcID that was generated in BuildStorageForServices.
-                                ClaimName: fmt.Sprintf("%s-%s-1%d",service.Name,service.ServiceId,i),
+                                ClaimName: common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",i)),
                             },
                         },
                     }
