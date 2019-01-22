@@ -20,6 +20,7 @@ import (
     "k8s.io/client-go/kubernetes/typed/apps/v1"
     "k8s.io/apimachinery/pkg/api/resource"
     "strings"
+    "github.com/nalej/grpc-application-go"
 )
 
 const (
@@ -276,14 +277,27 @@ func(d *DeployableDeployments) Build() error {
                 if storage.Size == 0 {
                     storage.Size = DefaultStorageAllocationSize
                 }
-                v := &apiv1.Volume {
-                    Name: fmt.Sprintf("vol-1%d",i),
-                    VolumeSource: apiv1.VolumeSource{
-                        EmptyDir:&apiv1.EmptyDirVolumeSource{
-                            Medium: apiv1.StorageMediumDefault,
-                            SizeLimit:resource.NewQuantity(storage.Size,resource.BinarySI),
+                var v *apiv1.Volume
+                if storage.Type == grpc_application_go.StorageType_EPHEMERAL {
+                    v = &apiv1.Volume {
+                        Name: fmt.Sprintf("vol-1%d",i),
+                        VolumeSource: apiv1.VolumeSource{
+                            EmptyDir:&apiv1.EmptyDirVolumeSource{
+                                Medium: apiv1.StorageMediumDefault,
+                                SizeLimit:resource.NewQuantity(storage.Size,resource.BinarySI),
+                            },
                         },
-                    },
+                    }
+                } else {
+                    v = &apiv1.Volume {
+                        Name: fmt.Sprintf("vol-1%d",i),
+                        VolumeSource: apiv1.VolumeSource{
+                            PersistentVolumeClaim:&apiv1.PersistentVolumeClaimVolumeSource{
+                                // claim name should be same as pvcID that was generated in BuildStorageForServices.
+                                ClaimName: common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",i)),
+                            },
+                        },
+                    }
                 }
                 volumes = append(volumes,*v)
                 vm := &apiv1.VolumeMount{

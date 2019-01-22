@@ -38,6 +38,8 @@ type Config struct {
 	Password string
 	// List of DNS entries separated by commas
 	DNS string
+	// cluster runtime environment such as aws/google/azure/...
+	ClusterEnvironment string
 }
 
 func (conf *Config) Validate() derrors.Error {
