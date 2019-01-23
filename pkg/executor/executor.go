@@ -108,18 +108,12 @@ type Executor interface {
 
 // A monitor system to inform the cluster API about the current status
 type Monitor interface {
-    // Update the status of a fragment
-    //UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
-    //    appInstanceId string, status entities.FragmentStatus)
 
-    // Update the status of a service
-    //UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
-    //    status entities.NalejServiceStatus, toDeploy Deployable, info string)
+    // Update the status of the system including fragments and services. This function must send to conductor
+    // the information corresponding to any service/fragment update in the system.
+    UpdateStatus()
 
-    // Send information about statuses with new updates
-    SendServiceStatus()
-
-    // Run the service
+    // Run the service to periodically check pending updates.
     Run()
 }
 

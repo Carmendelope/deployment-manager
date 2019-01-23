@@ -30,6 +30,16 @@ var ServiceStatusToGRPC = map[NalejServiceStatus] pbConductor.ServiceStatus {
     NALEJ_SERVICE_ERROR:     pbConductor.ServiceStatus_SERVICE_ERROR,
 }
 
+// Equivalence table between status services and their corresponding fragment status.
+var ServicesToFragmentStatus = map[NalejServiceStatus] FragmentStatus {
+    NALEJ_SERVICE_SCHEDULED: FRAGMENT_WAITING,
+    NALEJ_SERVICE_WAITING:   FRAGMENT_WAITING,
+    NALEJ_SERVICE_DEPLOYING: FRAGMENT_DEPLOYING,
+    NALEJ_SERVICE_RUNNING:   FRAGMENT_DONE,
+    NALEJ_SERVICE_ERROR:     FRAGMENT_ERROR,
+}
+
+
 // Translate a kubenetes deployment status into a Nalej service status
 // Kubernetes defines a set of deployment condition statuses to describe the current status of a deployment
 // 	DeploymentAvailable

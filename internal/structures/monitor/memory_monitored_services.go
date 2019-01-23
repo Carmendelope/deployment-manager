@@ -50,6 +50,25 @@ func (p *MemoryMonitoredInstances) AddApp(toAdd *entities.MonitoredAppEntry) {
     }
 }
 
+func(p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status entities.FragmentStatus, err error) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    current, found := p.monitoredApps[appInstanceId]
+    if !found {
+        log.Debug().Str("instanceId",appInstanceId).Msg("impossible to set status. No monitored app")
+    } else {
+        // Add new services if they were not previously added
+        log.Debug().Str("instanceId",appInstanceId).Interface("status",status).Msg("set instance status")
+        current.Status = status
+        if err !=  nil {
+            current.Info = err.Error()
+        } else {
+            current.Info = ""
+        }
+    }
+}
+
+
 // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
 // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
 func(p *MemoryMonitoredInstances) WaitPendingChecks(appInstanceId string, checkingSleepTime int, stageCheckingTimeout int) error {
@@ -267,6 +286,61 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     service.Status = finalStatus
     service.Info = newServiceInfo
 
+    // update app status
+    // the update will be only done if all the services are under deployed
+    // get the worst status found in the services
+    if len(app.Services) != app.TotalServices {
+        return
+    }
+
+
+    var newAppStatus entities.NalejServiceStatus
+    newAppStatus = entities.NALEJ_SERVICE_ERROR
+    newAppInfo := app.Info
+    for _, serv := range app.Services {
+        if serv.Status == entities.NALEJ_SERVICE_ERROR {
+            newAppStatus = entities.NALEJ_SERVICE_ERROR
+            newAppInfo = serv.Info
+            break
+        } else if serv.Status < newAppStatus {
+            newAppStatus = serv.Status
+            newAppInfo = serv.Info
+        }
+    }
+
+    app.Status = entities.ServicesToFragmentStatus[newAppStatus]
+    app.Info = newAppInfo
+}
+
+func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.MonitoredAppEntry) {
+    p.mu.RLock()
+    p.mu.RUnlock()
+    //log.Debug().Interface("monitored apps",p.monitoredApps).Msg("monitored before unnotified")
+    toReturn := make([]*entities.MonitoredAppEntry,0)
+    for _, app := range p.monitoredApps {
+        pendingServices := make(map[string]*entities.MonitoredServiceEntry,0)
+        // for every monitored app
+        for _, x := range app.Services {
+            // for every monitored service
+            if x.NewStatus {
+                pendingServices[x.ServiceID] = x
+            }
+        }
+        if len(pendingServices) > 0 {
+            newApp := entities.MonitoredAppEntry{
+                FragmentId: app.FragmentId,
+                NumPendingChecks: app.NumPendingChecks,
+                OrganizationId: app.OrganizationId,
+                InstanceId: app.InstanceId,
+                Services: pendingServices,
+                Info: app.Info,
+                DeploymentId: app.DeploymentId,
+                Status: app.Status,
+            }
+            toReturn = append(toReturn, &newApp)
+        }
+    }
+    return toReturn
 }
 
 // Return the list of services with a new status to be notified.
@@ -275,7 +349,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] *entities.MonitoredServiceEntry {
     p.mu.RLock()
     p.mu.RUnlock()
-    log.Debug().Interface("monitored apps",p.monitoredApps).Msg("monitored before unnotified")
+    //log.Debug().Interface("monitored apps",p.monitoredApps).Msg("monitored before unnotified")
     toNotify := make([]*entities.MonitoredServiceEntry,0)
     for _, app := range p.monitoredApps {
         // for every monitored app
@@ -317,9 +391,12 @@ func (p *MemoryMonitoredInstances) UpdateAppStatus(appInstanceID string) {
             pendingServices = pendingServices + 1
         }
     }
-    app.NumPendingChecks = pendingServices
-    log.Info().Str("appInstanceID", appInstanceID).Int("pendingServices",app.NumPendingChecks).
-        Msg("updated number of pending services for app")
+    if app.NumPendingChecks != pendingServices {
+        app.NumPendingChecks = pendingServices
+        log.Info().Str("appInstanceID", appInstanceID).Int("pendingServices",app.NumPendingChecks).
+            Msg("updated number of pending services for app")
+    }
+
 }
 
 

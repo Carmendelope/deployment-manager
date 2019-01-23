@@ -16,6 +16,10 @@ type MonitoredAppEntry struct {
     OrganizationId string `json: "organization_id, omitempty"`
     // Instance Id these stages belong to
     InstanceId string `json: "instance_id, omitempty"`
+    // Deployment app id
+    DeploymentId string `json: "deployment_id, omitempty"`
+    // Status
+    Status FragmentStatus `json: "status, omitempty"`
     // fragment id for these stages
     FragmentId string `json: "fragment_id, omitempty"`
     // Nalej Services
@@ -23,6 +27,10 @@ type MonitoredAppEntry struct {
     Services map[string]*MonitoredServiceEntry `json: "services, omitempty"`
     // Number of pending checks to be done
     NumPendingChecks int `json: "num_pending_checks, omitempty"`
+    // Additional info
+    Info string `json: "num_pending_checks, omitempty"`
+    // Total services
+    TotalServices int `json: "total_services, omitempty"`
 }
 
 // Add a new application entry. If the entry already exists, it adds the new services.

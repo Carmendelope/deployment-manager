@@ -41,17 +41,14 @@ func (h *Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
 	return &response, nil
 }
 
+
+// It processes the execution of a request in a parallel thread and updates the fragment status accordingly.
 func (h * Handler) triggerExecute(request *pbDeploymentMgr.DeploymentFragmentRequest) {
 	log.Debug().Str("requestId", request.RequestId).Str("fragmentId", request.Fragment.FragmentId).Msg("triggerExecute starts")
 	err := h.m.Execute(request)
 	if err != nil {
 		log.Error().Err(err).Str("requestId", request.RequestId).Msg("failed to execute fragment request")
-		return
 	}
-
-	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
-	log.Debug().Interface("executeResult", response).Msg("executed fragment responds")
-
 	log.Debug().Str("requestId", request.RequestId).Str("fragmentId", request.Fragment.FragmentId).Msg("triggerExecute finishes")
 }
 

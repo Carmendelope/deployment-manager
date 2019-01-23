@@ -28,6 +28,13 @@ type MonitoredInstances interface {
     //  toAdd application to be added.
     AddApp(toAdd *entities.MonitoredAppEntry)
 
+    // Set the status of a fragment
+    // params:
+    //  appInstanceId
+    //  status
+    //  err execution error
+    SetAppStatus(appInstanceId string, status entities.FragmentStatus, err error)
+
     // Add a new resource pending to be checked.
     // params:
     //  newResource to be checked
@@ -59,10 +66,10 @@ type MonitoredInstances interface {
     SetResourceStatus(appInstanceId string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
         endpoints string)
 
-    // Return the list of services with a new status to be notified.
+    // This function returns a list of monitored apps with pending notifications and their services with pending notifications.
     // returns:
-    //  array with the collection of entities with a service with a status pending of notification
-    GetServicesUnnotifiedStatus() [] *entities.MonitoredServiceEntry
+    //  array with the collection of monitored apps with pending notifications
+    GetPendingNotifications() ([] *entities.MonitoredAppEntry)
 
     // Set to already notified all services.
     ResetServicesUnnotifiedStatus()
