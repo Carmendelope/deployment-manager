@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
@@ -20,17 +21,21 @@ import (
 
 type DeployableSecrets struct {
 	client          coreV1.SecretInterface
-	stage                 *grpc_conductor_go.DeploymentStage
+	appInstanceID	string
+	serviceID 		string
+	stage           *grpc_conductor_go.DeploymentStage
 	targetNamespace string
 	secrets      map[string][]*v1.Secret
 }
 
 func NewDeployableSecrets(
 	client *kubernetes.Clientset,
+	appInstanceID string,
 	stage *grpc_conductor_go.DeploymentStage,
 	targetNamespace string) *DeployableSecrets {
 	return &DeployableSecrets{
 		client:          client.CoreV1().Secrets(targetNamespace),
+		appInstanceID:   appInstanceID,
 		stage:           stage,
 		targetNamespace: targetNamespace,
 		secrets:      make(map[string][]*v1.Secret, 0),
@@ -62,6 +67,11 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_appl
 		ObjectMeta: v12.ObjectMeta{
 			Name:         serviceId,
 			Namespace:    ds.targetNamespace,
+			Labels: map[string]string {
+				utils.NALEJ_ANNOTATION_SERVICE_ID:  serviceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:    ds.stage.StageId,
+				utils.NALEJ_ANNOTATION_INSTANCE_ID: ds.appInstanceID,
+			},
 		},
 		Data: map[string][]byte{
 			".dockerconfigjson": []byte(ds.getDockerConfigJSON(ic)),

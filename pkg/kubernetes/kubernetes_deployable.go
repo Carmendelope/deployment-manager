@@ -67,14 +67,13 @@ func NewDeployableKubernetesStage (
         targetNamespace: targetNamespace,
         nalejVariables:  nalejVariables,
         ztNetworkId:     ztNetworkId,
-        Services:        NewDeployableService(client, stage, targetNamespace),
+        Services:        NewDeployableService(client, stage, appInstanceId, targetNamespace),
         Deployments: NewDeployableDeployment(
                         client, stage, targetNamespace, nalejVariables, ztNetworkId, organizationId,
                         organizationName, deploymentId, appInstanceId, appName, dnsHosts),
         Ingresses:  NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
-        Configmaps: NewDeployableConfigMaps(client, stage, targetNamespace),
-        Secrets:    NewDeployableSecrets(client, stage, targetNamespace),
-        Storage:    NewDeployableStorage(client, stage, targetNamespace),
+        Configmaps: NewDeployableConfigMaps(client, appInstanceId, stage, targetNamespace),
+        Secrets:    NewDeployableSecrets(client, appInstanceId, stage, targetNamespace),
     }
 }
 

@@ -7,9 +7,10 @@
 package executor
 
 import (
-	"github.com/nalej/deployment-manager/internal/entities"
-	pbConductor "github.com/nalej/grpc-conductor-go"
-	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
+    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 )
 
 
@@ -23,11 +24,11 @@ type Executor interface {
     //  params:
     //   fragment to be deployed
     //   namespace the fragment belongs to
-    //   monitor to overview the deployment
+    //   instances structure controlling monitored instances
     //  return:
     //   error if any
     PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
-        monitor Monitor) (Deployable, error)
+        instances monitor.MonitoredInstances) (Deployable, error)
 
     // Build a deployable object that can be executed into the current platform using its native description.
     //  params:
@@ -52,11 +53,10 @@ type Executor interface {
     //   toDeploy items to be deployed
     //   fragment to the stage belongs to
     //   stage to be executed
-    //   monitor to inform about system information
     //  return:
     //   deployable object or error if any
     DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
-        monitor Monitor) error
+        monitoredInstances monitor.MonitoredInstances) error
 
     // This operation should be executed after the failed deployment of a deployment stage. The target platform must
     // be ready to retry again the deployment of this stage. This means, that other deployable entities deployed
@@ -85,17 +85,36 @@ type Executor interface {
     //   error if any
     UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
 
+    // Generate an events controller for a given namespace.
+    //  params:
+    //   namespace to be supervised
+    //   monitored data structure to monitor incoming events
+    //  return:
+    //   deployment controller in charge of this namespace
+    AddEventsController(namespace string, monitored monitor.MonitoredInstances) DeploymentController
+
+    // Start an event controller for the namespace.
+    //  params:
+    //   namespace to be supervised
+    //  return:
+    //   deployment controller in charge of this namespace
+    StartControlEvents(namespace string) DeploymentController
+
+    // Stop the control of events for a given namespace.
+    //  params:
+    //   namespace to stop the control
+    StopControlEvents(namespace string)
 }
 
 // A monitor system to inform the cluster API about the current status
 type Monitor interface {
-    // Update the status of a fragment
-    UpdateFragmentStatus(organizationId string,deploymentId string, fragmentId string,
-        appInstanceId string, status entities.FragmentStatus)
 
-    // Update the status of a service
-    UpdateServiceStatus(fragmentId string, organizationId string, instanceId string, serviceId string,
-        status entities.NalejServiceStatus, toDeploy Deployable)
+    // Update the status of the system including fragments and services. This function must send to conductor
+    // the information corresponding to any service/fragment update in the system.
+    UpdateStatus()
+
+    // Run the service to periodically check pending updates.
+    Run()
 }
 
 
@@ -118,15 +137,24 @@ type DeploymentController interface {
     // Add a monitor resource in the native platform using its uid and connect it with the corresponding service
     // and deployment stage.
     // params:
-    //  uid native resource identifier
-    //  serviceId nalej service identifier
-    //  stageId for the deployment stage
-   AddMonitoredResource(uid string, serviceId string, stageId string)
+    //  resource
+   AddMonitoredResource(resource *entities.MonitoredPlatformResource)
 
    // Sets the status of a resource in the system. The implementation is in charge of transforming the native
    // status value into a NalejServiceStatus
    // params:
+   //  appInstanceID application
+   //  serviceID service identifier
    //  uid native identifier
    //  status of the resource
-   SetResourceStatus(uid string, status entities.NalejServiceStatus)
+   //  info relevant textual information
+   //  endpoint for the resource
+   SetResourceStatus(appInstanceID string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
+       endpoint string)
+
+   // Start checking events
+   Run()
+
+   // Stop checking events
+   Stop()
 }

@@ -1,3 +1,8 @@
+/*
+ *  Copyright (C) 2018 Nalej Group - All Rights Reserved
+ *
+ */
+
 package entities
 
 import (
@@ -24,6 +29,16 @@ var ServiceStatusToGRPC = map[NalejServiceStatus] pbConductor.ServiceStatus {
     NALEJ_SERVICE_RUNNING:   pbConductor.ServiceStatus_SERVICE_RUNNING,
     NALEJ_SERVICE_ERROR:     pbConductor.ServiceStatus_SERVICE_ERROR,
 }
+
+// Equivalence table between status services and their corresponding fragment status.
+var ServicesToFragmentStatus = map[NalejServiceStatus] FragmentStatus {
+    NALEJ_SERVICE_SCHEDULED: FRAGMENT_WAITING,
+    NALEJ_SERVICE_WAITING:   FRAGMENT_WAITING,
+    NALEJ_SERVICE_DEPLOYING: FRAGMENT_DEPLOYING,
+    NALEJ_SERVICE_RUNNING:   FRAGMENT_DONE,
+    NALEJ_SERVICE_ERROR:     FRAGMENT_ERROR,
+}
+
 
 // Translate a kubenetes deployment status into a Nalej service status
 // Kubernetes defines a set of deployment condition statuses to describe the current status of a deployment
@@ -54,6 +69,9 @@ func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) Na
     }
     if error > 0 {
         result = NALEJ_SERVICE_ERROR
+    } else if len(kStatus.Conditions) == 0 {
+        // If no conditions were specified, we consider it as deploying
+        result = NALEJ_SERVICE_DEPLOYING
     } else if running == len(kStatus.Conditions) {
         result = NALEJ_SERVICE_RUNNING
     } else if progressing > 0 {

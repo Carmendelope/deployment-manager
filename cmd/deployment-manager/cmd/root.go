@@ -89,7 +89,6 @@ func init() {
 
 // SetupLogging sets the debugLevel level and console logging if required.
 func SetupLogging() {
-    zerolog.TimeFieldFormat = ""
     zerolog.SetGlobalLevel(zerolog.InfoLevel)
     if debugLevel {
         zerolog.SetGlobalLevel(zerolog.DebugLevel)

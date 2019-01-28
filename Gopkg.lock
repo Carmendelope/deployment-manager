@@ -201,10 +201,13 @@
   version = "v0.0.29"
 
 [[projects]]
+  digest = "1:e4891b7e05d4786ca43f1f87f3cf117b59c7cc949860cd60990adcc5063540f2"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
-  revision = "ac603fa3bfb4ad65f0f05ad6a30ed11df6ad7073"
-  version = "v0.0.73"
+  pruneopts = ""
+  revision = "3955e1481d10aebe85ec8c52ffaff635eeb5fe0e"
+  version = "v0.0.75"
+
 
 [[projects]]
   name = "github.com/nalej/grpc-deployment-manager-go"

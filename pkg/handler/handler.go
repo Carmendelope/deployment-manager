@@ -9,7 +9,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"github.com/nalej/deployment-manager/internal/entities"
 	pbApplication "github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-common-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
@@ -36,42 +35,20 @@ func (h *Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
 		return nil, theError
 	}
 
-	/*
-	err := h.m.Execute(request)
-	if err != nil {
-		log.Error().Err(err).Str("requestId", request.RequestId).Msg("failed to execute fragment request")
-		res := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
-		// TODO include error description in message
-		return &res, err
-	}
-
-	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
-	log.Debug().Interface("executeResult", response).Msg("executed fragment responds")
-	*/
-
 	go h.triggerExecute(request)
 
 	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_DEPLOYING}
 	return &response, nil
 }
 
+
+// It processes the execution of a request in a parallel thread and updates the fragment status accordingly.
 func (h * Handler) triggerExecute(request *pbDeploymentMgr.DeploymentFragmentRequest) {
 	log.Debug().Str("requestId", request.RequestId).Str("fragmentId", request.Fragment.FragmentId).Msg("triggerExecute starts")
 	err := h.m.Execute(request)
-	fragment := request.Fragment
 	if err != nil {
 		log.Error().Err(err).Str("requestId", request.RequestId).Msg("failed to execute fragment request")
-		//res := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_ERROR}
-		h.m.monitor.UpdateFragmentStatus(fragment.OrganizationId, fragment.DeploymentId, fragment.AppInstanceId,
-			fragment.FragmentId, entities.FRAGMENT_ERROR)
-
-		// TODO include error description in message
-		return
 	}
-
-	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_RUNNING}
-	log.Debug().Interface("executeResult", response).Msg("executed fragment responds")
-
 	log.Debug().Str("requestId", request.RequestId).Str("fragmentId", request.Fragment.FragmentId).Msg("triggerExecute finishes")
 }
 

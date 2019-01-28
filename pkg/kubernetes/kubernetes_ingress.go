@@ -2,7 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
@@ -90,6 +92,10 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 			Labels: map[string]string{
 				"cluster":   "application",
 				"component": "ingress-nginx",
+				utils.NALEJ_ANNOTATION_STAGE_ID: di.stage.StageId,
+				utils.NALEJ_ANNOTATION_INSTANCE_ID: di.appInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID:  serviceId,
+				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT: ingressHostname,
 			},
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
@@ -151,10 +157,10 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", serviceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			controller.AddMonitoredResource(string(created.GetUID()), serviceId, di.stage.StageId)
+			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.appInstanceId, serviceId,"")
+			controller.AddMonitoredResource(&res)
 		}
 	}
-	log.Debug().Int("created", numCreated).Msg("Ingresses have been created")
 	return nil
 }
 

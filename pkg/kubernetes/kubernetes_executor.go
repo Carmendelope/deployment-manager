@@ -9,7 +9,8 @@ package kubernetes
 import (
 	"errors"
 	"flag"
-	"github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
+    "github.com/nalej/deployment-manager/pkg/executor"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 	"github.com/rs/zerolog/log"
@@ -19,14 +20,18 @@ import (
 	"os"
 	"path/filepath"
     "github.com/nalej/deployment-manager/pkg/common"
+    "sync"
 )
-
-
 
 
 // The executor is the main structure in charge of running deployment plans on top of K8s.
 type KubernetesExecutor struct {
     Client *kubernetes.Clientset
+    // Map of controllers
+    // Namespace -> controller
+    Controllers map[string]*KubernetesController
+    // mutex
+    mu sync.Mutex
 }
 
 func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
@@ -47,7 +52,7 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
         log.Error().Err(foundError)
         return nil, foundError
     }
-    toReturn := KubernetesExecutor{Client: c}
+    toReturn := KubernetesExecutor{Client: c, Controllers: make(map[string]*KubernetesController,0)}
     return &toReturn, err
 }
 
@@ -77,23 +82,26 @@ func(k *KubernetesExecutor) BuildNativeDeployable(
 
 // Prepare the namespace for the deployment. This is a special case because all the Deployments will share a common
 // namespace. If this step cannot be done, no stage deployment will start.
-func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
-    monitor executor.Monitor) (executor.Deployable, error) {
+func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment,
+    namespace string, monitored monitor.MonitoredInstances)(executor.Deployable, error) {
+    log.Debug().Str("fragmentId",fragment.FragmentId).Msg("prepare environment for deployment")
+
     // Create a namespace
-    namespaceDeployable := NewDeployableNamespace(k.Client, fragment.FragmentId, namespace)
+    namespaceDeployable := NewDeployableNamespace(k.Client, fragment.AppInstanceId, fragment.FragmentId, namespace)
     err := namespaceDeployable.Build()
     if err != nil {
        log.Error().Err(err).Msgf("impossible to build namespace %s",namespace)
        return nil, err
     }
 
-    // Prepare a controller to be sure that we have a working namespace
-    // Build a controller for this deploy operation
-    checks := executor.NewPendingStages(fragment.OrganizationId,fragment.AppInstanceId,fragment.FragmentId, namespaceDeployable, monitor)
-    // Second, instantiate a new controller
-    kontroller := NewKubernetesController(k, checks, namespaceDeployable.targetNamespace)
+    controller, found := k.Controllers[namespaceDeployable.targetNamespace]
+    if !found {
+        log.Error().Str("namespace",namespaceDeployable.targetNamespace).
+            Msg("impossible to find the corresponding events controller")
+        return nil, errors.New("impossible to find the corresponding events controller")
+    }
 
-    err = namespaceDeployable.Deploy(kontroller)
+    err = namespaceDeployable.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy namespace %s",namespace)
         return nil,err
@@ -108,66 +116,84 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(fragment *pbConduct
 
 // Deploy a stage into kubernetes. This function
 func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment *pbConductor.DeploymentFragment,
-    stage *pbConductor.DeploymentStage, monitor executor.Monitor) error {
+    stage *pbConductor.DeploymentStage, monitoredInstances monitor.MonitoredInstances) error {
     log.Info().Str("stage",stage.StageId).Msgf("execute stage %s with %d Services", stage.StageId, len(stage.Services))
 
-    var k8sDeployable *DeployableKubernetesStage
-    k8sDeployable = toDeploy.(*DeployableKubernetesStage)
+    var k8sDeploy *DeployableKubernetesStage
+    k8sDeploy = toDeploy.(*DeployableKubernetesStage)
 
-
-    // Build a controller for this deploy operation
-    // First, build a struct in charge of the pending stages
-    checks := executor.NewPendingStages(fragment.OrganizationId,fragment.AppInstanceId,fragment.FragmentId, k8sDeployable, monitor)
-    // Second, instantiate a new controller
-    kontroller := NewKubernetesController(k, checks, k8sDeployable.targetNamespace)
-
-    var k8sController *KubernetesController
-    k8sController = kontroller.(*KubernetesController)
+    // get the previously generated controller for this namespace
+    controller, found := k.Controllers[k8sDeploy.targetNamespace]
+    if !found {
+        log.Error().Str("namespace",k8sDeploy.targetNamespace).Str("stageId",stage.StageId).
+            Msg("impossible to find the corresponding events controller")
+        return errors.New("impossible to find the corresponding events controller")
+    }
 
     // Deploy everything and then start the controller.
-    err := toDeploy.Deploy(kontroller)
+    err := toDeploy.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
         return err
     }
 
-    // run the controller
-    log.Debug().Msg("Run controller")
-    k8sController.Run()
-    log.Debug().Msg("Awaiting pending checks")
-    stageErr := checks.WaitPendingChecks(stage.StageId)
-    log.Debug().Msg("Stopping controller")
-    k8sController.Stop()
-    return stageErr
+    return err
 
 }
 
-// Internal function to execute a given set of deployable items.
-func (k *KubernetesExecutor) runStage(targetNamespace string, toDeploy executor.Deployable,
-    fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage,monitor executor.Monitor) error {
 
-    // Build a controller for this deploy operation
-    // First, build a struct in charge of the pending stages
-    checks := executor.NewPendingStages(fragment.OrganizationId,fragment.AppInstanceId,fragment.FragmentId, toDeploy, monitor)
-    // Second, instantiate a new controller
-    kontroller := NewKubernetesController(k, checks, targetNamespace)
+func (k *KubernetesExecutor) AddEventsController(namespace string, monitored monitor.MonitoredInstances) executor.DeploymentController {
+    // Instantiate a new controller
+    deployController := NewKubernetesController(k, monitored, namespace)
 
     var k8sController *KubernetesController
-    k8sController = kontroller.(*KubernetesController)
+    k8sController = deployController.(*KubernetesController)
 
-    // Deploy everything and then start the controller.
-    err := toDeploy.Deploy(kontroller)
-    if err != nil {
-        log.Error().Err(err).Msgf("impossible to deploy resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
-        return err
+    k.mu.Lock()
+    defer k.mu.Unlock()
+    _, found := k.Controllers[namespace]
+    if found {
+        log.Error().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
+        return nil
     }
-
-    // run the controller
-    k8sController.Run()
-    stageErr := checks.WaitPendingChecks(stage.StageId)
-    k8sController.Stop()
-    return stageErr
+    k.Controllers[namespace] = k8sController
+    log.Debug().Interface("controllers", k.Controllers).Msg("added a new events controller")
+    return k8sController
 }
+
+
+// Generate a events controller for a given namespace.
+//  params:
+//   namespace to be supervised
+//   monitored data structure to monitor incoming events
+func (k *KubernetesExecutor) StartControlEvents(namespace string) executor.DeploymentController {
+    k.mu.Lock()
+    defer k.mu.Unlock()
+    toReturn, found := k.Controllers[namespace]
+    if !found {
+        log.Error().Str("namespace",namespace).Msg("the kubernetes controller was not found")
+        return nil
+    }
+    toReturn.Run()
+    return toReturn
+}
+
+// Stop the control of events for a given namespace.
+//  params:
+//   namespace to stop the control
+func (k *KubernetesExecutor) StopControlEvents(namespace string) {
+    k.mu.Lock()
+    defer k.mu.Unlock()
+    log.Info().Str("namespace", namespace).Interface("controllers",k.Controllers).Msg("stop events controller")
+    controller, found := k.Controllers[namespace]
+    if !found {
+        log.Error().Str("namespace",namespace).Msg("impossible to stop controller, namespace not found")
+    }
+    controller.Stop()
+    // delete the instance
+    delete(k.Controllers,namespace)
+}
+
 
 func (k *KubernetesExecutor) UndeployStage(stage *pbConductor.DeploymentStage, toUndeploy executor.Deployable) error {
     log.Info().Msgf("undeploy stage %s from fragment %s", stage.StageId, stage.FragmentId)
@@ -192,7 +218,7 @@ func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.Undeploy
     targetNS := common.GetNamespace(request.OrganizationId, request.AppInstanceId)
     log.Info().Str("app_instance_id", request.AppInstanceId).Str("targetNS", targetNS).Msg("undeploy app namespace")
 
-    ns := NewDeployableNamespace(k.Client, "not necessary", targetNS)
+    ns := NewDeployableNamespace(k.Client, "not necessary", "not necessary", targetNS)
     err := ns.Build()
     if err != nil {
         log.Error().Msgf("error building deployable namespace %s", ns.namespace.Name)
@@ -204,6 +230,8 @@ func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.Undeploy
         log.Error().Msgf("error undeploying application %s in namespace %s", request.AppInstanceId, ns.namespace.Name)
         return err
     }
+
+
 
     return nil
 }

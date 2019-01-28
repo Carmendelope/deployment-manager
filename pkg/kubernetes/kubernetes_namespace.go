@@ -5,13 +5,13 @@
 package kubernetes
 
 import (
+    "github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/rs/zerolog/log"
     apiv1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    v12 "k8s.io/client-go/kubernetes/typed/core/v1"
     "k8s.io/client-go/kubernetes"
-    "github.com/nalej/deployment-manager/pkg/executor"
-    "github.com/rs/zerolog/log"
-    "github.com/nalej/deployment-manager/pkg/common"
+    v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // Deployable namespace
@@ -24,18 +24,22 @@ type DeployableNamespace struct {
     client v12.NamespaceInterface
     // fragment this namespace is attached to
     fragmentId string
+    // instanceId
+    appInstanceID string
     // namespace name descriptor
     targetNamespace string
     // namespace
     namespace apiv1.Namespace
 }
 
-func NewDeployableNamespace(client *kubernetes.Clientset, fragmentId string, targetNamespace string) *DeployableNamespace {
+func NewDeployableNamespace(client *kubernetes.Clientset, appInstanceID string, fragmentId string,
+    targetNamespace string) *DeployableNamespace {
     return &DeployableNamespace{
         client:          client.CoreV1().Namespaces(),
         fragmentId:      fragmentId,
         targetNamespace: targetNamespace,
         namespace:       apiv1.Namespace{},
+        appInstanceID:   appInstanceID,
     }
 }
 
@@ -44,7 +48,14 @@ func(n *DeployableNamespace) GetId() string {
 }
 
 func(n *DeployableNamespace) Build() error {
-    ns := apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: n.targetNamespace}}
+    ns := apiv1.Namespace{
+        ObjectMeta: metav1.ObjectMeta{
+            Name: n.targetNamespace,
+            Labels: map[string]string{
+                utils.NALEJ_ANNOTATION_INSTANCE_ID: n.appInstanceID,
+            },
+        },
+    }
     n.namespace = ns
     return nil
 }
@@ -63,8 +74,6 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     }
     log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
     n.namespace = *created
-    // The namespace is a special case that covers all the Services
-    controller.AddMonitoredResource(string(created.GetUID()), common.AllServices,n.fragmentId)
     return err
 }
 

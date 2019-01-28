@@ -9,9 +9,11 @@ package service
 import (
     "crypto/tls"
     "fmt"
+    "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/deployment-manager/pkg/login-helper"
+    monitor2 "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/network"
     "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/derrors"
@@ -119,10 +121,19 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         return nil, errCond
     }
 
+    log.Info().Msg("instantiate memory based instances monitor structure...")
+    instanceMonitor := monitor.NewMemoryMonitoredInstances()
+    log.Info().Msg("done")
+
+    log.Info().Msg("start monitor helper service...")
+    monitorService := monitor2.NewMonitorHelper(clusterAPIConn,clusterAPILoginHelper, instanceMonitor)
+    go monitorService.Run()
+    log.Info().Msg("Done")
+
     nalejDNSForPods := strings.Split(config.DNS, ",")
     nalejDNSForPods = append(nalejDNSForPods, "8.8.8.8")
     // Instantiate deployment manager service
-    mgr := handler.NewManager(clusterAPIConn, &exec, clusterAPILoginHelper, config.ClusterPublicHostname, nalejDNSForPods)
+    mgr := handler.NewManager(&exec, config.ClusterPublicHostname, nalejDNSForPods, instanceMonitor)
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)

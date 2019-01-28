@@ -5,6 +5,8 @@
 package kubernetes
 
 import (
+    "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/pkg/utils"
     pbConductor "github.com/nalej/grpc-conductor-go"
     apiv1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +26,8 @@ type DeployableServices struct {
     client v12.ServiceInterface
     // stage associated with these resources
     stage *pbConductor.DeploymentStage
+    // instance id
+    instanceID string
     // namespace name descriptor
     targetNamespace string
     // serviceId -> serviceInstance
@@ -33,11 +37,12 @@ type DeployableServices struct {
 }
 
 func NewDeployableService(client *kubernetes.Clientset, stage *pbConductor.DeploymentStage,
-    targetNamespace string) *DeployableServices {
+    instanceID string, targetNamespace string) *DeployableServices {
 
     return &DeployableServices{
         client: client.CoreV1().Services(targetNamespace),
         stage: stage,
+        instanceID: instanceID,
         targetNamespace: targetNamespace,
         services: make(map[string]apiv1.Service,0),
         ztAgents: make(map[string]apiv1.Service,0),
@@ -54,16 +59,17 @@ func(s *DeployableServices) Build() error {
     ztServices := make(map[string]apiv1.Service,0)
     for serviceIndex, service := range s.stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.stage.Services))
+        extendedLabels := service.Labels
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+        extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = s.stage.StageId
+        extendedLabels[utils.NALEJ_ANNOTATION_INSTANCE_ID] = s.instanceID
         ports := getServicePorts(service.ExposedPorts)
         if ports!=nil{
             k8sService := apiv1.Service{
                 ObjectMeta: metav1.ObjectMeta{
                     Namespace: s.targetNamespace,
                     Name: common.FormatName(service.Name),
-                    Labels: service.Labels,
-                    Annotations: map[string] string {
-                        "nalej-service" : service.ServiceId,
-                    },
+                    Labels: extendedLabels,
                 },
                 Spec: apiv1.ServiceSpec{
                     ExternalName: common.FormatName(service.Name),
@@ -80,6 +86,9 @@ func(s *DeployableServices) Build() error {
             ztAgentLabels := map[string]string {
                 "agent": "zt-agent",
                 "app": service.Labels["app"],
+                utils.NALEJ_ANNOTATION_SERVICE_ID:  service.ServiceId,
+                utils.NALEJ_ANNOTATION_STAGE_ID: s.stage.StageId,
+                utils.NALEJ_ANNOTATION_INSTANCE_ID: s.instanceID,
             }
 
             ztServiceName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
@@ -88,9 +97,6 @@ func(s *DeployableServices) Build() error {
                     Namespace: s.targetNamespace,
                     Name: ztServiceName,
                     Labels: ztAgentLabels,
-                    Annotations: map[string] string {
-                        "nalej-service" : service.ServiceId,
-                    },
                 },
                 Spec: apiv1.ServiceSpec{
                     ExternalName: ztServiceName,
@@ -122,8 +128,10 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
             log.Error().Err(err).Msgf("error creating service %s",serv.Name)
             return err
         }
-        log.Debug().Msgf("created service with uid %s", created.GetUID())
-        controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
+        log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",s.instanceID).
+            Str("serviceID", serviceId).Msg("add service resource to be monitored")
+        res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.instanceID, serviceId,"")
+        controller.AddMonitoredResource(&res)
     }
 
     // Create Services for agents
@@ -133,8 +141,10 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
             log.Error().Err(err).Msgf("error creating service agent %s",serv.Name)
             return err
         }
-        log.Debug().Msgf("created service agent with uid %s", created.GetUID())
-        controller.AddMonitoredResource(string(created.GetUID()), serviceId,s.stage.StageId)
+        log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",s.instanceID).
+            Str("serviceID", serviceId).Msg("add zt-agent service resource to be monitored")
+        res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.instanceID, serviceId,"")
+        controller.AddMonitoredResource(&res)
     }
     return nil
 }
