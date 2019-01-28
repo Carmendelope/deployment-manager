@@ -137,11 +137,6 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
         return err
     }
 
-    // run the controller
-    // log.Debug().Msg("Awaiting pending checks")
-    // stageErr := monitoredInstances.WaitPendingChecks(stage.StageId, StageCheckTime, StageCheckTimeout)
-    // log.Debug().Msg("Finished waiting for pending checks")
-    //return stageErr
     return err
 
 }

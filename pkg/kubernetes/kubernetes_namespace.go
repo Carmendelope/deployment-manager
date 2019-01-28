@@ -74,9 +74,6 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
     }
     log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
     n.namespace = *created
-    // The namespace is a special case that covers all the Services
-    //res := entities.NewMonitoredPlatformResource(string(created.GetUID()), common.AllServices, common.AllServices,"")
-    //controller.AddMonitoredResource(res)
     return err
 }
 

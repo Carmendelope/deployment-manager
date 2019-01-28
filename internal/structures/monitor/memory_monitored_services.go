@@ -215,8 +215,6 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     // -> resource
     resource, found := service.Resources[uid]
     if !found {
-        // log.Error().Str("appInstanceID", appInstanceID).Str("stageID", serviceID).Str("resource uid", uid).
-        //    Msg("impossible to get resource. Resource not monitored")
         log.Warn().Str("appInstanceID", appInstanceID).Str("stageID", serviceID).Str("resource uid", uid).
             Msg("resource was not added before setting a new status. We add it now")
         newResource := entities.NewMonitoredPlatformResource(uid, appInstanceID,serviceID, info)
@@ -266,9 +264,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     var finalStatus entities.NalejServiceStatus
     finalStatus = entities.NALEJ_SERVICE_ERROR
     newServiceInfo := service.Info
-    //log.Debug().Msgf("check service %s with resources %v", serviceID, p.resourceService[serviceID])
     for _,res := range service.Resources {
-        //log.Debug().Msgf("--> resource %s has status %v",resourceId, p.resourceStatus[resourceId])
         if res.Status == entities.NALEJ_SERVICE_ERROR {
             finalStatus = entities.NALEJ_SERVICE_ERROR
             newServiceInfo = res.Info
@@ -315,7 +311,6 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.MonitoredAppEntry) {
     p.mu.RLock()
     p.mu.RUnlock()
-    //log.Debug().Interface("monitored apps",p.monitoredApps).Msg("monitored before unnotified")
     toReturn := make([]*entities.MonitoredAppEntry,0)
     for _, app := range p.monitoredApps {
         pendingServices := make(map[string]*entities.MonitoredServiceEntry,0)
@@ -349,7 +344,6 @@ func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.Monit
 func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] *entities.MonitoredServiceEntry {
     p.mu.RLock()
     p.mu.RUnlock()
-    //log.Debug().Interface("monitored apps",p.monitoredApps).Msg("monitored before unnotified")
     toNotify := make([]*entities.MonitoredServiceEntry,0)
     for _, app := range p.monitoredApps {
         // for every monitored app
