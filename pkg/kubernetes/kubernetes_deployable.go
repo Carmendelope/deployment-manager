@@ -47,6 +47,8 @@ type DeployableKubernetesStage struct {
     Configmaps *DeployableConfigMaps
     // Collection of Secrets to be deployed.
     Secrets * DeployableSecrets
+    // Collection of persistence Volum claims
+    Storage *DeployableStorage
 }
 
 // Instantiate a new set of resources for a stage to be deployed.
@@ -111,6 +113,12 @@ func (d DeployableKubernetesStage) Build() error {
         return err
     }
 
+    // Build storage
+    err = d.Storage.Build()
+    if err != nil {
+        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create storage for")
+        return err
+    }
     return nil
 }
 
@@ -129,6 +137,14 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
     err = d.Configmaps.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Configmaps, aborting")
+        return err
+    }
+
+    // Deploy Storage
+    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Storage")
+    err = d.Storage.Deploy(controller)
+    if err != nil {
+        log.Error().Err(err).Msg("error deploying Storage, aborting")
         return err
     }
 
@@ -189,6 +205,10 @@ func (d DeployableKubernetesStage) Undeploy() error {
         return err
     }
 
+    err = d.Storage.Undeploy()
+    if err != nil {
+        return err
+    }
     return nil
 }
 

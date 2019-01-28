@@ -8,6 +8,7 @@ package common
 import (
 	"fmt"
 	"strings"
+	"regexp"
 )
 
 const(
@@ -39,6 +40,9 @@ var DEPLOYMENT_MANAGER_ADDR string
 // TODO Create a new variable in the configuration.
 var CLUSTER_ID string
 
+// ClusterEnvironemt such as aws/google/azure/nalejCustom ....
+var CLUSTER_ENV string
+
 // Return the namespace associated with a service.
 //  params:
 //   organizationId
@@ -60,4 +64,22 @@ func FormatName(name string) string {
 	// replace any space
 	aux = strings.Replace(aux, " ", "", -1)
 	return aux
+}
+
+func GetNamePVC(name string, id string, index string) string {
+    // remove special chars and spaces except -.
+    //https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+    // 253 chars, lower case alphanumeric and "-." only
+
+    reg,_ := regexp.Compile("[^-.a-zA-Z0-9]+")   // except these chars replace everything with ""
+    name = reg.ReplaceAllString(strings.ToLower(name),"")
+    id = reg.ReplaceAllString(strings.ToLower(id),"")
+    // Lets try to restrict name and id to NamespaceLength, which should be enough.
+    if len(id) > NamespaceLength {
+        id = id[:NamespaceLength]
+    }
+    if len(name) > NamespaceLength {
+        name = name[:NamespaceLength]
+    }
+    return fmt.Sprintf("%s-%s-%s",name,id,index)
 }

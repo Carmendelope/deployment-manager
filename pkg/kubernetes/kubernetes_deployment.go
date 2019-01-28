@@ -19,7 +19,9 @@ import (
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/kubernetes/typed/apps/v1"
+    "k8s.io/apimachinery/pkg/api/resource"
     "strings"
+    "github.com/nalej/grpc-application-go"
 )
 
 const (
@@ -29,6 +31,8 @@ const (
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
     DefaultImagePullPolicy = apiv1.PullAlways
+    //Default storage size
+    DefaultStorageAllocationSize = int64(100*1024*1024)
 )
 
 
@@ -266,6 +270,48 @@ func(d *DeployableDeployments) Build() error {
             deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
             log.Debug().Msg("Linking configmap volumes")
             deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
+        }
+        if service.Storage != nil && len(service.Storage) > 0 {
+            // Set VolumeMounts and Volumes based on storage type
+            volumes := make([]apiv1.Volume,0)
+            volumeMounts := make([]apiv1.VolumeMount,0)
+
+            for i,storage := range service.Storage {
+                if storage.Size == 0 {
+                    storage.Size = DefaultStorageAllocationSize
+                }
+                var v *apiv1.Volume
+                if storage.Type == grpc_application_go.StorageType_EPHEMERAL {
+                    v = &apiv1.Volume {
+                        Name: fmt.Sprintf("vol-1%d",i),
+                        VolumeSource: apiv1.VolumeSource{
+                            EmptyDir:&apiv1.EmptyDirVolumeSource{
+                                Medium: apiv1.StorageMediumDefault,
+                                SizeLimit:resource.NewQuantity(storage.Size,resource.BinarySI),
+                            },
+                        },
+                    }
+                } else {
+                    v = &apiv1.Volume {
+                        Name: fmt.Sprintf("vol-1%d",i),
+                        VolumeSource: apiv1.VolumeSource{
+                            PersistentVolumeClaim:&apiv1.PersistentVolumeClaimVolumeSource{
+                                // claim name should be same as pvcID that was generated in BuildStorageForServices.
+                                ClaimName: common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",i)),
+                            },
+                        },
+                    }
+                }
+                volumes = append(volumes,*v)
+                vm := &apiv1.VolumeMount{
+                    Name: v.Name,
+                    MountPath:storage.MountPath,
+                }
+                volumeMounts = append(volumeMounts, *vm)
+            }
+            deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,volumes...)
+            deployment.Spec.Template.Spec.Containers[0].VolumeMounts =
+                append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
         }
 
 
