@@ -74,6 +74,7 @@ func NewDeployableKubernetesStage (
         Ingresses:  NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
         Configmaps: NewDeployableConfigMaps(client, appInstanceId, stage, targetNamespace),
         Secrets:    NewDeployableSecrets(client, appInstanceId, stage, targetNamespace),
+        Storage:    NewDeployableStorage(client, stage, targetNamespace),
     }
 }
 
