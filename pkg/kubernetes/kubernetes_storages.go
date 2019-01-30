@@ -33,11 +33,6 @@ func NewDeployableStorage(
 	targetNamespace string) *DeployableStorage {
 
 	sc := ""
-		// get storage classs name based on the environment
-	switch(common.CLUSTER_ENV) {
-	case "azure": sc = "managed-premium"
-	default: sc = ""
-	}
 	return &DeployableStorage{
 		client:          client.CoreV1().PersistentVolumeClaims(targetNamespace),
 		stage:           stage,
@@ -77,6 +72,35 @@ func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_applicat
 	}
 }
 
+//This function returns the storage class name based on the storage type and cluster environment
+func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageType, ctype string) string{
+    sc := ""
+    // Get the right class based on cluster hosting environment
+    switch(ctype) {
+    case "azure":
+          // use azure provided sotrage class. By default managed-premium is local replicated PVs
+          // TODO: if we want we can create nalej storage class for azure to allocate PVs from non replicated pool
+        switch(stype) {
+        case grpc_application_go.StorageType_CLUSTER_LOCAL:
+            sc = "managed-premium"
+        case grpc_application_go.StorageType_CLUSTER_REPLICA:
+            sc = "managed-premium"
+        default: sc = ""
+        }
+    case "das":
+        switch(stype) {
+        case grpc_application_go.StorageType_CLUSTER_LOCAL:
+            sc = "nalej-sc-local"
+        case grpc_application_go.StorageType_CLUSTER_REPLICA:
+            sc = "nalej-sc-local-replica"
+        default: sc = ""
+        }
+    default:
+        sc = ""
+    }
+    return sc
+}
+
 // This function returns an array in case we support other Secrets in the future.
 func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go.Service) []*v1.PersistentVolumeClaim {
 	if service.Storage == nil{
@@ -88,14 +112,9 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		// TODO: Currently handle only cluster_local type, other types in plan phase.
-		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL {
-			// TODO:Ideally we should return error and user should know why
-			log.Error().Str("serviceName", service.Name).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
-			// service will fail if we continue, as no PVC can be bound
-			continue
-		}
+		ds.class = ds.GetStorageClass(storage.Type, common.CLUSTER_ENV)
 		if ds.class == "" {
-			log.Error().Str("serviceName", service.Name).Str("storage class for", common.CLUSTER_ENV).Msg("not supported ")
+			log.Error().Str("serviceName", service.Name).Str("storage type: ", grpc_application_go.StorageType_name[int32(storage.Type)]).Str("or cluster environment: ", common.CLUSTER_ENV).Msg("not supported ")
 			continue
 		}
 		// construct PVC ID - based on serviceId and storage Index
