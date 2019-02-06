@@ -24,6 +24,8 @@ const (
     NALEJ_ANNOTATION_STAGE_ID = "nalej-stage"
     // Annotation for metadata to identify the stage for these deployments
     NALEJ_ANNOTATION_INSTANCE_ID = "nalej-instance"
+    // Annotation for metadata to identify the group service
+    NALEJ_ANNOTATION_SERVICE_GROUP_ID = "nalej-service-group"
     // Annotation for metadata to identify endpoints for ingress
     NALEJ_ANNOTATION_INGRESS_ENDPOINT = "nalej-endpoint"
 

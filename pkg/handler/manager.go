@@ -82,7 +82,22 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         return executionError
     }
 
-    preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace,m.monitored)
+    // Build a metadata object
+    metadata := entities.DeploymentMetadata{
+        Namespace: namespace,
+        AppInstanceId: request.Fragment.AppInstanceId,
+        ZtNetworkId: request.ZtNetworkId,
+        OrganizationName: request.Fragment.OrganizationName,
+        OrganizationId: request.Fragment.OrganizationId,
+        DeploymentId: request.Fragment.DeploymentId,
+        AppName: request.Fragment.AppName,
+        NalejVariables: request.Fragment.NalejVariables,
+        FragmentId: request.Fragment.FragmentId,
+        DNSHosts: m.dnsHosts,
+        ClusterPublicHostname: m.clusterPublicHostname,
+    }
+
+    preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(metadata)
     if executionError != nil {
         log.Error().Err(executionError).Msgf("failed environment preparation for fragment %s",
             request.Fragment.FragmentId)
@@ -101,10 +116,11 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
-        deployable, executionError := m.executor.BuildNativeDeployable(
-            stage, namespace, request.Fragment.NalejVariables, request.ZtNetworkId, request.Fragment.OrganizationId,
-            request.Fragment.OrganizationName,request.Fragment.DeploymentId, request.Fragment.AppInstanceId,
-            request.Fragment.AppName, m.clusterPublicHostname, m.dnsHosts)
+
+        // fill the stage specific information
+        metadata.Stage = *stage
+
+        deployable, executionError := m.executor.BuildNativeDeployable(metadata)
 
         if executionError != nil {
             log.Error().Err(executionError).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)

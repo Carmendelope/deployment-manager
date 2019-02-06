@@ -5,6 +5,7 @@
 package kubernetes
 
 import (
+    "github.com/nalej/deployment-manager/internal/entities"
     pbConductor "github.com/nalej/grpc-conductor-go"
     apiv1 "k8s.io/api/core/v1"
     "github.com/rs/zerolog/log"
@@ -29,14 +30,8 @@ const (
 type DeployableKubernetesStage struct {
     // kubernetes Client
     client *kubernetes.Clientset
-    // stage associated with these resources
-    stage *pbConductor.DeploymentStage
-    // namespace name descriptor
-    targetNamespace string
-    // Nalej defined variables
-    nalejVariables map[string]string
-    // ZeroTier network id
-    ztNetworkId string
+    // deployment data
+    data entities.DeploymentMetadata
     // collection of Deployments
     Deployments *DeployableDeployments
     // collection of Services
@@ -47,7 +42,7 @@ type DeployableKubernetesStage struct {
     Configmaps *DeployableConfigMaps
     // Collection of Secrets to be deployed.
     Secrets * DeployableSecrets
-    // Collection of persistence Volum claims
+    // Collection of persistence Volume claims
     Storage *DeployableStorage
 }
 
@@ -57,67 +52,59 @@ type DeployableKubernetesStage struct {
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage (
-    client *kubernetes.Clientset, stage *pbConductor.DeploymentStage, targetNamespace string,
-    nalejVariables map[string]string, ztNetworkId string, organizationId string,
-    organizationName string, deploymentId string, appInstanceId string,
-    appName string, clusterPublicHostname string, dnsHosts []string) *DeployableKubernetesStage {
+    client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableKubernetesStage {
     return &DeployableKubernetesStage{
         client:          client,
-        stage:           stage,
-        targetNamespace: targetNamespace,
-        nalejVariables:  nalejVariables,
-        ztNetworkId:     ztNetworkId,
-        Services:        NewDeployableService(client, stage, appInstanceId, targetNamespace),
-        Deployments: NewDeployableDeployment(
-                        client, stage, targetNamespace, nalejVariables, ztNetworkId, organizationId,
-                        organizationName, deploymentId, appInstanceId, appName, dnsHosts),
-        Ingresses:  NewDeployableIngress(client, appInstanceId, stage, targetNamespace, clusterPublicHostname),
-        Configmaps: NewDeployableConfigMaps(client, appInstanceId, stage, targetNamespace),
-        Secrets:    NewDeployableSecrets(client, appInstanceId, stage, targetNamespace),
-        Storage:    NewDeployableStorage(client, stage, targetNamespace),
+        data:            data,
+        Services:        NewDeployableService(client, data),
+        Deployments: NewDeployableDeployment(client, data),
+        Ingresses:  NewDeployableIngress(client, data),
+        Configmaps: NewDeployableConfigMaps(client, data),
+        Secrets:    NewDeployableSecrets(client, data),
+        Storage:    NewDeployableStorage(client, data),
     }
 }
 
 func(d DeployableKubernetesStage) GetId() string {
-    return d.stage.StageId
+    return d.data.Stage.StageId
 }
 
 func (d DeployableKubernetesStage) Build() error {
     // Build Deployments
     err := d.Deployments.Build()
     if err != nil {
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create Deployments")
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("impossible to create Deployments")
         return err
     }
     // Build Services
     err = d.Services.Build()
     if err != nil {
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create Services for")
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("impossible to create Services for")
         return err
     }
 
     err = d.Ingresses.Build()
     if err != nil{
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create Ingresses")
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("cannot create Ingresses")
         return err
     }
 
     err = d.Configmaps.Build()
     if err != nil{
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create Configmaps")
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("cannot create Configmaps")
         return err
     }
 
     err = d.Secrets.Build()
     if err != nil{
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("cannot create Secrets")
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("cannot create Secrets")
         return err
     }
 
     // Build storage
     err = d.Storage.Build()
     if err != nil {
-        log.Error().Err(err).Str("stageId", d.stage.StageId).Msg("impossible to create storage for")
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("impossible to create storage for")
         return err
     }
     return nil
@@ -126,7 +113,7 @@ func (d DeployableKubernetesStage) Build() error {
 func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentController) error {
 
     // Deploy Secrets
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Secrets")
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Secrets")
     err := d.Secrets.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Secrets, aborting")
@@ -134,7 +121,7 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
     }
 
     // Deploy Configmaps
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Configmaps")
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Configmaps")
     err = d.Configmaps.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Configmaps, aborting")
@@ -142,7 +129,7 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
     }
 
     // Deploy Storage
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Storage")
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Storage")
     err = d.Storage.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Storage, aborting")
@@ -150,21 +137,21 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
     }
 
     // Deploy Deployments
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Deployments")
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Deployments")
     err = d.Deployments.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Deployments, aborting")
         return err
     }
     // Deploy Services
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Services")
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Services")
     err = d.Services.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Services, aborting")
         return err
     }
 
-    log.Debug().Str("stageId", d.stage.StageId).Msg("Deploy Ingresses")
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Ingresses")
     err = d.Ingresses.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msg("error deploying Ingresses, aborting")

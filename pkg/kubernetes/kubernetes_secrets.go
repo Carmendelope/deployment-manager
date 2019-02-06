@@ -7,43 +7,36 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
-	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	coreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type DeployableSecrets struct {
 	client          coreV1.SecretInterface
-	appInstanceID	string
-	serviceID 		string
-	stage           *grpc_conductor_go.DeploymentStage
-	targetNamespace string
+	data            entities.DeploymentMetadata
 	secrets      map[string][]*v1.Secret
 }
 
 func NewDeployableSecrets(
 	client *kubernetes.Clientset,
-	appInstanceID string,
-	stage *grpc_conductor_go.DeploymentStage,
-	targetNamespace string) *DeployableSecrets {
+	data entities.DeploymentMetadata) *DeployableSecrets {
 	return &DeployableSecrets{
-		client:          client.CoreV1().Secrets(targetNamespace),
-		appInstanceID:   appInstanceID,
-		stage:           stage,
-		targetNamespace: targetNamespace,
+		client:          client.CoreV1().Secrets(data.Namespace),
+		data:            data,
 		secrets:      make(map[string][]*v1.Secret, 0),
 	}
 }
 
 func (ds*DeployableSecrets) GetId() string {
-	return ds.stage.StageId
+	return ds.data.Stage.StageId
 }
 
 func (ds*DeployableSecrets) getAuth(username string, password string) string {
@@ -66,11 +59,12 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_appl
 		},
 		ObjectMeta: v12.ObjectMeta{
 			Name:         serviceId,
-			Namespace:    ds.targetNamespace,
+			Namespace:    ds.data.Namespace,
 			Labels: map[string]string {
 				utils.NALEJ_ANNOTATION_SERVICE_ID:  serviceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID:    ds.stage.StageId,
-				utils.NALEJ_ANNOTATION_INSTANCE_ID: ds.appInstanceID,
+				utils.NALEJ_ANNOTATION_STAGE_ID:    ds.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_INSTANCE_ID: ds.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID: ds.data.ServiceGroupId,
 			},
 		},
 		Data: map[string][]byte{
@@ -92,7 +86,7 @@ func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.
 }
 
 func (ds*DeployableSecrets) Build() error {
-	for _, service := range ds.stage.Services {
+	for _, service := range ds.data.Stage.Services {
 		toAdd := ds.BuildSecretsForService(service)
 		if toAdd != nil && len(toAdd) > 0 {
 			ds.secrets[service.ServiceId] = toAdd

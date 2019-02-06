@@ -5,10 +5,10 @@
 package kubernetes
 
 import (
+	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
-	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,28 +20,22 @@ import (
 
 type DeployableConfigMaps struct {
 	client          coreV1.ConfigMapInterface
-	appInstanceID	string
-	stage           *grpc_conductor_go.DeploymentStage
-	targetNamespace string
+	data            entities.DeploymentMetadata
 	configmaps      map[string][]*v1.ConfigMap
 }
 
 func NewDeployableConfigMaps(
 	client *kubernetes.Clientset,
-	appInstanceID string,
-	stage *grpc_conductor_go.DeploymentStage,
-	targetNamespace string) *DeployableConfigMaps {
+	data entities.DeploymentMetadata) *DeployableConfigMaps {
 	return &DeployableConfigMaps{
-		client:          client.CoreV1().ConfigMaps(targetNamespace),
-		appInstanceID:	 appInstanceID,
-		stage:           stage,
-		targetNamespace: targetNamespace,
+		client:          client.CoreV1().ConfigMaps(data.Namespace),
+		data:            data,
 		configmaps:      make(map[string][]*v1.ConfigMap, 0),
 	}
 }
 
 func (dc *DeployableConfigMaps) GetId() string {
-	return dc.stage.StageId
+	return dc.data.Stage.StageId
 }
 
 func GetConfigMapPath(mountPath string) (string, string) {
@@ -49,7 +43,7 @@ func GetConfigMapPath(mountPath string) (string, string) {
 	if index == -1 {
 		return "/", mountPath
 	}
-	return mountPath [0: index + 1], mountPath [index + 1: len(mountPath)]
+	return mountPath [0: index + 1], mountPath [index + 1: ]
 }
 
 func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_application_go.ConfigFile) *v1.ConfigMap {
@@ -63,11 +57,11 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_app
 		},
 		ObjectMeta: v12.ObjectMeta{
 			Name:      cf.ConfigFileId,
-			Namespace: dc.targetNamespace,
+			Namespace: dc.data.Namespace,
 			Labels:    map[string]string{
 				utils.NALEJ_ANNOTATION_SERVICE_ID: serviceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID:   dc.stage.StageId,
-				utils.NALEJ_ANNOTATION_INSTANCE_ID:dc.appInstanceID,
+				utils.NALEJ_ANNOTATION_STAGE_ID:   dc.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_INSTANCE_ID:dc.data.AppInstanceId,
 			},
 		},
 		BinaryData: map[string][]byte{
@@ -93,7 +87,7 @@ func (dc *DeployableConfigMaps) BuildConfigMapsForService(service *grpc_applicat
 }
 
 func (dc *DeployableConfigMaps) Build() error {
-	for _, service := range dc.stage.Services {
+	for _, service := range dc.data.Stage.Services {
 		toAdd := dc.BuildConfigMapsForService(service)
 		if toAdd != nil && len(toAdd) > 0 {
 			dc.configmaps[service.ServiceId] = toAdd

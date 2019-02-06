@@ -6,31 +6,29 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/common"
+	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/grpc-application-go"
-	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	coreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 type DeployableStorage struct {
 	client          coreV1.PersistentVolumeClaimInterface
-	stage           *grpc_conductor_go.DeploymentStage
-	targetNamespace string
+	data            entities.DeploymentMetadata
 	class    		string
 	pvcs      		map[string][]*v1.PersistentVolumeClaim
 }
 
 func NewDeployableStorage(
 	client *kubernetes.Clientset,
-	stage *grpc_conductor_go.DeploymentStage,
-	targetNamespace string) *DeployableStorage {
+	data entities.DeploymentMetadata) *DeployableStorage {
 
 	sc := ""
 		// get storage classs name based on the environment
@@ -39,16 +37,15 @@ func NewDeployableStorage(
 	default: sc = ""
 	}
 	return &DeployableStorage{
-		client:          client.CoreV1().PersistentVolumeClaims(targetNamespace),
-		stage:           stage,
-		targetNamespace: targetNamespace,
+		client:         client.CoreV1().PersistentVolumeClaims(data.Namespace),
+		data:           data,
 		class:			sc,
-		pvcs:      make(map[string][]*v1.PersistentVolumeClaim, 0),
+		pvcs:           make(map[string][]*v1.PersistentVolumeClaim, 0),
 	}
 }
 
 func (ds*DeployableStorage) GetId() string {
-	return ds.stage.StageId
+	return ds.data.Stage.StageId
 }
 
 
@@ -66,7 +63,7 @@ func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_applicat
 		},
 		ObjectMeta: v12.ObjectMeta{
 			Name:         storageId,
-			Namespace:    ds.targetNamespace,
+			Namespace:    ds.data.Namespace,
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce,},
@@ -115,7 +112,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 
 // storage should be build only once when platform application cluster modules are deployed.
 func (ds*DeployableStorage) Build() error {
-	for _, service := range ds.stage.Services {
+	for _, service := range ds.data.Stage.Services {
 		toAdd := ds.BuildStorageForServices(service)
 		if toAdd != nil && len(toAdd) > 0 {
 			ds.pvcs[service.ServiceId] = toAdd

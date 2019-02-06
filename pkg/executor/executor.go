@@ -22,31 +22,18 @@ type Executor interface {
 
     // Execute any initial preparation to deploy a fragment.
     //  params:
-    //   fragment to be deployed
-    //   namespace the fragment belongs to
-    //   instances structure controlling monitored instances
+    //   data information for deployment
     //  return:
     //   error if any
-    PrepareEnvironmentForDeployment(fragment *pbConductor.DeploymentFragment, namespace string,
-        instances monitor.MonitoredInstances) (Deployable, error)
+    PrepareEnvironmentForDeployment(data entities.DeploymentMetadata) (Deployable, error)
 
     // Build a deployable object that can be executed into the current platform using its native description.
     //  params:
-    //   stage to be deployed
-    //   namespace where the stage has to be deployed
-    //   nalejVariables map of variables defined by the nalej environment
-    //   ztNetworkId identifier for the zero-tier network these deployables will use
-    //   organizationId identifier for the organization
-    //   organizationName required for human readable naming
-    //   deploymentId identifier for the specific deployment
-    //   appInstanceId identifier of the application instance
-    //   appName name of the nalej application
-    //   dnsHosts array of dns hosts
+    //   data deployment metadata
     //  return:
     //   deployable entity or error if any
-    BuildNativeDeployable(stage *pbConductor.DeploymentStage, namespace string, nalejVaribles map[string]string,
-        ztNetworkId string, organizationId string, organizationName string, deploymentId string, appInstanceId string,
-        appName string, clusterPublicHostname string, dnsHosts []string) (Deployable, error)
+    BuildNativeDeployable(data entities.DeploymentMetadata) (Deployable, error)
+
 
     // Execute a deployment stage for the current platform.
     //  params:
