@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: deployment-manager
-  namespace: nalej
+  namespace: __NPH_NAMESPACE
   labels:
     cluster: application
     component: deployment-manager
