@@ -8,9 +8,9 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 
 # Docker configuration
-AZURE_CR=nalejregistry
+AZURE_CR=nalejdev
 DOCKER_REGISTRY=$(AZURE_CR).azurecr.io
-DOCKER_REPO=nalej
+DOCKER_REPO=$(shell whoami)
 VERSION=$(shell cat .version)
 
 # Use ldflags to pass commit and branch information
@@ -101,12 +101,16 @@ yaml:
 			cp components/"$$app"/appcluster/*.yaml $(TARGET)/yaml/appcluster/. ; \
 			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - ; \
 			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - ; \
+			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - ; \
+			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPO)/g' && cd - ; \
 		fi ; \
 		if [ -d components/"$$app"/mngtcluster ]; then \
 			mkdir -p $(TARGET)/yaml/mngtcluster ; \
 			cp components/"$$app"/mngtcluster/*.yaml $(TARGET)/yaml/mngtcluster/. ; \
 			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - ; \
 			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - ; \
+			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - ; \
+			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPO)/g' && cd - ; \
 		fi ; \
 	done
 
