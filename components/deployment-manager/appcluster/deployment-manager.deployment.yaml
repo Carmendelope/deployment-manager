@@ -5,7 +5,7 @@ metadata:
     cluster: application
     component: deployment-manager
   name: deployment-manager
-  namespace: nalej
+  namespace: __NPH_NAMESPACE
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -22,8 +22,7 @@ spec:
       serviceAccountName: deployment-manager
       containers:
       - name: deployment-manager
-        image: nalejregistry.azurecr.io/nalej/deployment-manager:VERSION
-        # imagePullPolicy: IfNotPresent
+        image: __NPH_REGISTRY.azurecr.io/__NPH_REGISTRY_NAMESPACE/deployment-manager:__NPH_VERSION
         imagePullPolicy: Always
         securityContext:
           runAsUser: 2000
