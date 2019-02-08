@@ -70,7 +70,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 		return nil
 	}
 
-	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", serviceId, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
+	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", serviceName, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -92,7 +92,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
 				"organizationId":              organizationId,
-				"appInstanceId":				di.data.AppInstanceId,
+				"appInstanceId":			   di.data.AppInstanceId,
 				"serviceId":                   serviceId,
 				"portName":                    port.Name,
 			},

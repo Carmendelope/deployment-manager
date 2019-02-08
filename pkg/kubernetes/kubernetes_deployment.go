@@ -359,7 +359,7 @@ func(d *DeployableDeployments) Build() error {
                                                 "check",
                                                 "--appInstanceId", d.data.AppInstanceId,
                                                 "--appName", d.data.AppName,
-                                                "--serviceName", service.Name,
+                                                "--serviceName", common.FormatName(service.Name),
                                                 "--deploymentId", d.data.DeploymentId,
                                                 "--fragmentId", d.data.Stage.FragmentId,
                                                 "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
