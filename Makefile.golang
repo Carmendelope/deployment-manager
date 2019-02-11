@@ -8,10 +8,21 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 
 # Docker configuration
+registry:=dev
 AZURE_CR=nalejdev
 DOCKER_REGISTRY=$(AZURE_CR).azurecr.io
 DOCKER_REPO=$(shell whoami)
 VERSION=$(shell cat .version)
+
+ifeq ($(registry),staging)
+	AZURE_CR=nalejstaging
+	DOCKER_REPO=nalej
+endif
+
+ifeq ($(registry),production)
+	AZURE_CR=nalejregistry
+	DOCKER_REPO=nalej
+endif
 
 # Use ldflags to pass commit and branch information
 # TODO: Integrate this into the compilation process
@@ -99,18 +110,18 @@ yaml:
 		if [ -d components/"$$app"/appcluster ]; then \
 			mkdir -p $(TARGET)/yaml/appcluster ; \
 			cp components/"$$app"/appcluster/*.yaml $(TARGET)/yaml/appcluster/. ; \
-			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - ; \
-			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - ; \
-			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - ; \
-			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPO)/g' && cd - ; \
+			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - > /dev/null ; \
+			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - > /dev/null ; \
+			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - > /dev/null ; \
+			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPO)/g' && cd - > /dev/null ; \
 		fi ; \
 		if [ -d components/"$$app"/mngtcluster ]; then \
 			mkdir -p $(TARGET)/yaml/mngtcluster ; \
 			cp components/"$$app"/mngtcluster/*.yaml $(TARGET)/yaml/mngtcluster/. ; \
-			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - ; \
-			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - ; \
-			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - ; \
-			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPO)/g' && cd - ; \
+			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - > /dev/null ; \
+			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - > /dev/null ; \
+			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - > /dev/null ; \
+			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPO)/g' && cd - > /dev/null ; \
 		fi ; \
 	done
 
