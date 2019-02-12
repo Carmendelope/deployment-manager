@@ -108,6 +108,7 @@ yaml:
 	@echo ">>> Creating K8s files..."
 	for app in $(APPS); do \
 		if [ -d components/"$$app"/appcluster ]; then \
+			rm -rf $(TARGET)/yaml/appcluster ; \
 			mkdir -p $(TARGET)/yaml/appcluster ; \
 			cp components/"$$app"/appcluster/*.yaml $(TARGET)/yaml/appcluster/. ; \
 			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - > /dev/null ; \
@@ -116,6 +117,7 @@ yaml:
 			cd $(TARGET)/yaml/appcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY/$(AZURE_CR)/g' && cd - > /dev/null ; \
 		fi ; \
 		if [ -d components/"$$app"/mngtcluster ]; then \
+			rm -rf $(TARGET)/yaml/mngtcluster ; \
 			mkdir -p $(TARGET)/yaml/mngtcluster ; \
 			cp components/"$$app"/mngtcluster/*.yaml $(TARGET)/yaml/mngtcluster/. ; \
 			cd $(TARGET)/yaml/mngtcluster && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - > /dev/null ; \
