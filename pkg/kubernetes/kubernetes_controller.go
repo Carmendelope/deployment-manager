@@ -30,8 +30,6 @@ type KubernetesController struct {
     deployments *KubernetesObserver
     // Services controller
     services *KubernetesObserver
-    // Namespaces controller
-    //namespaces *KubernetesObserver
     // Ingress observer
     ingresses *KubernetesObserver
     // Pending checks to run
@@ -103,8 +101,8 @@ func (c *KubernetesController) AddMonitoredResource(resource *entities.Monitored
 
 // Set the status of a native resource
 func (c *KubernetesController) SetResourceStatus(appInstanceID string, serviceID string, uid string,
-    status entities.NalejServiceStatus, info string, endpoint string) {
-    c.monitoredInstances.SetResourceStatus(appInstanceID, serviceID, uid, status, info, endpoint)
+    status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) {
+    c.monitoredInstances.SetResourceStatus(appInstanceID, serviceID, uid, status, info, endpoints)
 }
 
 // Run this controller with its corresponding observers
@@ -297,37 +295,29 @@ func checkDeployments(stored interface{}, pending monitor.MonitoredInstances){
     dep := stored.(*v1beta1.Deployment)
     log.Debug().Msgf("deployment %s status %v", dep.GetName(), dep.Status.String())
     // This deployment is monitored, and all its replicas are available
-    // if pending.IsMonitoredResource(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-    //    dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], string(dep.GetUID())){
-        // if there are enough replicas, we assume this is working
-        if (dep.Status.UnavailableReplicas == 0 && dep.Status.AvailableReplicas > 0){
-            pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-                dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()),
-                entities.NALEJ_SERVICE_RUNNING,"", "")
-        } else {
-            foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
-            // Generate an information string if possible
-            info := ""
-            if len(dep.Status.Conditions) != 0 {
-                for _, condition := range dep.Status.Conditions {
-                    info = fmt.Sprintf("%s %s",info,condition)
-                }
-            }
-            log.Debug().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
-                Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-                Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
-                Msg("set deployment new status to ready")
-            pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-                dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), foundStatus, info, "")
-        }
-    /*
+
+    // if there are enough replicas, we assume this is working
+    if (dep.Status.UnavailableReplicas == 0 && dep.Status.AvailableReplicas > 0){
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],
+            dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()),
+            entities.NALEJ_SERVICE_RUNNING,"", []entities.EndpointInstance{})
     } else {
-        log.Warn().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
+        foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
+        // Generate an information string if possible
+        info := ""
+        if len(dep.Status.Conditions) != 0 {
+            for _, condition := range dep.Status.Conditions {
+                info = fmt.Sprintf("%s %s",info,condition)
+            }
+        }
+        log.Debug().Str(utils.NALEJ_ANNOTATION_SERVICE_ID,dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-            Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-            Msg("deployment is not monitored")
+            Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
+            Msg("set deployment new status to ready")
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],
+            dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
     }
-    */
+
     return
 }
 
@@ -340,26 +330,15 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
     // TODO determine what do we expect from a service to be deployed
     dep := stored.(*v1.Service)
     // This deployment is monitored.
-    //if pending.IsMonitoredResource(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-    //    dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID())) {
-        // K8S API does not offer any direct method to check if a service is already up an running
-        // The ServiceStatus is almost empty and only contains pointer the load ingress values.
-        // TODO check if there is a way to get more information for service status
-        log.Debug().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
-            Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-            Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-            Msg("set service new status to ready")
-        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-            dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"",
-            "")
-        /*
-    } else {
-        log.Warn().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
-            Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-            Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-            Msg("service is not monitored")
-    }
-        */
+
+    log.Debug().Str(utils.NALEJ_ANNOTATION_SERVICE_ID,dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
+        Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
+        Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
+        Msg("set service new status to ready")
+    pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],
+        dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"",
+        []entities.EndpointInstance{})
+
 }
 
 // Helping function to check if a namespace is deployed or not. If so, it should
@@ -372,25 +351,16 @@ func checkNamespacesDeployed(stored interface{}, pending monitor.MonitoredInstan
     dep := stored.(*v1.Namespace)
 
     // This namespace will only be correct if it is active
-    //if pending.IsMonitoredResource(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-    //    dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID())){
-        if dep.Status.Phase == v1.NamespaceActive {
-            log.Debug().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
-                Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-                Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-                Msg("set namespace new status to ready")
-            pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-                dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
-                "", "")
-        }
-        /*
-    } else {
-        log.Warn().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
+    if dep.Status.Phase == v1.NamespaceActive {
+        log.Debug().Str(utils.NALEJ_ANNOTATION_SERVICE_ID,dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
             Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-            Msg("namespace is not monitored")
+            Msg("set namespace new status to ready")
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],
+            dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
+            "", []entities.EndpointInstance{})
     }
-        */
+
 }
 
 // Helping function to check if an ingress is deployed or not. If so, it should
@@ -398,35 +368,28 @@ func checkNamespacesDeployed(stored interface{}, pending monitor.MonitoredInstan
 //  params:
 //   stored object stored in the pipeline.
 //   pending list of pending checks.
-// TODO link this checker with the corresponding objects.
 func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances){
     dep := stored.(*v1beta1.Ingress)
-    // This namespace will only be correct if it is active
-    // if pending.IsMonitoredResource(dep.Annotations[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-    //    dep.Annotations[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID())){
-        // It considers the ingress to be ready when all the entries have ip and hostname
-        ready := true
-        for _, ing := range dep.Status.LoadBalancer.Ingress {
-            if ing.Hostname != "" && ing.IP != "" {
-                ready = true
-                break
-            }
+
+    // It considers the ingress to be ready when all the entries have ip and hostname
+    ready := true
+    for _, ing := range dep.Status.LoadBalancer.Ingress {
+        if ing.Hostname != "" && ing.IP != "" {
+            ready = true
+            break
         }
-        if ready {
-            log.Debug().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
-                Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-                Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-                Msg("set ingress new status to ready")
-            pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID],
-                dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
-                "", dep.Labels[utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT])
-        }
-        /*
-    } else {
-        log.Warn().Str(utils.NALEJ_ANNOTATION_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_INSTANCE_ID]).
-            Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
-            Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
-            Msg("ingress is not monitored")
     }
-        */
+    if ready {
+        log.Debug().Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
+            Str(utils.NALEJ_ANNOTATION_SERVICE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
+            Str("uid", string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
+            Msg("set ingress new status to ready")
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID],
+            dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
+            "", []entities.EndpointInstance{entities.EndpointInstance{
+                FQDN: dep.Labels[utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT],
+                EndpointInstanceId: string(dep.UID),
+                EndpointType: entities.ENDPOINT_TYPE_WEB,
+            }})
+    }
 }

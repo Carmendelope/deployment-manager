@@ -42,26 +42,8 @@ const (
 type DeployableDeployments struct{
     // kubernetes Client
     client v1.DeploymentInterface
-    // stage associated with these resources
-    stage *pbConductor.DeploymentStage
-    // namespace name descriptor
-    targetNamespace string
-    // nalej generated variables
-    nalejVariables map[string]string
-    // zero-tier network id
-    ztNetworkId string
-    // organization id
-    organizationId string
-    // organization name
-    organizationName string
-    // deployment id
-    deploymentId string
-    // application instance id
-    appInstanceId string
-    // app nalej name
-    appName string
-    // DNS ips
-    dnsHosts []string
+    // stage metadata
+    data entities.DeploymentMetadata
     // map of Deployments ready to be deployed
     // service_id -> deployment
     deployments map[string]appsv1.Deployment
@@ -71,29 +53,17 @@ type DeployableDeployments struct{
 }
 
 func NewDeployableDeployment(
-    client *kubernetes.Clientset, stage *pbConductor.DeploymentStage, targetNamespace string,
-    nalejVariables map[string]string, ztNetworkId string, organizationId string,
-    organizationName string, deploymentId string, appInstanceId string,
-    appName string, dnsHosts []string) *DeployableDeployments {
+    client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableDeployments {
     return &DeployableDeployments{
-        client: client.AppsV1().Deployments(targetNamespace),
-        stage: stage,
-        targetNamespace: targetNamespace,
-        nalejVariables: nalejVariables,
-        ztNetworkId: ztNetworkId,
-        organizationId: organizationId,
-        organizationName: organizationName,
-        deploymentId: deploymentId,
-        appInstanceId: appInstanceId,
-        appName: appName,
-        dnsHosts: dnsHosts,
+        client: client.AppsV1().Deployments(data.Namespace),
+        data: data,
         deployments: make(map[string]appsv1.Deployment,0),
         ztAgents: make(map[string]appsv1.Deployment,0),
     }
 }
 
 func(d *DeployableDeployments) GetId() string {
-    return d.stage.StageId
+    return d.data.Stage.StageId
 }
 
 func(d *DeployableDeployments) Build() error {
@@ -101,22 +71,27 @@ func(d *DeployableDeployments) Build() error {
     deployments:= make(map[string]appsv1.Deployment,0)
     agents:= make(map[string]appsv1.Deployment,0)
 
-    for serviceIndex, service := range d.stage.Services {
-        log.Debug().Msgf("build deployment %s %d out of %d",service.ServiceId,serviceIndex+1,len(d.stage.Services))
+    for serviceIndex, service := range d.data.Stage.Services {
+        log.Debug().Msgf("build deployment %s %d out of %d", service.ServiceId,serviceIndex+1,len(d.data.Stage.Services))
 
         // value for privileged user
         user0 := int64(0)
         privilegedUser := &user0
 
         extendedLabels := service.Labels
+        extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = d.data.OrganizationId
+        extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.data.AppDescriptorId
+        extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.data.AppInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.data.Stage.StageId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
-        extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.stage.StageId
-        extendedLabels[utils.NALEJ_ANNOTATION_INSTANCE_ID] = d.appInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = d.data.ServiceGroupId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = d.data.ServiceGroupInstanceId
+
 
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: common.FormatName(service.Name),
-                Namespace: d.targetNamespace,
+                Namespace: d.data.Namespace,
                 Labels: extendedLabels,
             },
             Spec: appsv1.DeploymentSpec{
@@ -132,14 +107,14 @@ func(d *DeployableDeployments) Build() error {
                         // Set POD DNS policies
                         DNSPolicy: apiv1.DNSNone,
                         DNSConfig: &apiv1.PodDNSConfig{
-                            Nameservers: d.dnsHosts,
+                            Nameservers: d.data.DNSHosts,
                         },
                         Containers: []apiv1.Container{
                             // User defined container
                             {
                                 Name:  common.FormatName(service.Name),
                                 Image: service.Image,
-                                Env:   d.getEnvVariables(d.nalejVariables,service.EnvironmentVariables),
+                                Env:   d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables),
                                 Ports: d.getContainerPorts(service.ExposedPorts),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                             },
@@ -149,15 +124,15 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
-                                    "--appInstanceId", d.appInstanceId,
-                                    "--appName", d.appName,
+                                    "--appInstanceId", d.data.AppInstanceId,
+                                    "--appName", d.data.AppName,
                                     "--serviceName", service.Name,
-                                    "--deploymentId", d.deploymentId,
-                                    "--fragmentId", d.stage.FragmentId,
+                                    "--deploymentId", d.data.DeploymentId,
+                                    "--fragmentId", d.data.Stage.FragmentId,
                                     "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
-                                    "--organizationId", d.organizationId,
-                                    "--organizationName", d.organizationName,
-                                    "--networkId", d.ztNetworkId,
+                                    "--organizationId", d.data.OrganizationId,
+                                    "--organizationName", d.data.OrganizationName,
+                                    "--networkId", d.data.ZtNetworkId,
                                 },
                                 Env: []apiv1.EnvVar{
                                     // Indicate this is not a ZT proxy
@@ -175,15 +150,15 @@ func(d *DeployableDeployments) Build() error {
                                             Command: []string{
                                                 "./nalej/zt-agent",
                                                 "check",
-                                                "--appInstanceId", d.appInstanceId,
-                                                "--appName", d.appName,
+                                                "--appInstanceId", d.data.AppInstanceId,
+                                                "--appName", d.data.AppName,
                                                 "--serviceName", service.Name,
-                                                "--deploymentId", d.deploymentId,
-                                                "--fragmentId", d.stage.FragmentId,
+                                                "--deploymentId", d.data.DeploymentId,
+                                                "--fragmentId", d.data.Stage.FragmentId,
                                                 "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
-                                                "--organizationId", d.organizationId,
-                                                "--organizationName", d.organizationName,
-                                                "--networkId", d.ztNetworkId,
+                                                "--organizationId", d.data.OrganizationId,
+                                                "--organizationName", d.data.OrganizationName,
+                                                "--networkId", d.data.ZtNetworkId,
                                             },
                                         },
                                     },
@@ -323,13 +298,17 @@ func(d *DeployableDeployments) Build() error {
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: ztAgentName,
-                Namespace: d.targetNamespace,
+                Namespace: d.data.Namespace,
                 Labels: map[string] string {
-                    utils.NALEJ_ANNOTATION_SERVICE_ID:  service.ServiceId,
-                    utils.NALEJ_ANNOTATION_STAGE_ID:    d.stage.StageId,
-                    utils.NALEJ_ANNOTATION_INSTANCE_ID: d.appInstanceId,
-                    "agent": "zt-agent",
-                    "app": service.Labels["app"],
+                    utils.NALEJ_ANNOTATION_ORGANIZATION : d.data.OrganizationId,
+                    utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : d.data.AppDescriptorId,
+                    utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : d.data.AppInstanceId,
+                    utils.NALEJ_ANNOTATION_STAGE_ID : d.data.Stage.StageId,
+                    utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
+                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
+                    "agent":                                    "zt-agent",
+                    "app":                                      service.Labels["app"],
                 },
             },
             Spec: appsv1.DeploymentSpec{
@@ -352,15 +331,15 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
-                                    "--appInstanceId", d.appInstanceId,
-                                    "--appName", d.appName,
+                                    "--appInstanceId", d.data.AppInstanceId,
+                                    "--appName", d.data.AppName,
                                     "--serviceName", common.FormatName(service.Name),
-                                    "--deploymentId", d.deploymentId,
-                                    "--fragmentId", d.stage.FragmentId,
+                                    "--deploymentId", d.data.DeploymentId,
+                                    "--fragmentId", d.data.Stage.FragmentId,
                                     "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
-                                    "--organizationId", d.organizationId,
-                                    "--organizationName", d.organizationName,
-                                    "--networkId", d.ztNetworkId,
+                                    "--organizationId", d.data.OrganizationId,
+                                    "--organizationName", d.data.OrganizationName,
+                                    "--networkId", d.data.ZtNetworkId,
                                     "--isProxy",
                                 },
                                 Env: []apiv1.EnvVar{
@@ -384,15 +363,15 @@ func(d *DeployableDeployments) Build() error {
                                             Command: []string{
                                                 "./nalej/zt-agent",
                                                 "check",
-                                                "--appInstanceId", d.appInstanceId,
-                                                "--appName", d.appName,
-                                                "--serviceName", service.Name,
-                                                "--deploymentId", d.deploymentId,
-                                                "--fragmentId", d.stage.FragmentId,
+                                                "--appInstanceId", d.data.AppInstanceId,
+                                                "--appName", d.data.AppName,
+                                                "--serviceName", common.FormatName(service.Name),
+                                                "--deploymentId", d.data.DeploymentId,
+                                                "--fragmentId", d.data.Stage.FragmentId,
                                                 "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
-                                                "--organizationId", d.organizationId,
-                                                "--organizationName", d.organizationName,
-                                                "--networkId", d.ztNetworkId,
+                                                "--organizationId", d.data.OrganizationId,
+                                                "--organizationName", d.data.OrganizationName,
+                                                "--networkId", d.data.ZtNetworkId,
                                             },
                                         },
                                     },
@@ -455,9 +434,9 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
             return err
         }
-        log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.appInstanceId).
+        log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.data.AppInstanceId).
             Str("serviceID", serviceId).Msg("add nalej deployment resource to be monitored")
-        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.appInstanceId, serviceId, "")
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.data.AppInstanceId, serviceId, "")
         controller.AddMonitoredResource(&res)
     }
     // same approach for agents
@@ -467,9 +446,9 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
             log.Error().Err(err).Msgf("error creating deployment for zt-agent %s",dep.Name)
             return err
         }
-        log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.appInstanceId).
+        log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.data.AppInstanceId).
             Str("serviceID", serviceId).Msg("add zt-agent deployment resource to be monitored")
-        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.appInstanceId, serviceId, "")
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.data.AppInstanceId, serviceId, "")
         controller.AddMonitoredResource(&res)
     }
     return nil
@@ -487,23 +466,6 @@ func(d *DeployableDeployments) Undeploy() error {
 }
 
 
-//// Get the set of Nalej environment variables designed to help users.
-////  params:
-////   nalejVariables set of variables for nalej Services
-////  return:
-////   list of environment variables
-//func (d *DeployableDeployments) getNalejEnvVariables() map[string]string {
-//    // TODO these variables should be generated for the whole fragment
-//    vars := make(map[string]string,0)
-//    for _, service := range d.stage.Services {
-//        name := fmt.Sprintf("%s%s", NalejServicePrefix,strings.ToUpper(service.ServiceId))
-//        netName := network.GetNetworkingName(service.Name, d.organizationName, d.appInstanceId)
-//        value := fmt.Sprintf("%s.service.nalej",netName)
-//        vars[name] = value
-//    }
-//    log.Debug().Interface("variables", vars).Msg("Nalej common variables")
-//    return vars
-//}
 
 
 // Transform a service map of environment variables to the corresponding K8s API structure. Any user-defined
@@ -532,7 +494,7 @@ func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string
     for k, v := range nalejVariables {
         result = append(result, apiv1.EnvVar{Name:k, Value: v})
     }
-    log.Debug().Interface("nalej_variables", result).Str("appId", d.appInstanceId).Msg("generated variables for service")
+    log.Debug().Interface("nalej_variables", result).Str("appId", d.data.AppInstanceId).Msg("generated variables for service")
     return result
 }
 

@@ -7,6 +7,7 @@ package entities
 
 import (
     pbConductor "github.com/nalej/grpc-conductor-go"
+    pbApplication "github.com/nalej/grpc-application-go"
     "k8s.io/api/extensions/v1beta1"
 )
 
@@ -108,4 +109,59 @@ var FragmentStatusToGRPC = map[FragmentStatus] pbConductor.DeploymentFragmentSta
     FRAGMENT_DONE : pbConductor.DeploymentFragmentStatus_DONE,
     FRAGMENT_ERROR : pbConductor.DeploymentFragmentStatus_ERROR,
     FRAGMENT_RETRYING : pbConductor.DeploymentFragmentStatus_RETRYING,
+}
+
+// Deployment metadata
+type DeploymentMetadata struct {
+    FragmentId string `json:"fragment_id,omitempty"`
+    Stage pbConductor.DeploymentStage `json:"stage,omitempty"`
+    Namespace string `json:"namespace,omitempty"`
+    NalejVariables map[string]string `json:"nalej_variables,omitempty"`
+    ZtNetworkId string `json:"zt_network_id,omitempty"`
+    OrganizationId string `json:"organization_id,omitempty"`
+    OrganizationName string `json:"organization_name,omitempty"`
+    DeploymentId string `json:"deployment_id,omitempty"`
+    AppDescriptorId string `json:"app_descriptor_id,omitempty"`
+    AppInstanceId string `json:"app_instance_id,omitempty"`
+    ServiceGroupId string `json:"service_group_id,omitempty"`
+    ServiceGroupInstanceId string `json:"service_group_instance_id,omitempty"`
+    AppName string `json:"app_name,omitempty"`
+    ClusterPublicHostname string `json:"cluster_public_hostname,omitempty"`
+    DNSHosts []string `json:"dns_hosts,omitempty"`
+}
+
+// EndpointType ---
+
+type EndpointType int
+
+const (
+    ENDPOINT_TYPE_IS_ALIVE = iota
+    ENDPOINT_TYPE_REST
+    ENDPOINT_TYPE_WEB
+    ENDPOINT_TYPE_PROMETHEUS
+    ENDPOINT_TYPE_INGESTION
+)
+
+var EndpointTypeToGRPC = map[EndpointType]pbApplication.EndpointType{
+    ENDPOINT_TYPE_IS_ALIVE : pbApplication.EndpointType_IS_ALIVE,
+    ENDPOINT_TYPE_REST : pbApplication.EndpointType_REST,
+    ENDPOINT_TYPE_WEB : pbApplication.EndpointType_WEB,
+    ENDPOINT_TYPE_PROMETHEUS : pbApplication.EndpointType_PROMETHEUS,
+    ENDPOINT_TYPE_INGESTION : pbApplication.EndpointType_INGESTION,
+}
+
+// EndpointInstance ---
+
+type EndpointInstance struct {
+    EndpointInstanceId string `json:"endpoint_instance_id,omitempty"`
+    EndpointType EndpointType `json:"endpoint_type,omitempty"`
+    FQDN string `json:"fqdn,omitempty"`
+}
+
+func(ei *EndpointInstance) ToGRPC() *pbApplication.EndpointInstance {
+    return &pbApplication.EndpointInstance{
+        EndpointInstanceId: ei.EndpointInstanceId,
+        Type: EndpointTypeToGRPC[ei.EndpointType],
+        Fqdn: ei.FQDN,
+    }
 }

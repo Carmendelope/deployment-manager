@@ -82,7 +82,25 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         return executionError
     }
 
-    preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(request.Fragment, namespace,m.monitored)
+    // Build a metadata object
+    metadata := entities.DeploymentMetadata{
+        Namespace: namespace,
+        AppDescriptorId: request.Fragment.AppDescriptorId,
+        AppInstanceId: request.Fragment.AppInstanceId,
+        ZtNetworkId: request.ZtNetworkId,
+        OrganizationName: request.Fragment.OrganizationName,
+        OrganizationId: request.Fragment.OrganizationId,
+        ServiceGroupId: request.Fragment.ServiceGroupId,
+        ServiceGroupInstanceId: request.Fragment.ServiceGroupInstanceId,
+        DeploymentId: request.Fragment.DeploymentId,
+        AppName: request.Fragment.AppName,
+        NalejVariables: request.Fragment.NalejVariables,
+        FragmentId: request.Fragment.FragmentId,
+        DNSHosts: m.dnsHosts,
+        ClusterPublicHostname: m.clusterPublicHostname,
+    }
+
+    preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(metadata)
     if executionError != nil {
         log.Error().Err(executionError).Msgf("failed environment preparation for fragment %s",
             request.Fragment.FragmentId)
@@ -101,10 +119,11 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
     for stageNumber, stage := range request.Fragment.Stages {
         services := stage.Services
         log.Info().Msgf("plan %d contains %d services to execute",stageNumber, len(services))
-        deployable, executionError := m.executor.BuildNativeDeployable(
-            stage, namespace, request.Fragment.NalejVariables, request.ZtNetworkId, request.Fragment.OrganizationId,
-            request.Fragment.OrganizationName,request.Fragment.DeploymentId, request.Fragment.AppInstanceId,
-            request.Fragment.AppName, m.clusterPublicHostname, m.dnsHosts)
+
+        // fill the stage specific information
+        metadata.Stage = *stage
+
+        deployable, executionError := m.executor.BuildNativeDeployable(metadata)
 
         if executionError != nil {
             log.Error().Err(executionError).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
@@ -264,11 +283,14 @@ func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment
     services := make(map[string]*entities.MonitoredServiceEntry,0)
     for  _,s := range stage.Services {
         services[s.ServiceId] = &entities.MonitoredServiceEntry{
-            FragmentId: fragment.FragmentId,
-            InstanceId: fragment.AppInstanceId,
+            FragmentId:  fragment.FragmentId,
+            AppDescriptorId: fragment.AppDescriptorId,
+            AppInstanceId: fragment.AppInstanceId,
+            ServiceGroupInstanceId: fragment.ServiceGroupInstanceId,
+            ServiceGroupId: fragment.ServiceGroupId,
             OrganizationId: fragment.OrganizationId,
             Info: "",
-            Endpoints: make([]string,0),
+            Endpoints: make([]entities.EndpointInstance,0),
             Status: entities.NALEJ_SERVICE_SCHEDULED,
             NewStatus: true,
             Resources: make(map[string]*entities.MonitoredPlatformResource,0),
@@ -282,15 +304,16 @@ func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment
         totalNumberServices = totalNumberServices + len(dep.Services)
     }
     toReturn := &entities.MonitoredAppEntry{
-        OrganizationId: fragment.OrganizationId,
-        FragmentId: fragment.FragmentId,
-        InstanceId: fragment.AppInstanceId,
-        DeploymentId: fragment.DeploymentId,
-        Status: entities.NALEJ_SERVICE_SCHEDULED,
-        Services: services,
+        OrganizationId:   fragment.OrganizationId,
+        FragmentId:       fragment.FragmentId,
+        AppDescriptorId:  fragment.AppDescriptorId,
+        AppInstanceId:    fragment.AppInstanceId,
+        DeploymentId:     fragment.DeploymentId,
+        Status:           entities.NALEJ_SERVICE_SCHEDULED,
+        Services:         services,
         NumPendingChecks: len(services),
-        Info: "",
-        TotalServices: totalNumberServices,
+        Info:             "",
+        TotalServices:    totalNumberServices,
     }
     return toReturn
 }

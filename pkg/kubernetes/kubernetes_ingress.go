@@ -6,7 +6,6 @@ import (
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
-	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/extensions/v1beta1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,30 +16,22 @@ import (
 
 type DeployableIngress struct {
 	client                extV1Beta1.IngressInterface
-	appInstanceId string
-	stage                 *grpc_conductor_go.DeploymentStage
-	targetNamespace       string
-	clusterPublicHostname string
+	data                  entities.DeploymentMetadata
 	ingresses             map[string][]*v1beta1.Ingress
 }
 
 func NewDeployableIngress(
 	client *kubernetes.Clientset,
-	appInstanceId string,
-	stage *grpc_conductor_go.DeploymentStage,
-	targetNamespace string, clusterPublicHostname string) *DeployableIngress {
+	data entities.DeploymentMetadata) *DeployableIngress {
 	return &DeployableIngress{
-		client:          client.ExtensionsV1beta1().Ingresses(targetNamespace),
-		appInstanceId: appInstanceId,
-		stage: stage,
-		targetNamespace: targetNamespace,
-		clusterPublicHostname: clusterPublicHostname,
+		client:          client.ExtensionsV1beta1().Ingresses(data.Namespace),
+		data:            data,
 		ingresses:       make(map[string][]*v1beta1.Ingress, 0),
 	}
 }
 
 func (di *DeployableIngress) GetId() string {
-	return di.stage.StageId
+	return di.data.Stage.StageId
 }
 
 func (di * DeployableIngress) GetIngressesEndpoints() map[string][]string{
@@ -79,7 +70,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 		return nil
 	}
 
-	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", serviceId, di.appInstanceId[0:5], di.clusterPublicHostname)
+	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", serviceName, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -88,19 +79,23 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 		},
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:      fmt.Sprintf("ingress-%s", serviceId),
-			Namespace: di.targetNamespace,
+			Namespace: di.data.Namespace,
 			Labels: map[string]string{
 				"cluster":   "application",
 				"component": "ingress-nginx",
-				utils.NALEJ_ANNOTATION_STAGE_ID: di.stage.StageId,
-				utils.NALEJ_ANNOTATION_INSTANCE_ID: di.appInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID:  serviceId,
-				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT: ingressHostname,
+				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:  ingressHostname,
+				utils.NALEJ_ANNOTATION_ORGANIZATION : di.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : di.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : di.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID : di.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : di.data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : di.data.ServiceGroupInstanceId,
 			},
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
 				"organizationId":              organizationId,
-				"appInstanceId":				di.appInstanceId,
+				"appInstanceId":			   di.data.AppInstanceId,
 				"serviceId":                   serviceId,
 				"portName":                    port.Name,
 			},
@@ -135,7 +130,7 @@ func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_
 }
 
 func (di *DeployableIngress) Build() error {
-	for _, service := range di.stage.Services {
+	for _, service := range di.data.Stage.Services {
 		toAdd := di.BuildIngressesForService(service)
 		if toAdd != nil && len(toAdd) > 0 {
 			di.ingresses[service.ServiceId] = di.BuildIngressesForService(service)
@@ -157,7 +152,7 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", serviceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.appInstanceId, serviceId,"")
+			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.data.AppInstanceId, serviceId,"")
 			controller.AddMonitoredResource(&res)
 		}
 	}

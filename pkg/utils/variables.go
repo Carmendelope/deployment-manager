@@ -17,13 +17,21 @@ const (
     // Name of the variable containing the cluster id.
     CLUSTER_ID = "CLUSTER_ID"
 
-    // Annotation to identify services deployed by nalej
-    NALEJ_ANNOTATION_SERVICE_ID = "nalej-service"
 
+    // Annotation for the organization
+    NALEJ_ANNOTATION_ORGANIZATION = "nalej-organization"
+    // Annotation application descriptor
+    NALEJ_ANNOTATION_APP_DESCRIPTOR = "nalej-app-descriptor"
+    // Annotation application instance
+    NALEJ_ANNOTATION_APP_INSTANCE_ID = "nalej-app-instance-id"
     // Annotation for metadata to identify the stage for these deployments
-    NALEJ_ANNOTATION_STAGE_ID = "nalej-stage"
-    // Annotation for metadata to identify the stage for these deployments
-    NALEJ_ANNOTATION_INSTANCE_ID = "nalej-instance"
+    NALEJ_ANNOTATION_STAGE_ID = "nalej-stage-id"
+    // Annotation for metadata to identify the service for these deployments
+    NALEJ_ANNOTATION_SERVICE_ID = "nalej-service-id"
+    // Annotation for metadata to identify the group service
+    NALEJ_ANNOTATION_SERVICE_GROUP_ID = "nalej-service-group-id"
+    // Annotation for metadata to identify the group service
+    NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID = "nalej-service-group-instance-id"
     // Annotation for metadata to identify endpoints for ingress
     NALEJ_ANNOTATION_INGRESS_ENDPOINT = "nalej-endpoint"
 
