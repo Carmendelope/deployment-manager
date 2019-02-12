@@ -13,6 +13,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/login-helper"
     "github.com/nalej/grpc-cluster-api-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
+    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
     "github.com/nalej/deployment-manager/pkg/common"
@@ -95,13 +96,23 @@ func (m *MonitorHelper) UpdateStatus() {
     for _, app := range notificationPending {
         list := make([]*pbConductor.ServiceUpdate,0)
         for _, serv := range app.Services {
+
+            endpoints := make([]*pbApplication.EndpointInstance,len(serv.Endpoints))
+            for i, e := range serv.Endpoints {
+                endpoints[i] = e.ToGRPC()
+            }
+
             x := &pbConductor.ServiceUpdate{
-                ApplicationInstanceId: serv.InstanceId,
+                ApplicationId: serv.AppDescriptorId,
+                ApplicationInstanceId: serv.AppInstanceId,
+                ServiceId: serv.ServiceID,
+                ServiceGroupId: serv.ServiceGroupId,
+                ServiceGroupInstanceId: serv.ServiceGroupInstanceId,
                 ServiceInstanceId:     serv.ServiceID,
                 OrganizationId:        serv.OrganizationId,
                 Status:                entities.ServiceStatusToGRPC[serv.Status],
                 ClusterId:             common.CLUSTER_ID,
-                Endpoints:             serv.Endpoints,
+                Endpoints:             endpoints,
                 Info:                  serv.Info,
             }
             list = append(list,x)
@@ -115,14 +126,14 @@ func (m *MonitorHelper) UpdateStatus() {
             }
         m.sendUpdateService(req)
 
-        // Set a request for the frament
+        // Set a request for the fragment
         reqApp := pbConductor.DeploymentFragmentUpdateRequest{
             OrganizationId: app.OrganizationId,
             DeploymentId: app.DeploymentId,
             FragmentId: app.FragmentId,
             Status: entities.FragmentStatusToGRPC[app.Status],
             ClusterId: common.CLUSTER_ID,
-            AppInstanceId: app.InstanceId,
+            AppInstanceId: app.AppInstanceId,
             Info: app.Info,
         }
         m.sendFragmentStatus(reqApp)

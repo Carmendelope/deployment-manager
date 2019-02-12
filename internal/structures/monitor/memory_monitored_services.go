@@ -38,14 +38,14 @@ func NewMemoryMonitoredInstances() MonitoredInstances {
 func (p *MemoryMonitoredInstances) AddApp(toAdd *entities.MonitoredAppEntry) {
     p.mu.Lock()
     defer p.mu.Unlock()
-    current, found := p.monitoredApps[toAdd.InstanceId]
+    current, found := p.monitoredApps[toAdd.AppInstanceId]
     if !found {
         // new entry
-        log.Debug().Str("instanceId",toAdd.InstanceId).Msg("new app to be monitorized")
-        p.monitoredApps[toAdd.InstanceId] = toAdd
+        log.Debug().Str("instanceId",toAdd.AppInstanceId).Msg("new app to be monitorized")
+        p.monitoredApps[toAdd.AppInstanceId] = toAdd
     } else {
         // Add new services if they were not previously added
-        log.Debug().Str("instanceId",toAdd.InstanceId).Msg("append new services to app")
+        log.Debug().Str("instanceId",toAdd.AppInstanceId).Msg("append new services to app")
         current.AppendServices(toAdd)
     }
 }
@@ -191,7 +191,7 @@ func (p *MemoryMonitoredInstances) IsMonitoredResource(appInstanceID string, ser
 
 
 func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, serviceID, uid string,
-    status entities.NalejServiceStatus, info string, endpoint string) {
+    status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) {
     p.mu.Lock()
     defer p.mu.Unlock()
 
@@ -234,9 +234,11 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     resource.Info = info
 
     // set the endpoints for this entry
-    if endpoint != "" {
+    service.Endpoints = endpoints
+    /*
+    if len(endpoints) >0 {
         if service.Endpoints == nil {
-            service.Endpoints = []string{endpoint}
+            service.Endpoints = endpoints
         } else {
             // add the endpoint if it is new
             found := false
@@ -252,6 +254,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
             }
         }
     }
+    */
 
     // If this is running remove one check
     if resource.Status == entities.NALEJ_SERVICE_RUNNING {
@@ -323,14 +326,14 @@ func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.Monit
         }
         if len(pendingServices) > 0 {
             newApp := entities.MonitoredAppEntry{
-                FragmentId: app.FragmentId,
+                FragmentId:       app.FragmentId,
                 NumPendingChecks: app.NumPendingChecks,
-                OrganizationId: app.OrganizationId,
-                InstanceId: app.InstanceId,
-                Services: pendingServices,
-                Info: app.Info,
-                DeploymentId: app.DeploymentId,
-                Status: app.Status,
+                OrganizationId:   app.OrganizationId,
+                AppInstanceId:    app.AppInstanceId,
+                Services:         pendingServices,
+                Info:             app.Info,
+                DeploymentId:     app.DeploymentId,
+                Status:           app.Status,
             }
             toReturn = append(toReturn, &newApp)
         }

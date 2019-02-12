@@ -9,6 +9,7 @@ import (
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/common"
 	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
@@ -64,6 +65,15 @@ func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_applicat
 		ObjectMeta: v12.ObjectMeta{
 			Name:         storageId,
 			Namespace:    ds.data.Namespace,
+			Labels: map[string]string{
+				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : storageId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
+			},
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce,},

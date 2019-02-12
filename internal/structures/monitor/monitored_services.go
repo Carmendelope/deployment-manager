@@ -64,7 +64,7 @@ type MonitoredInstances interface {
     //  info textual information if proceeds
     //  endpoints optional array of endpoints
     SetResourceStatus(appInstanceId string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
-        endpoints string)
+        endpoints []entities.EndpointInstance)
 
     // This function returns a list of monitored apps with pending notifications and their services with pending notifications.
     // returns:

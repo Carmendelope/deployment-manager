@@ -14,8 +14,10 @@ import "github.com/rs/zerolog/log"
 type MonitoredAppEntry struct {
     // Organization Id these stages are running into
     OrganizationId string `json: "organization_id, omitempty"`
+    // App Descriptor id
+    AppDescriptorId string `json: "app_descriptor_id, omitempty"`
     // Instance Id these stages belong to
-    InstanceId string `json: "instance_id, omitempty"`
+    AppInstanceId string `json: "app_instance_id, omitempty"`
     // Deployment app id
     DeploymentId string `json: "deployment_id, omitempty"`
     // Status
@@ -48,8 +50,14 @@ func(m *MonitoredAppEntry) AppendServices(new *MonitoredAppEntry) {
 type MonitoredServiceEntry struct {
     // Organization Id these stages are running into
     OrganizationId string `json: "organization_id, omitempty"`
-    // Instance Id these stages belong to
-    InstanceId string `json: "instance_id, omitempty"`
+    // App Descriptor Id these stages belong to
+    AppDescriptorId string `json: "app_descriptor_id, omitempty"`
+    // AppInstanceId
+    AppInstanceId string `json: "app_instance_id, omitempty"`
+    // Service group
+    ServiceGroupId string `json: "service_group_id, omitempty"`
+    // Service group instance id
+    ServiceGroupInstanceId string `json: "service_group_instance_id, omitempty"`
     // fragment id for these stages
     FragmentId string `json: "fragment_id, omitempty"`
     // Service identifier
@@ -66,7 +74,7 @@ type MonitoredServiceEntry struct {
     // Relevant textual information
     Info string `json: "info, omitempty"`
     // Endpoints serving data
-    Endpoints [] string
+    Endpoints [] EndpointInstance
 }
 
 // Add a pending resource to a monitored Nalej service entry

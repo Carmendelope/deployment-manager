@@ -59,9 +59,13 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_app
 			Name:      cf.ConfigFileId,
 			Namespace: dc.data.Namespace,
 			Labels:    map[string]string{
-				utils.NALEJ_ANNOTATION_SERVICE_ID: serviceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID:   dc.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_INSTANCE_ID:dc.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_ORGANIZATION : dc.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : dc.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID : dc.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : dc.data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : dc.data.ServiceGroupInstanceId,
 			},
 		},
 		BinaryData: map[string][]byte{

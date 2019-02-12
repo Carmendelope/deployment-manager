@@ -135,9 +135,9 @@ type DeploymentController interface {
    //  uid native identifier
    //  status of the resource
    //  info relevant textual information
-   //  endpoint for the resource
+   //  endpoints for the resource
    SetResourceStatus(appInstanceID string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
-       endpoint string)
+       endpoints []entities.EndpointInstance)
 
    // Start checking events
    Run()

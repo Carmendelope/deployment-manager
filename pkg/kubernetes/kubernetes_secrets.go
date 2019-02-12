@@ -61,10 +61,13 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_appl
 			Name:         serviceId,
 			Namespace:    ds.data.Namespace,
 			Labels: map[string]string {
-				utils.NALEJ_ANNOTATION_SERVICE_ID:  serviceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID:    ds.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_INSTANCE_ID: ds.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID: ds.data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
 			},
 		},
 		Data: map[string][]byte{

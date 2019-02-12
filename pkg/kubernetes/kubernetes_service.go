@@ -52,10 +52,13 @@ func(s *DeployableServices) Build() error {
     for serviceIndex, service := range s.data.Stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.data.Stage.Services))
         extendedLabels := service.Labels
-        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+        extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = s.data.OrganizationId
+        extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = s.data.AppDescriptorId
+        extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = s.data.AppInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = s.data.Stage.StageId
-        extendedLabels[utils.NALEJ_ANNOTATION_INSTANCE_ID] = s.data.AppInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = s.data.ServiceGroupId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = s.data.ServiceGroupInstanceId
         ports := getServicePorts(service.ExposedPorts)
         if ports!=nil{
             k8sService := apiv1.Service{
@@ -79,10 +82,13 @@ func(s *DeployableServices) Build() error {
             ztAgentLabels := map[string]string {
                 "agent": "zt-agent",
                 "app": service.Labels["app"],
-                utils.NALEJ_ANNOTATION_SERVICE_ID:  service.ServiceId,
-                utils.NALEJ_ANNOTATION_STAGE_ID: s.data.Stage.StageId,
-                utils.NALEJ_ANNOTATION_INSTANCE_ID: s.data.AppInstanceId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID: s.data.ServiceGroupId,
+                utils.NALEJ_ANNOTATION_ORGANIZATION : s.data.OrganizationId,
+                utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : s.data.AppDescriptorId,
+                utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : s.data.AppInstanceId,
+                utils.NALEJ_ANNOTATION_STAGE_ID : s.data.Stage.StageId,
+                utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : s.data.ServiceGroupId,
+                utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : s.data.ServiceGroupInstanceId,
             }
 
             ztServiceName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))

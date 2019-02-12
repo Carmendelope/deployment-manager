@@ -79,10 +79,13 @@ func(d *DeployableDeployments) Build() error {
         privilegedUser := &user0
 
         extendedLabels := service.Labels
-        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+        extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = d.data.OrganizationId
+        extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.data.AppDescriptorId
+        extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.data.AppInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.data.Stage.StageId
-        extendedLabels[utils.NALEJ_ANNOTATION_INSTANCE_ID] = d.data.AppInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = d.data.ServiceGroupId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = d.data.ServiceGroupInstanceId
 
 
         deployment := appsv1.Deployment{
@@ -297,12 +300,15 @@ func(d *DeployableDeployments) Build() error {
                 Name: ztAgentName,
                 Namespace: d.data.Namespace,
                 Labels: map[string] string {
-                    utils.NALEJ_ANNOTATION_SERVICE_ID:  service.ServiceId,
-                    utils.NALEJ_ANNOTATION_STAGE_ID:    d.data.Stage.StageId,
-                    utils.NALEJ_ANNOTATION_INSTANCE_ID: d.data.AppInstanceId,
-                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID: d.data.ServiceGroupId,
-                    "agent": "zt-agent",
-                    "app": service.Labels["app"],
+                    utils.NALEJ_ANNOTATION_ORGANIZATION : d.data.OrganizationId,
+                    utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : d.data.AppDescriptorId,
+                    utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : d.data.AppInstanceId,
+                    utils.NALEJ_ANNOTATION_STAGE_ID : d.data.Stage.StageId,
+                    utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
+                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
+                    "agent":                                    "zt-agent",
+                    "app":                                      service.Labels["app"],
                 },
             },
             Spec: appsv1.DeploymentSpec{
