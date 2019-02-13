@@ -24,6 +24,7 @@ type DeployableStorage struct {
 	stage           *grpc_conductor_go.DeploymentStage
 	targetNamespace string
 	class    		string
+	nodes 			int
 	pvcs      		map[string][]*v1.PersistentVolumeClaim
 }
 
@@ -33,11 +34,18 @@ func NewDeployableStorage(
 	targetNamespace string) *DeployableStorage {
 
 	sc := ""
+	// get number of nodes in a cluster. Log message if storage type is "cluster replica" and nodes < 3
+	numNodes := 0
+	nodes, err := client.CoreV1().Nodes().List(metaV1.ListOptions{Limit:int64(3),})
+	if err == nil {
+		numNodes = len(nodes.Items)
+	}
 	return &DeployableStorage{
 		client:          client.CoreV1().PersistentVolumeClaims(targetNamespace),
 		stage:           stage,
 		targetNamespace: targetNamespace,
 		class:			sc,
+		nodes: 			numNodes,
 		pvcs:      make(map[string][]*v1.PersistentVolumeClaim, 0),
 	}
 }
@@ -92,6 +100,9 @@ func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageTy
         case grpc_application_go.StorageType_CLUSTER_LOCAL:
             sc = "nalej-sc-local"
         case grpc_application_go.StorageType_CLUSTER_REPLICA:
+        	if ds.nodes < 3 {
+				log.Debug().Interface("Nodes",ds.nodes ).Msg("Less than minimum 3 required for Storage Type CLUSTER_REPLICA")
+			}
             sc = "nalej-sc-local-replica"
         default: sc = ""
         }
