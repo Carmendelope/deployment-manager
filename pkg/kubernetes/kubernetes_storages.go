@@ -50,7 +50,8 @@ func (ds*DeployableStorage) GetId() string {
 }
 
 
-func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
+func (ds*DeployableStorage) generatePVC(storageId string, serviceInstanceId string,
+	storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
 
 
 	if storage.Size == 0 {
@@ -71,6 +72,7 @@ func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_applicat
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : storageId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
 			},
@@ -85,7 +87,7 @@ func (ds*DeployableStorage) generatePVC(storageId string, storage *grpc_applicat
 }
 
 // This function returns an array in case we support other Secrets in the future.
-func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go.Service) []*v1.PersistentVolumeClaim {
+func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go.ServiceInstance) []*v1.PersistentVolumeClaim {
 	if service.Storage == nil{
 		return nil
 	}
@@ -108,7 +110,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 		// construct PVC ID - based on serviceId and storage Index
 		//pvcId := fmt.Sprintf("%s-%s-1%d",service.Name,service.ServiceId,index)
 		pvcId := common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",index))
-		toAdd := ds.generatePVC(pvcId, storage)
+		toAdd := ds.generatePVC(pvcId, service.ServiceInstanceId, storage)
 		pvcs = append(pvcs, toAdd)
 	}
 	log.Debug().Interface("number", len(pvcs)).Str("serviceName", service.Name).Msg("Storage prepared for service")

@@ -74,6 +74,8 @@ func(k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMe
         return nil,err
     }
 
+    log.Debug().Interface("metadata",metadata).Interface("k8sDeployable",resources).Msg("built k8s deployable")
+
     return resources, nil
 }
 

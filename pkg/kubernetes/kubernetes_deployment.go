@@ -39,17 +39,24 @@ const (
 // Deployable Deployments
 //-----------------------
 
+// Struct for internal use containing information for a deployment. This is intended to be used by the monitoring service.
+type DeploymentInfo struct {
+    ServiceId string
+    ServiceInstanceId string
+    Deployment appsv1.Deployment
+}
+
 type DeployableDeployments struct{
     // kubernetes Client
     client v1.DeploymentInterface
     // stage metadata
     data entities.DeploymentMetadata
-    // map of Deployments ready to be deployed
-    // service_id -> deployment
-    deployments map[string]appsv1.Deployment
-    // map of agents deployed for every service
-    // service_id -> zt-agent deployment
-    ztAgents map[string]appsv1.Deployment
+    // array of Deployments ready to be deployed
+    // [[service_id, service_instance_id, deployment],...]
+    deployments []DeploymentInfo
+    // array of agents deployed for every service
+    // [[service_id, service_instance_id, deployment],...]
+    ztAgents []DeploymentInfo
 }
 
 func NewDeployableDeployment(
@@ -57,8 +64,8 @@ func NewDeployableDeployment(
     return &DeployableDeployments{
         client: client.AppsV1().Deployments(data.Namespace),
         data: data,
-        deployments: make(map[string]appsv1.Deployment,0),
-        ztAgents: make(map[string]appsv1.Deployment,0),
+        deployments: make([]DeploymentInfo,0),
+        ztAgents: make([]DeploymentInfo,0),
     }
 }
 
@@ -68,8 +75,8 @@ func(d *DeployableDeployments) GetId() string {
 
 func(d *DeployableDeployments) Build() error {
 
-    deployments:= make(map[string]appsv1.Deployment,0)
-    agents:= make(map[string]appsv1.Deployment,0)
+    //deployments:= make(map[string]appsv1.Deployment,0)
+    //agents:= make(map[string]appsv1.Deployment,0)
 
     for serviceIndex, service := range d.data.Stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d", service.ServiceId,serviceIndex+1,len(d.data.Stage.Services))
@@ -84,6 +91,7 @@ func(d *DeployableDeployments) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.data.AppInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.data.Stage.StageId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = d.data.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = d.data.ServiceGroupInstanceId
 
@@ -305,6 +313,7 @@ func(d *DeployableDeployments) Build() error {
                     utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : d.data.AppInstanceId,
                     utils.NALEJ_ANNOTATION_STAGE_ID : d.data.Stage.StageId,
                     utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+                    utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
                     utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
                     utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
                     "agent":                                    "zt-agent",
@@ -417,38 +426,45 @@ func(d *DeployableDeployments) Build() error {
             },
         }
 
-        deployments[service.ServiceId] = deployment
-        agents[service.ServiceId] = agent
+        d.deployments = append(d.deployments, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, deployment})
+        d.ztAgents = append(d.ztAgents, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, agent})
+        //deployments[service.ServiceInstanceId] = deployment
+        //agents[service.ServiceInstanceId] = agent
     }
 
 
-    d.deployments = deployments
-    d.ztAgents = agents
+    //d.deployments = deployments
+    //d.ztAgents = agents
     return nil
 }
 
 func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
-    for serviceId, dep := range d.deployments {
-        deployed, err := d.client.Create(&dep)
+    //for serviceId, dep := range d.deployments {
+    for _, depInfo := range d.deployments {
+
+        deployed, err := d.client.Create(&depInfo.Deployment)
         if err != nil {
-            log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
+            log.Error().Err(err).Msgf("error creating deployment %s",depInfo.Deployment.Name)
             return err
         }
         log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.data.AppInstanceId).
-            Str("serviceID", serviceId).Msg("add nalej deployment resource to be monitored")
-        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.data.AppInstanceId, serviceId, "")
+            Str("serviceID", depInfo.ServiceId).Str("serviceInstanceId",depInfo.ServiceInstanceId).
+            Msg("add nalej deployment resource to be monitored")
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.data, depInfo.ServiceId,depInfo.ServiceInstanceId, "")
         controller.AddMonitoredResource(&res)
     }
     // same approach for agents
-    for serviceId, dep := range d.ztAgents {
-        deployed, err := d.client.Create(&dep)
+    //for serviceId, dep := range d.ztAgents {
+    for _, depInfo := range d.ztAgents {
+        deployed, err := d.client.Create(&depInfo.Deployment)
         if err != nil {
-            log.Error().Err(err).Msgf("error creating deployment for zt-agent %s",dep.Name)
+            log.Error().Err(err).Msgf("error creating deployment for zt-agent %s",depInfo.Deployment.Name)
             return err
         }
         log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.data.AppInstanceId).
-            Str("serviceID", serviceId).Msg("add zt-agent deployment resource to be monitored")
-        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.data.AppInstanceId, serviceId, "")
+            Str("serviceID", depInfo.ServiceId).Str("serviceInstanceId",depInfo.ServiceInstanceId).
+            Msg("add zt-agent deployment resource to be monitored")
+        res := entities.NewMonitoredPlatformResource(string(deployed.GetUID()),d.data, depInfo.ServiceId, depInfo.ServiceInstanceId, "")
         controller.AddMonitoredResource(&res)
     }
     return nil
@@ -456,9 +472,9 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
 
 func(d *DeployableDeployments) Undeploy() error {
     for _, dep := range d.deployments {
-        err := d.client.Delete(dep.Name,metav1.NewDeleteOptions(DeleteGracePeriod))
+        err := d.client.Delete(dep.Deployment.Name,metav1.NewDeleteOptions(DeleteGracePeriod))
         if err != nil {
-            log.Error().Err(err).Msgf("error creating deployment %s",dep.Name)
+            log.Error().Err(err).Msgf("error creating deployment %s",dep.Deployment.Name)
             return err
         }
     }

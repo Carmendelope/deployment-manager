@@ -46,7 +46,7 @@ func GetConfigMapPath(mountPath string) (string, string) {
 	return mountPath [0: index + 1], mountPath [index + 1: ]
 }
 
-func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_application_go.ConfigFile) *v1.ConfigMap {
+func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInstanceId string, cf *grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating config map...")
 	_, file := GetConfigMapPath(cf.MountPath)
 	log.Debug().Str("file", file).Msg("Config map content")
@@ -64,6 +64,7 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_app
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : dc.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : dc.data.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : dc.data.ServiceGroupInstanceId,
 			},
@@ -74,13 +75,13 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, cf *grpc_app
 	}
 }
 
-func (dc *DeployableConfigMaps) BuildConfigMapsForService(service *grpc_application_go.Service) []*v1.ConfigMap {
+func (dc *DeployableConfigMaps) BuildConfigMapsForService(service *grpc_application_go.ServiceInstance) []*v1.ConfigMap {
 	if len(service.Configs) == 0 {
 		return nil
 	}
 	cms := make([]*v1.ConfigMap, 0)
 	for _, cm := range service.Configs {
-		toAdd := dc.generateConfigMap(service.ServiceId, cm)
+		toAdd := dc.generateConfigMap(service.ServiceId, service.ServiceInstanceId, cm)
 		if toAdd != nil {
 			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
 			cms = append(cms, toAdd)

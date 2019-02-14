@@ -51,7 +51,7 @@ func (ds*DeployableSecrets) getDockerConfigJSON(ic *grpc_application_go.ImageCre
 	return toEncode
 }
 
-func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_application_go.ImageCredentials) *v1.Secret {
+func (ds*DeployableSecrets) generateDockerSecret(serviceId string, serviceInstanceId string, ic *grpc_application_go.ImageCredentials) *v1.Secret {
 	return &v1.Secret{
 		TypeMeta:   v12.TypeMeta{
 			Kind:       "Secret",
@@ -66,6 +66,7 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_appl
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
 			},
@@ -78,11 +79,11 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, ic *grpc_appl
 }
 
 // This function returns an array in case we support other Secrets in the future.
-func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.Service) []*v1.Secret {
+func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.ServiceInstance) []*v1.Secret {
 	if service.Credentials == nil{
 		return nil
 	}
-	dockerSecret := ds.generateDockerSecret(service.ServiceId, service.Credentials)
+	dockerSecret := ds.generateDockerSecret(service.ServiceId, service.ServiceInstanceId, service.Credentials)
 	result := []*v1.Secret{dockerSecret}
 	log.Debug().Interface("number", len(result)).Str("serviceName", service.Name).Msg("Secrets prepared for service")
 	return result

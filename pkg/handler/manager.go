@@ -98,6 +98,8 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         FragmentId: request.Fragment.FragmentId,
         DNSHosts: m.dnsHosts,
         ClusterPublicHostname: m.clusterPublicHostname,
+        // Set stage in each iteration
+        //Stage:
     }
 
     preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(metadata)
@@ -282,13 +284,15 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
 func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment *pbConductor.DeploymentFragment) *entities.MonitoredAppEntry{
     services := make(map[string]*entities.MonitoredServiceEntry,0)
     for  _,s := range stage.Services {
-        services[s.ServiceId] = &entities.MonitoredServiceEntry{
+        services[s.ServiceInstanceId] = &entities.MonitoredServiceEntry{
             FragmentId:  fragment.FragmentId,
-            AppDescriptorId: fragment.AppDescriptorId,
-            AppInstanceId: fragment.AppInstanceId,
-            ServiceGroupInstanceId: fragment.ServiceGroupInstanceId,
-            ServiceGroupId: fragment.ServiceGroupId,
-            OrganizationId: fragment.OrganizationId,
+            AppDescriptorId: s.AppDescriptorId,
+            AppInstanceId: s.AppInstanceId,
+            ServiceGroupInstanceId: s.ServiceGroupInstanceId,
+            ServiceGroupId: s.ServiceGroupId,
+            OrganizationId: s.OrganizationId,
+            ServiceID: s.ServiceId,
+            ServiceInstanceID: s.ServiceInstanceId,
             Info: "",
             Endpoints: make([]entities.EndpointInstance,0),
             Status: entities.NALEJ_SERVICE_SCHEDULED,
@@ -296,7 +300,6 @@ func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment
             Resources: make(map[string]*entities.MonitoredPlatformResource,0),
             // This will be increased by the resources
             NumPendingChecks: 0,
-            ServiceID: s.ServiceId,
         }
     }
     totalNumberServices := 0
