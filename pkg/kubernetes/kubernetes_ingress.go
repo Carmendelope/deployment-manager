@@ -14,10 +14,16 @@ import (
 	extV1Beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 )
 
+type IngressesInfo struct {
+	ServiceId string
+	ServiceInstanceId string
+	Ingresses []*v1beta1.Ingress
+}
+
 type DeployableIngress struct {
 	client                extV1Beta1.IngressInterface
 	data                  entities.DeploymentMetadata
-	ingresses             map[string][]*v1beta1.Ingress
+	ingresses             []IngressesInfo
 }
 
 func NewDeployableIngress(
@@ -26,7 +32,7 @@ func NewDeployableIngress(
 	return &DeployableIngress{
 		client:          client.ExtensionsV1beta1().Ingresses(data.Namespace),
 		data:            data,
-		ingresses:       make(map[string][]*v1beta1.Ingress, 0),
+		ingresses:       make([]IngressesInfo, 0),
 	}
 }
 
@@ -36,17 +42,20 @@ func (di *DeployableIngress) GetId() string {
 
 func (di * DeployableIngress) GetIngressesEndpoints() map[string][]string{
 	result := make(map[string][]string, 0)
-	for serviceId, ingresses := range di.ingresses{
+
+	for _, ings := range di.ingresses {
 		endpoints := make([]string, 0)
-		for _, endpoint := range ingresses {
+		for _, endpoint := range ings.Ingresses {
 			endpoints = append(endpoints, endpoint.Spec.Rules[0].Host)
 		}
-		result[serviceId] = endpoints
+		result[ings.ServiceId] = endpoints
 	}
+
 	return result
 }
 
-func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId string, serviceName string, port *grpc_application_go.Port) *v1beta1.Ingress {
+func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId string, serviceInstanceId string,
+	serviceName string, port *grpc_application_go.Port) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
@@ -89,6 +98,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : di.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : di.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : di.data.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : di.data.ServiceGroupInstanceId,
 			},
@@ -116,10 +126,10 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 }
 
 // TODO Check the rules to build the Ingresses.
-func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.Service) []*v1beta1.Ingress {
+func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.ServiceInstance) []*v1beta1.Ingress {
 	ingresses := make([]*v1beta1.Ingress, 0)
 	for _, p := range service.ExposedPorts {
-		toAdd := di.getHTTPIngress(service.OrganizationId, service.ServiceId, service.Name, p)
+		toAdd := di.getHTTPIngress(service.OrganizationId, service.ServiceId, service.ServiceInstanceId, service.Name, p)
 		if toAdd != nil{
 			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
 			ingresses = append(ingresses, toAdd)
@@ -133,7 +143,8 @@ func (di *DeployableIngress) Build() error {
 	for _, service := range di.data.Stage.Services {
 		toAdd := di.BuildIngressesForService(service)
 		if toAdd != nil && len(toAdd) > 0 {
-			di.ingresses[service.ServiceId] = di.BuildIngressesForService(service)
+			built := di.BuildIngressesForService(service)
+			di.ingresses = append(di.ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, built})
 		}
 	}
 	log.Debug().Interface("Ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
@@ -142,17 +153,17 @@ func (di *DeployableIngress) Build() error {
 
 func (di *DeployableIngress) Deploy(controller executor.DeploymentController) error {
 	numCreated := 0
-	for serviceId, ingresses := range di.ingresses {
-		for _, toCreate := range ingresses {
+	for _, ingresses := range di.ingresses {
+		for _, toCreate := range ingresses.Ingresses {
 			log.Debug().Interface("toCreate", toCreate).Msg("Creating ingress")
 			created, err := di.client.Create(toCreate)
 			if err != nil {
 				log.Error().Err(err).Interface("toCreate", toCreate).Msg("cannot create ingress")
 				return err
 			}
-			log.Debug().Str("serviceId", serviceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
+			log.Debug().Str("serviceId", ingresses.ServiceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.data.AppInstanceId, serviceId,"")
+			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.data, ingresses.ServiceId, ingresses.ServiceInstanceId, "")
 			controller.AddMonitoredResource(&res)
 		}
 	}
@@ -161,15 +172,16 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 
 func (di *DeployableIngress) Undeploy() error {
 	deleted := 0
-	for serviceId, ingresses := range di.ingresses {
-		for _, toDelete := range ingresses {
+	//for serviceId, ingresses := range di.ingresses {
+	for _, ingresses := range di.ingresses {
+		for _, toDelete := range ingresses.Ingresses {
 			err := di.client.Delete(toDelete.Name, metaV1.NewDeleteOptions(DeleteGracePeriod))
 			if err != nil {
-				log.Error().Str("serviceId", serviceId).Interface("toDelete", toDelete).Msg("cannot delete ingress")
+				log.Error().Str("serviceId", ingresses.ServiceId).Interface("toDelete", toDelete).Msg("cannot delete ingress")
 				return err
 
 			}
-			log.Debug().Str("serviceId", serviceId).Str("Name", toDelete.Name).Msg("Ingress has been deleted")
+			log.Debug().Str("serviceId", ingresses.ServiceId).Str("Name", toDelete.Name).Msg("Ingress has been deleted")
 		}
 		deleted++
 	}

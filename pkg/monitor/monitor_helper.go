@@ -97,6 +97,8 @@ func (m *MonitorHelper) UpdateStatus() {
         list := make([]*pbConductor.ServiceUpdate,0)
         for _, serv := range app.Services {
 
+            log.Debug().Interface("service",serv).Msg("update service status")
+
             endpoints := make([]*pbApplication.EndpointInstance,len(serv.Endpoints))
             for i, e := range serv.Endpoints {
                 endpoints[i] = e.ToGRPC()
@@ -105,10 +107,10 @@ func (m *MonitorHelper) UpdateStatus() {
             x := &pbConductor.ServiceUpdate{
                 ApplicationId: serv.AppDescriptorId,
                 ApplicationInstanceId: serv.AppInstanceId,
-                ServiceId: serv.ServiceID,
                 ServiceGroupId: serv.ServiceGroupId,
                 ServiceGroupInstanceId: serv.ServiceGroupInstanceId,
-                ServiceInstanceId:     serv.ServiceID,
+                ServiceId: serv.ServiceID,
+                ServiceInstanceId:     serv.ServiceInstanceID,
                 OrganizationId:        serv.OrganizationId,
                 Status:                entities.ServiceStatusToGRPC[serv.Status],
                 ClusterId:             common.CLUSTER_ID,

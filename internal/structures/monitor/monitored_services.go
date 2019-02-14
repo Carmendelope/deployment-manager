@@ -45,14 +45,14 @@ type MonitoredInstances interface {
     //  uid internal platform identifier
     // returns:
     //  false if not found
-    RemovePendingResource(stageID string, serviceID, uid string) bool
+    RemovePendingResource(stageID string, serviceInstanceID string, uid string) bool
 
     // Check if a platform resource is monitored
     // params:
     //  uid internal platform identifier
     // returns:
     //  true if the resource is monitored
-    IsMonitoredResource(stageID string, serviceID, uid string) bool
+    IsMonitoredResource(stageID string, serviceInstanceID string, uid string) bool
 
 
     // Set the status of a resource. This function determines how to change the service status
@@ -63,7 +63,7 @@ type MonitoredInstances interface {
     //  status of the native resource
     //  info textual information if proceeds
     //  endpoints optional array of endpoints
-    SetResourceStatus(appInstanceId string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
+    SetResourceStatus(appInstanceId string, serviceInstanceId string, uid string, status entities.NalejServiceStatus, info string,
         endpoints []entities.EndpointInstance)
 
     // This function returns a list of monitored apps with pending notifications and their services with pending notifications.

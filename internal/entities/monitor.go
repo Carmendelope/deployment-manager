@@ -38,10 +38,10 @@ type MonitoredAppEntry struct {
 // Add a new application entry. If the entry already exists, it adds the new services.
 func(m *MonitoredAppEntry) AppendServices(new *MonitoredAppEntry) {
     for _, serv := range new.Services {
-        _, found := m.Services[serv.ServiceID]
+        _, found := m.Services[serv.ServiceInstanceID]
         if !found {
             // This is new. Add it
-            m.Services[serv.ServiceID] = serv
+            m.Services[serv.ServiceInstanceID] = serv
             m.NumPendingChecks = m.NumPendingChecks + 1
         }
     }
@@ -62,6 +62,8 @@ type MonitoredServiceEntry struct {
     FragmentId string `json: "fragment_id, omitempty"`
     // Service identifier
     ServiceID string `json: "service_id, omitempty"`
+    // Service instance identifier
+    ServiceInstanceID string `json: "service_instance_id, omitempty"`
     // Number of pending checks to be done
     NumPendingChecks int `json: "num_pending_checks, omitempty"`
     // Map of resources being monitored for this Nalej service.
@@ -93,23 +95,31 @@ func (m *MonitoredServiceEntry) AddPendingResource(toAdd *MonitoredPlatformResou
 func (m *MonitoredServiceEntry) RemovePendingResource(uid string) {
     res, found := m.Resources[uid]
     if !found {
-        log.Error().Str("serviceId", m.ServiceID).Str("uid",uid).
+        log.Error().Str("serviceInstanceId", m.ServiceInstanceID).Str("uid",uid).
             Msg("cannot remove pending resource from monitored service entry. Not found")
         return
     }
 
     res.Pending = false
     m.NumPendingChecks = m.NumPendingChecks - 1
-    log.Debug().Str("serviceId", m.ServiceID).Str("uid",uid).Int("numPendingChecks", m.NumPendingChecks).
+    log.Debug().Str("serviceInstanceId", m.ServiceInstanceID).Str("uid",uid).Int("numPendingChecks", m.NumPendingChecks).
         Msg("the number of pending checks was modified")
 }
 
 
 type MonitoredPlatformResource struct {
+    // AppID for this resource
+    AppID string `json: "app_id, omitempty"`
     // Stage this resource belongs to
     AppInstanceID string `json: "app_instance_id, omitempty"`
+    // Service Group this resource belongs to
+    ServiceGroupID string `json: "service_group_id, omitempty"`
+    // Service Group instance this resource belongs to
+    ServiceGroupInstanceID string `json: "service_group_instance_id, omitempty"`
     // Service ID this resource belongs to
     ServiceID string `json: "service_id, omitempty"`
+    // Service instance ID for this resource
+    ServiceInstanceID string `json: "service_instance_id, omitempty"`
     // Local UID used for this resource
     UID string `json: "uid, omitempty"`
     // Textual information
@@ -120,8 +130,15 @@ type MonitoredPlatformResource struct {
     Status NalejServiceStatus `json: "status, omitempty"`
 }
 
-func NewMonitoredPlatformResource(uid string, appInstanceId string, serviceID string, info string) MonitoredPlatformResource {
-    return MonitoredPlatformResource{
-        UID: uid, AppInstanceID: appInstanceId, Info: info, Status:NALEJ_SERVICE_SCHEDULED, ServiceID: serviceID, Pending: true}
 
+func NewMonitoredPlatformResource(uid string, metadata DeploymentMetadata, serviceId string, serviceInstanceId, info string) MonitoredPlatformResource {
+    return MonitoredPlatformResource{
+        UID: uid,
+        AppID: metadata.AppDescriptorId,
+        AppInstanceID: metadata.AppInstanceId,
+        ServiceGroupID: metadata.ServiceGroupId,
+        ServiceGroupInstanceID: metadata.ServiceGroupInstanceId,
+        ServiceID: serviceId,
+        ServiceInstanceID: serviceInstanceId,
+        Info: info, Status:NALEJ_SERVICE_SCHEDULED, Pending: true}
 }

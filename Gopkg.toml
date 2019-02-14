@@ -62,14 +62,13 @@
     name="github.com/nalej/grpc-utils"
     version="v1.2.0"
 
-
 [[constraint]]
     name = "github.com/nalej/grpc-conductor-go"
-    version="v0.0.81"
+    version="v0.0.82"
 
 [[constraint]]
     name = "github.com/nalej/grpc-application-go"
-    version="v0.0.48"
+    version="v0.0.50"
 
 [[constraint]]
     name = "github.com/nalej/grpc-deployment-manager-go"
