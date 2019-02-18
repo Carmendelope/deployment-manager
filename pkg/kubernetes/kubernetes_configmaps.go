@@ -88,18 +88,23 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInsta
 func (dc* DeployableConfigMaps) generateConsolidateConfigMap(serviceId string, serviceInstanceId string, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating consolidate config map...")
 
+	if len(cf) == 0{
+		return nil
+	}
+
 	binaryData := make (map[string][]byte, 0)
 
 	for _, config := range cf {
 		binaryData[config.ConfigFileId] = config.Content
 	}
+
 	return &v1.ConfigMap{
 		TypeMeta: v12.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: "v1",
 		},
 		ObjectMeta: v12.ObjectMeta{
-			Name:      fmt.Sprintf("config_map-%s-%s", serviceId, serviceInstanceId),
+			Name:      fmt.Sprintf("config-map-%s-%s", serviceId, serviceInstanceId),
 			Namespace: dc.data.Namespace,
 			Labels:    map[string]string{
 				utils.NALEJ_ANNOTATION_ORGANIZATION : dc.data.OrganizationId,
@@ -118,26 +123,11 @@ func (dc* DeployableConfigMaps) generateConsolidateConfigMap(serviceId string, s
 	return nil
 }
 
-func (dc *DeployableConfigMaps) BuildConfigMapsForService(service *grpc_application_go.ServiceInstance) []*v1.ConfigMap {
-	if len(service.Configs) == 0 {
-		return nil
-	}
-	cms := make([]*v1.ConfigMap, 0)
-	for _, cm := range service.Configs {
-		toAdd := dc.generateConfigMap(service.ServiceId, service.ServiceInstanceId, cm)
-		if toAdd != nil {
-			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
-			cms = append(cms, toAdd)
-		}
-	}
-	log.Debug().Interface("number", len(cms)).Str("serviceName", service.Name).Msg("Config maps prepared for service")
-	return cms
-}
-
 func (dc *DeployableConfigMaps) Build() error {
 	for _, service := range dc.data.Stage.Services {
-		toAdd := dc.generateConsolidateConfigMap(service.ServiceId, service.ServiceGroupInstanceId, service.Configs)
+		toAdd := dc.generateConsolidateConfigMap(service.ServiceId, service.ServiceInstanceId, service.Configs)
 		if toAdd != nil {
+			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
 			dc.configmaps[service.ServiceId] = append(dc.configmaps[service.ServiceId], toAdd)
 		}
 	}

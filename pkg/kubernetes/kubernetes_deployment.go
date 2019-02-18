@@ -97,7 +97,7 @@ func createVolumeName(name string) string {
         res = res[:len(res)-1]
     }
 
-    return strings.Replace(res, "/", "-", -1)
+    return strings.Replace(res, "/", "_", -1)
 
 }
 
@@ -121,7 +121,7 @@ func (d *DeployableDeployments) generateAllVolumes (serviceId string, serviceIns
                 VolumeSource: apiv1.VolumeSource{
                     ConfigMap: &apiv1.ConfigMapVolumeSource {
                         LocalObjectReference: apiv1.LocalObjectReference{
-                            Name: fmt.Sprintf("config_map-%s-%s", serviceId, serviceInstanceId),
+                            Name: fmt.Sprintf("config-map-%s-%s", serviceId, serviceInstanceId),
                         },
                         Items: []apiv1.KeyToPath{{
                             Key: config.ConfigFileId,
@@ -315,7 +315,7 @@ func(d *DeployableDeployments) Build() error {
             log.Debug().Msg("Adding config maps")
             log.Debug().Msg("Creating volumes")
             // NP-694. Support consolidating config maps
-            configVolumes, cmVolumeMounts := d.generateAllVolumes(service.ServiceId, service.ServiceGroupId, service.Configs)
+            configVolumes, cmVolumeMounts := d.generateAllVolumes(service.ServiceId, service.ServiceInstanceId, service.Configs)
             deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
             log.Debug().Msg("Linking configmap volumes")
             deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
