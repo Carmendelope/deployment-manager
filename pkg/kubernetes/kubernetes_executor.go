@@ -31,11 +31,12 @@ type KubernetesExecutor struct {
     // Map of controllers
     // Namespace -> controller
     Controllers map[string]*KubernetesController
+    PlanetPath string
     // mutex
     mu sync.Mutex
 }
 
-func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
+func NewKubernetesExecutor(internal bool, planetPath string) (executor.Executor,error) {
     var c *kubernetes.Clientset
     var err error
 
@@ -53,7 +54,10 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
         log.Error().Err(foundError)
         return nil, foundError
     }
-    toReturn := KubernetesExecutor{Client: c, Controllers: make(map[string]*KubernetesController,0)}
+    toReturn := KubernetesExecutor{
+        Client: c,
+        Controllers: make(map[string]*KubernetesController,0),
+        PlanetPath:planetPath}
     return &toReturn, err
 }
 
@@ -63,7 +67,7 @@ func(k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMe
         metadata.FragmentId, metadata.Stage.StageId)
 
     var resources executor.Deployable
-    k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata)
+    k8sDeploy := NewDeployableKubernetesStage(k.Client, k.PlanetPath, metadata)
     resources = k8sDeploy
 
     err := k8sDeploy.Build()

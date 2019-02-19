@@ -41,6 +41,7 @@ spec:
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"
         - "--dns=$(DNS_HOSTS)"
+        - "--planetPath=/zt/planet"
         - "--debug"
         env:
         - name: MANAGER_CLUSTER_IP
@@ -91,5 +92,13 @@ spec:
         ports:
         - name: api-port
           containerPort: 5200
+        volumeMounts:
+          - name: zt-planet
+            mountPath: /zt/planet
+            readOnly: true
       imagePullSecrets:
       - name: nalej-registry
+      volumes:
+        - name: zt-planet
+          secret:
+            secretName: zt-planet

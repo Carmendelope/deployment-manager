@@ -40,12 +40,18 @@ type Config struct {
 	DNS string
 	// cluster runtime environment such as aws/google/azure/...
 	ClusterEnvironment string
+	// planet file path
+	PlanetPath string
 }
 
 func (conf *Config) Validate() derrors.Error {
 
 	if conf.Port <= 0 {
 		return derrors.NewInvalidArgumentError("ports must be valid")
+	}
+
+	if conf.ClusterAPIAddress != "" {
+		return derrors.NewInvalidArgumentError("clusterAPIAddress has been deprecated")
 	}
 
 	if conf.ClusterAPIHostname == "" || conf.ClusterAPIPort <= 0 {
@@ -72,6 +78,10 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("dns list must be set")
 	}
 
+	if conf.PlanetPath == "" {
+		return derrors.NewInvalidArgumentError("planet path cannot be empty")
+	}
+
 	return nil
 }
 
@@ -88,4 +98,5 @@ func (conf *Config) Print() {
 	}
 	log.Info().Str("Email", conf.Email).Str("password", strings.Repeat("*", len(conf.Password))).Msg("Application cluster credentials")
 	log.Info().Str("DNS", conf.DNS).Msg("List of DNS ips")
+	log.Info().Str("PlanetPath", conf.PlanetPath).Msg("Planet path")
 }

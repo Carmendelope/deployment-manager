@@ -47,6 +47,7 @@ func init() {
 	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
+	runCmd.Flags().String("planetPath", "/zt/planet/planet", "List of dns ips separated by commas")
 	runCmd.Flags().String("runtimeEnv",  "azure", "Cluster runtime environment - azure,google,aws,custom ")
 	viper.BindPFlags(runCmd.Flags())
 }
@@ -68,6 +69,7 @@ func Run() {
 		Email:                viper.GetString("email"),
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
+		PlanetPath:           viper.GetString("planetPath"),
 		ClusterEnvironment:	  viper.GetString("runtimeEnv"),
 	}
 
