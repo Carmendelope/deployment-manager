@@ -30,7 +30,7 @@ spec:
         - "run"
         - "--local"
         - "--depMgrAddress=$(DEPLOYMENT_MANAGER_SERVICE_HOST):5200"
-        - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
+#        - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
         - "--clusterAPIHostname=$(CLUSTER_API_HOST)"
         - "--clusterAPIPort=443"
         - "--useTLSForClusterAPI=true"

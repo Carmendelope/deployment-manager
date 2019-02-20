@@ -34,7 +34,7 @@ func init() {
 
 	runCmd.Flags().Uint32P("port", "p", 5200, "port where deployment manager listens to")
 	runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
-	runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
+	//runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
 	runCmd.Flags().StringP("networkMgrAddress", "n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
 	runCmd.Flags().StringP("depMgrAddress", "d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
 	runCmd.Flags().String("clusterAPIHostname", "", "Hostname of the cluster API on the management cluster")
