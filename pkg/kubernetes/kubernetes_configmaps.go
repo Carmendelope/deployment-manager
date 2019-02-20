@@ -5,6 +5,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
@@ -22,6 +23,15 @@ type DeployableConfigMaps struct {
 	client          coreV1.ConfigMapInterface
 	data            entities.DeploymentMetadata
 	configmaps      map[string][]*v1.ConfigMap
+}
+
+// NewDeployableConfigMapsForTest creates an empty DeployableConfigMaps (ONLY FOR TESTS!!)
+func NewDeployableConfigMapsForTest(data entities.DeploymentMetadata) *DeployableConfigMaps {
+	return &DeployableConfigMaps{
+		client:          nil,
+		data:            data,
+		configmaps:      make(map[string][]*v1.ConfigMap, 0),
+	}
 }
 
 func NewDeployableConfigMaps(
@@ -75,27 +85,50 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInsta
 	}
 }
 
-func (dc *DeployableConfigMaps) BuildConfigMapsForService(service *grpc_application_go.ServiceInstance) []*v1.ConfigMap {
-	if len(service.Configs) == 0 {
+func (dc* DeployableConfigMaps) generateConsolidateConfigMap(serviceId string, serviceInstanceId string, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
+	log.Debug().Interface("configMap", cf).Msg("generating consolidate config map...")
+
+	if len(cf) == 0{
 		return nil
 	}
-	cms := make([]*v1.ConfigMap, 0)
-	for _, cm := range service.Configs {
-		toAdd := dc.generateConfigMap(service.ServiceId, service.ServiceInstanceId, cm)
-		if toAdd != nil {
-			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
-			cms = append(cms, toAdd)
-		}
+
+	binaryData := make (map[string][]byte, 0)
+
+	for _, config := range cf {
+		binaryData[config.ConfigFileId] = config.Content
 	}
-	log.Debug().Interface("number", len(cms)).Str("serviceName", service.Name).Msg("Config maps prepared for service")
-	return cms
+
+	return &v1.ConfigMap{
+		TypeMeta: v12.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: v12.ObjectMeta{
+			Name:      fmt.Sprintf("config-map-%s-%s", serviceId, serviceInstanceId),
+			Namespace: dc.data.Namespace,
+			Labels:    map[string]string{
+				utils.NALEJ_ANNOTATION_ORGANIZATION : dc.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : dc.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID : dc.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : dc.data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : dc.data.ServiceGroupInstanceId,
+			},
+		},
+		BinaryData: binaryData,
+	}
+
+	return nil
 }
 
 func (dc *DeployableConfigMaps) Build() error {
 	for _, service := range dc.data.Stage.Services {
-		toAdd := dc.BuildConfigMapsForService(service)
-		if toAdd != nil && len(toAdd) > 0 {
-			dc.configmaps[service.ServiceId] = toAdd
+		toAdd := dc.generateConsolidateConfigMap(service.ServiceId, service.ServiceInstanceId, service.Configs)
+		if toAdd != nil {
+			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
+			dc.configmaps[service.ServiceId] = append(dc.configmaps[service.ServiceId], toAdd)
 		}
 	}
 	log.Debug().Interface("Configmaps", dc.configmaps).Msg("configmap have been build and are ready to deploy")
