@@ -33,6 +33,8 @@ const (
     DefaultImagePullPolicy = apiv1.PullAlways
     //Default storage size
     DefaultStorageAllocationSize = int64(100*1024*1024)
+    // zt-planet secret name
+    ZTPlanetSecretName = "zt-planet"
     // Default Nalej public registry
     DefaultNalejPublicRegistry = "nalej-public-registry"
 )
@@ -285,6 +287,12 @@ func(d *DeployableDeployments) Build() error {
                                         ReadOnly: true,
                                         MountPath: "/dev/net/tun",
                                     },
+                                    // volume mount for the zt-planet secret
+                                    {
+                                        Name: ZTPlanetSecretName,
+                                        MountPath: "/zt/planet",
+                                        ReadOnly: true,
+                                    },
                                 },
                             },
                         },
@@ -295,6 +303,15 @@ func(d *DeployableDeployments) Build() error {
                                 VolumeSource: apiv1.VolumeSource{
                                     HostPath: &apiv1.HostPathVolumeSource{
                                         Path: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                            // zt-planet secret
+                            {
+                                Name: ZTPlanetSecretName,
+                                VolumeSource: apiv1.VolumeSource{
+                                    Secret: &apiv1.SecretVolumeSource{
+                                        SecretName: ZTPlanetSecretName,
                                     },
                                 },
                             },
@@ -479,6 +496,12 @@ func(d *DeployableDeployments) Build() error {
                                         ReadOnly: true,
                                         MountPath: "/dev/net/tun",
                                     },
+                                    // volume mount for the zt-planet secret
+                                    {
+                                        Name: ZTPlanetSecretName,
+                                        MountPath: "/zt/planet",
+                                        ReadOnly: true,
+                                    },
                                 },
                             },
                         },
@@ -490,6 +513,15 @@ func(d *DeployableDeployments) Build() error {
                                 VolumeSource: apiv1.VolumeSource{
                                     HostPath: &apiv1.HostPathVolumeSource{
                                         Path: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                            // zt-planet secret
+                            {
+                                Name: ZTPlanetSecretName,
+                                VolumeSource: apiv1.VolumeSource{
+                                    Secret: &apiv1.SecretVolumeSource{
+                                        SecretName: ZTPlanetSecretName,
                                     },
                                 },
                             },

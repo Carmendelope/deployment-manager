@@ -35,7 +35,7 @@ func init() {
 
 	runCmd.Flags().Uint32P("port", "p", 5200, "port where deployment manager listens to")
 	runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
-	runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
+	//runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
 	runCmd.Flags().StringP("networkMgrAddress", "n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
 	runCmd.Flags().StringP("depMgrAddress", "d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
 	runCmd.Flags().String("clusterAPIHostname", "", "Hostname of the cluster API on the management cluster")
@@ -48,6 +48,7 @@ func init() {
 	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
+	runCmd.Flags().String("planetPath", "/zt/planet/planet", "List of dns ips separated by commas")
 	runCmd.Flags().String("runtimeEnv",  "azure", "Cluster runtime environment - azure,google,aws,custom ")
 
 	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
@@ -74,6 +75,7 @@ func Run() {
 		Email:                viper.GetString("email"),
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
+		PlanetPath:           viper.GetString("planetPath"),
 		ClusterEnvironment:	  viper.GetString("runtimeEnv"),
 		PublicCredentials:    grpc_application_go.ImageCredentials{
 			Username: 			viper.GetString("publicRegistryUserName"),
