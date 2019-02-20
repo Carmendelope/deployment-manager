@@ -41,7 +41,7 @@ spec:
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"
         - "--dns=$(DNS_HOSTS)"
-        - "--planetPath=/zt/planet"
+        - "--planetPath=/zt/planet/planet"
         - "--debug"
         env:
         - name: MANAGER_CLUSTER_IP
