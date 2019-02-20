@@ -13,6 +13,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/derrors"
+    "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/rs/zerolog/log"
@@ -47,17 +48,21 @@ type Manager struct {
     dnsHosts []string
     // Structure controlling monitored instances
     monitored monitor.MonitoredInstances
+    // Config
+    PublicCredentials grpc_application_go.ImageCredentials
 }
 
 func NewManager(
     executor *executor.Executor,
     clusterPublicHostname string,
-    dnsHosts []string, monitored monitor.MonitoredInstances) *Manager {
+    dnsHosts []string, monitored monitor.MonitoredInstances,
+    publicCredentials grpc_application_go.ImageCredentials) *Manager {
         return &Manager{
         executor: *executor,
         clusterPublicHostname: clusterPublicHostname,
         dnsHosts: dnsHosts,
         monitored: monitored,
+        PublicCredentials: publicCredentials,
     }
 }
 
@@ -98,6 +103,8 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         FragmentId: request.Fragment.FragmentId,
         DNSHosts: m.dnsHosts,
         ClusterPublicHostname: m.clusterPublicHostname,
+        // ----
+        PublicCredentials: m.PublicCredentials,
         // Set stage in each iteration
         //Stage:
     }

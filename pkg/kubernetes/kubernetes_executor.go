@@ -105,8 +105,21 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
         return nil,err
     }
 
+    // NP-766. create the nalej-public-registry on the user namespace
+    nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
+    err = nalejSecret.Build()
+    if err != nil {
+        log.Error().Err(err).Msg("impossible to build nalej-public-registry")
+    }
+    err = nalejSecret.Deploy(controller)
+    if err != nil {
+        log.Error().Err(err).Msg("impossible to deploy nalej-public-registry")
+        return nil,err
+    }
+
     var toReturn executor.Deployable
     toReturn = namespaceDeployable
+
 
     return toReturn, nil
 }
@@ -231,7 +244,6 @@ func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.Undeploy
         log.Error().Msgf("error undeploying application %s in namespace %s", request.AppInstanceId, ns.namespace.Name)
         return err
     }
-
 
 
     return nil

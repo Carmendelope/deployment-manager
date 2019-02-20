@@ -89,6 +89,7 @@ func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.
 	return result
 }
 
+
 func (ds*DeployableSecrets) Build() error {
 	for _, service := range ds.data.Stage.Services {
 		toAdd := ds.BuildSecretsForService(service)
@@ -96,6 +97,8 @@ func (ds*DeployableSecrets) Build() error {
 			ds.secrets[service.ServiceId] = toAdd
 		}
 	}
+	// create nalej-public-registry
+	//ds.secrets["zt-sidecar"] = []*v1.Secret{ds.BuildNalejPublicRegistry()}
 	log.Debug().Interface("Secrets", ds.secrets).Msg("Secrets have been build and are ready to deploy")
 	return nil
 }
