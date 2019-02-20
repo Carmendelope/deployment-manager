@@ -31,11 +31,12 @@ type KubernetesExecutor struct {
     // Map of controllers
     // Namespace -> controller
     Controllers map[string]*KubernetesController
+    PlanetPath string
     // mutex
     mu sync.Mutex
 }
 
-func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
+func NewKubernetesExecutor(internal bool, planetPath string) (executor.Executor,error) {
     var c *kubernetes.Clientset
     var err error
 
@@ -53,7 +54,10 @@ func NewKubernetesExecutor(internal bool) (executor.Executor,error) {
         log.Error().Err(foundError)
         return nil, foundError
     }
-    toReturn := KubernetesExecutor{Client: c, Controllers: make(map[string]*KubernetesController,0)}
+    toReturn := KubernetesExecutor{
+        Client: c,
+        Controllers: make(map[string]*KubernetesController,0),
+        PlanetPath:planetPath}
     return &toReturn, err
 }
 
@@ -63,7 +67,7 @@ func(k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMe
         metadata.FragmentId, metadata.Stage.StageId)
 
     var resources executor.Deployable
-    k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata)
+    k8sDeploy := NewDeployableKubernetesStage(k.Client, k.PlanetPath, metadata)
     resources = k8sDeploy
 
     err := k8sDeploy.Build()
@@ -99,14 +103,28 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
         return nil, errors.New("impossible to find the corresponding events controller")
     }
 
+
     err = namespaceDeployable.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
         return nil,err
     }
 
+    // NP-766. create the nalej-public-registry on the user namespace
+    nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
+    err = nalejSecret.Build()
+    if err != nil {
+        log.Error().Err(err).Msg("impossible to build nalej-public-registry")
+    }
+    err = nalejSecret.Deploy(controller)
+    if err != nil {
+        log.Error().Err(err).Msg("impossible to deploy nalej-public-registry")
+        return nil,err
+    }
+
     var toReturn executor.Deployable
     toReturn = namespaceDeployable
+
 
     return toReturn, nil
 }
@@ -231,7 +249,6 @@ func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.Undeploy
         log.Error().Msgf("error undeploying application %s in namespace %s", request.AppInstanceId, ns.namespace.Name)
         return err
     }
-
 
 
     return nil

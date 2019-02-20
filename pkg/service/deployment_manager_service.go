@@ -105,7 +105,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         return nil, err
     }
 
-    exec, kubErr := kubernetes.NewKubernetesExecutor(config.Local)
+    exec, kubErr := kubernetes.NewKubernetesExecutor(config.Local, config.PlanetPath)
     if kubErr != nil {
         log.Panic().Err(err).Msg("there was an error creating kubernetes client")
         panic(err.Error())
@@ -133,7 +133,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     nalejDNSForPods := strings.Split(config.DNS, ",")
     nalejDNSForPods = append(nalejDNSForPods, "8.8.8.8")
     // Instantiate deployment manager service
-    mgr := handler.NewManager(&exec, config.ClusterPublicHostname, nalejDNSForPods, instanceMonitor)
+    mgr := handler.NewManager(&exec, config.ClusterPublicHostname, nalejDNSForPods, instanceMonitor, config.PublicCredentials)
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)

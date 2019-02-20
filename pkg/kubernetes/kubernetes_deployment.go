@@ -33,6 +33,10 @@ const (
     DefaultImagePullPolicy = apiv1.PullAlways
     //Default storage size
     DefaultStorageAllocationSize = int64(100*1024*1024)
+    // zt-planet secret name
+    ZTPlanetSecretName = "zt-planet"
+    // Default Nalej public registry
+    DefaultNalejPublicRegistry = "nalej-public-registry"
 )
 
 
@@ -68,10 +72,96 @@ func NewDeployableDeployment(
         ztAgents: make([]DeploymentInfo,0),
     }
 }
+// NewDeployableDeploymentForTest creates a new empty DeployableDeployment (only for TEST!)
+func NewDeployableDeploymentForTest() *DeployableDeployments {
+    return &DeployableDeployments{
+        deployments: make([]DeploymentInfo,0),
+        ztAgents: make([]DeploymentInfo,0),
+    }
+}
 
 func(d *DeployableDeployments) GetId() string {
     return d.data.Stage.StageId
 }
+// NP-694. Support consolidating config maps
+// createVolumeName transform a path into a name deleting '/' from the end and from the beginning
+// and replacing the '/' character for '-'
+func createVolumeName(name string) string {
+    if name == "" {
+        return ""
+    }
+
+    var res string
+    res = strings.TrimSpace(name)
+
+    if res[0] == '/' {
+        res = res[1:]
+    }
+    if res [len(res)-1] == '/' {
+        res = res[:len(res)-1]
+    }
+
+    return strings.Replace(res, "/", "_", -1)
+
+}
+
+func (d *DeployableDeployments) generateAllVolumes (serviceId string, serviceInstanceId string, configFiles []*grpc_application_go.ConfigFile) ([]apiv1.Volume, []apiv1.VolumeMount) {
+    if configFiles == nil {
+        return nil, nil
+    }
+
+    volumes := make([]apiv1.Volume, 0)
+    pathAdded := make(map[string]bool, 0)
+    volumesMount := make([]apiv1.VolumeMount, 0)
+
+    for _, config := range configFiles {
+        path, file := GetConfigMapPath(config.MountPath)
+        clearPath := createVolumeName(path)
+        _, exists := pathAdded[clearPath]
+        // if we has not found this path before -> create a volumeMount and volume entries
+        if ! exists {
+            volume := apiv1.Volume{
+                Name: clearPath,
+                VolumeSource: apiv1.VolumeSource{
+                    ConfigMap: &apiv1.ConfigMapVolumeSource {
+                        LocalObjectReference: apiv1.LocalObjectReference{
+                            Name: fmt.Sprintf("config-map-%s-%s", serviceId, serviceInstanceId),
+                        },
+                        Items: []apiv1.KeyToPath{{
+                            Key: config.ConfigFileId,
+                            Path: file,
+                        },
+                        },
+                    },
+                },
+            }
+            volumes = append(volumes, volume)
+            pathAdded[clearPath] = true
+
+            volumeMount := apiv1.VolumeMount{
+                Name: clearPath,
+                ReadOnly:true,
+                MountPath: path,
+            }
+            volumesMount = append(volumesMount, volumeMount)
+
+        }else { // if we has found this path before -> we only have to add a key-path in the volumes (in its corresponding entry)
+            // find the volumeMount and add a Key_Path
+            newKeyPath := apiv1.KeyToPath{
+                Key:  config.ConfigFileId,
+                Path: file,
+            }
+            for i := 0; i < len(volumes); i++ {
+                if volumes[i].Name == clearPath {
+                    volumes[i].VolumeSource.ConfigMap.Items = append(volumes[i].VolumeSource.ConfigMap.Items, newKeyPath)
+                    break
+                }
+            }
+        }
+    }
+    return volumes, volumesMount
+}
+
 
 func(d *DeployableDeployments) Build() error {
 
@@ -116,6 +206,11 @@ func(d *DeployableDeployments) Build() error {
                         DNSPolicy: apiv1.DNSNone,
                         DNSConfig: &apiv1.PodDNSConfig{
                             Nameservers: d.data.DNSHosts,
+                        },
+                        ImagePullSecrets: []apiv1.LocalObjectReference{
+                          {
+                            Name: DefaultNalejPublicRegistry,
+                          }  ,
                         },
                         Containers: []apiv1.Container{
                             // User defined container
@@ -192,6 +287,12 @@ func(d *DeployableDeployments) Build() error {
                                         ReadOnly: true,
                                         MountPath: "/dev/net/tun",
                                     },
+                                    // volume mount for the zt-planet secret
+                                    {
+                                        Name: ZTPlanetSecretName,
+                                        MountPath: "/zt/planet",
+                                        ReadOnly: true,
+                                    },
                                 },
                             },
                         },
@@ -202,6 +303,15 @@ func(d *DeployableDeployments) Build() error {
                                 VolumeSource: apiv1.VolumeSource{
                                     HostPath: &apiv1.HostPathVolumeSource{
                                         Path: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                            // zt-planet secret
+                            {
+                                Name: ZTPlanetSecretName,
+                                VolumeSource: apiv1.VolumeSource{
+                                    Secret: &apiv1.SecretVolumeSource{
+                                        SecretName: ZTPlanetSecretName,
                                     },
                                 },
                             },
@@ -228,28 +338,8 @@ func(d *DeployableDeployments) Build() error {
         if service.Configs != nil && len(service.Configs) > 0 {
             log.Debug().Msg("Adding config maps")
             log.Debug().Msg("Creating volumes")
-            configVolumes := make([]apiv1.Volume, 0)
-            cmVolumeMounts := make([]apiv1.VolumeMount, 0)
-            for _, cf := range service.Configs{
-                v := &apiv1.Volume{
-                    Name:         fmt.Sprintf("cv-%s", cf.ConfigFileId),
-                    VolumeSource: apiv1.VolumeSource{
-                        ConfigMap:             &apiv1.ConfigMapVolumeSource{
-                            LocalObjectReference: apiv1.LocalObjectReference{
-                                Name: cf.ConfigFileId,
-                            },
-                        },
-                    },
-                }
-                configVolumes = append(configVolumes, *v)
-                mountPath, _ := GetConfigMapPath(cf.MountPath)
-                vm := &apiv1.VolumeMount{
-                    Name:             fmt.Sprintf("cv-%s", cf.ConfigFileId),
-                    ReadOnly:         true,
-                    MountPath:        mountPath,
-                }
-                cmVolumeMounts = append(cmVolumeMounts, *vm)
-            }
+            // NP-694. Support consolidating config maps
+            configVolumes, cmVolumeMounts := d.generateAllVolumes(service.ServiceId, service.ServiceInstanceId, service.Configs)
             deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
             log.Debug().Msg("Linking configmap volumes")
             deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
@@ -406,6 +496,12 @@ func(d *DeployableDeployments) Build() error {
                                         ReadOnly: true,
                                         MountPath: "/dev/net/tun",
                                     },
+                                    // volume mount for the zt-planet secret
+                                    {
+                                        Name: ZTPlanetSecretName,
+                                        MountPath: "/zt/planet",
+                                        ReadOnly: true,
+                                    },
                                 },
                             },
                         },
@@ -417,6 +513,15 @@ func(d *DeployableDeployments) Build() error {
                                 VolumeSource: apiv1.VolumeSource{
                                     HostPath: &apiv1.HostPathVolumeSource{
                                         Path: "/dev/net/tun",
+                                    },
+                                },
+                            },
+                            // zt-planet secret
+                            {
+                                Name: ZTPlanetSecretName,
+                                VolumeSource: apiv1.VolumeSource{
+                                    Secret: &apiv1.SecretVolumeSource{
+                                        SecretName: ZTPlanetSecretName,
                                     },
                                 },
                             },

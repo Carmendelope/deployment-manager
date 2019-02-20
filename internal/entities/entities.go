@@ -128,6 +128,7 @@ type DeploymentMetadata struct {
     AppName string `json:"app_name,omitempty"`
     ClusterPublicHostname string `json:"cluster_public_hostname,omitempty"`
     DNSHosts []string `json:"dns_hosts,omitempty"`
+    PublicCredentials pbApplication.ImageCredentials `json:"public_credentials,omitempty"`
 }
 
 // EndpointType ---
