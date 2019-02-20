@@ -96,7 +96,7 @@ func (ds *DeployableSecrets) generatePlanetSecret (namespace string) *v1.Secret 
 			APIVersion: "v1",
 		},
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:         ztPlanetSecretName,
+			Name:         ZTPlanetSecretName,
 			GenerateName: "",
 			Namespace:    namespace,
 			Labels: map[string]string {
