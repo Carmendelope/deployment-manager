@@ -14,9 +14,6 @@ const (
     // Port of the remote manager cluster
     MANAGER_CLUSTER_PORT = "MANAGER_CLUSTER_PORT"
 
-    // Name of the variable containing the cluster id.
-    CLUSTER_ID = "CLUSTER_ID"
-
 
     // Annotation for the organization
     NALEJ_ANNOTATION_ORGANIZATION = "nalej-organization"
@@ -36,8 +33,7 @@ const (
     NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID = "nalej-service-group-instance-id"
     // Annotation for metadata to identify endpoints for ingress
     NALEJ_ANNOTATION_INGRESS_ENDPOINT = "nalej-endpoint"
+    // Annotation for metadata to identify the security rule.
+    NALEJ_ANNOTATION_SECURITY_RULE_ID = "nalej-security-rule-id"
 
-
-    // Environment variable indicating the conductor address
-    IT_CONDUCTOR_ADDRESS = "IT_CONDUCTOR_ADDRESS"
 )

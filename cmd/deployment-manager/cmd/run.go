@@ -7,6 +7,7 @@
 package cmd
 
 import (
+	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/service"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -47,13 +48,13 @@ func init() {
 	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
-	runCmd.Flags().String("runtimeEnv",  "azure", "Cluster runtime environment - azure,google,aws,custom ")
+	runCmd.Flags().String("targetPlatform", "MINIKUBE", "Target platform: MINIKUBE or AZURE")
 	viper.BindPFlags(runCmd.Flags())
 }
 
 func Run() {
 
-	config := service.Config{
+	config := config.Config{
 		Port:                 uint32(viper.GetInt32("port")),
 		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
 		ClusterAPIHostname:   viper.GetString("clusterAPIHostname"),
@@ -68,7 +69,7 @@ func Run() {
 		Email:                viper.GetString("email"),
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
-		ClusterEnvironment:	  viper.GetString("runtimeEnv"),
+		TargetPlatformName:	  viper.GetString("targetPlatform"),
 	}
 
 	log.Info().Msg("launching deployment manager...")

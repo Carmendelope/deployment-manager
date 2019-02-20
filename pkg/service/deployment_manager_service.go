@@ -10,12 +10,12 @@ import (
     "crypto/tls"
     "fmt"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
+    "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     monitor2 "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/network"
-    "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/derrors"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/nalej/grpc-utils/pkg/tools"
@@ -24,10 +24,7 @@ import (
     "google.golang.org/grpc/credentials"
     "google.golang.org/grpc/reflection"
     "net"
-    "os"
-    "strconv"
     "strings"
-    "github.com/nalej/deployment-manager/pkg/common"
 )
 
 type DeploymentManagerService struct {
@@ -38,33 +35,8 @@ type DeploymentManagerService struct {
     // Server for incoming requests
     server *tools.GenericGRPCServer
     // configuration
-    configuration Config
+    configuration config.Config
 }
-
-// Set the values of the environment variables.
-// TODO Why we need environment variables?
-// Deprecated: Use the config elements
-func setEnvironmentVars(config *Config) {
-    if common.MANAGER_CLUSTER_IP = os.Getenv(utils.MANAGER_ClUSTER_IP); common.MANAGER_CLUSTER_IP == "" {
-        log.Fatal().Msgf("%s variable was not set", utils.MANAGER_ClUSTER_IP)
-    }
-
-    if common.MANAGER_CLUSTER_PORT = os.Getenv(utils.MANAGER_CLUSTER_PORT); common.MANAGER_CLUSTER_PORT == "" {
-        log.Fatal().Msgf("%s variable was not set", utils.MANAGER_CLUSTER_PORT)
-        _, err :=  strconv.Atoi(common.MANAGER_CLUSTER_PORT)
-        if err != nil {
-            log.Fatal().Msgf("%s must be a port number", utils.MANAGER_CLUSTER_PORT)
-        }
-    }
-
-    if common.CLUSTER_ID = os.Getenv(utils.CLUSTER_ID); common.CLUSTER_ID == "" {
-        log.Fatal().Msgf("%s variable was not set", utils.CLUSTER_ID)
-    }
-
-    common.CLUSTER_ENV = config.ClusterEnvironment
-    common.DEPLOYMENT_MANAGER_ADDR = config.DeploymentMgrAddress
-}
-
 
 func getClusterAPIConnection(hostname string, port int) (*grpc.ClientConn, derrors.Error) {
     // Build connection with cluster API
@@ -85,19 +57,23 @@ func getClusterAPIConnection(hostname string, port int) (*grpc.ClientConn, derro
     return sConn, nil
 }
 
-func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, error) {
+func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService, error) {
 
-    setEnvironmentVars(config)
+    rErr := cfg.Resolve()
+    if rErr != nil {
+        log.Fatal().Str("trace", rErr.DebugReport()).Msg("cannot resolve variables")
+    }
 
-    vErr := config.Validate()
+    vErr := cfg.Validate()
     if vErr != nil {
         log.Fatal().Str("err", vErr.DebugReport()).Msg("invalid configuration")
     }
 
-    config.Print()
+    cfg.Print()
+    config.SetGlobalConfig(cfg)
 
     // login
-    clusterAPILoginHelper := login_helper.NewLogin(config.LoginHostname, int(config.LoginPort), config.UseTLSForLogin, config.Email, config.Password)
+    clusterAPILoginHelper := login_helper.NewLogin(cfg.LoginHostname, int(cfg.LoginPort), cfg.UseTLSForLogin, cfg.Email, cfg.Password)
     err := clusterAPILoginHelper.Login()
     if err != nil {
         log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
@@ -105,7 +81,7 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
         return nil, err
     }
 
-    exec, kubErr := kubernetes.NewKubernetesExecutor(config.Local)
+    exec, kubErr := kubernetes.NewKubernetesExecutor(cfg.Local)
     if kubErr != nil {
         log.Panic().Err(err).Msg("there was an error creating kubernetes client")
         panic(err.Error())
@@ -113,10 +89,10 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     }
 
     // Build connection with conductor
-    log.Debug().Str("hostname", config.ClusterAPIHostname).Msg("connecting with cluster api")
-    clusterAPIConn, errCond := getClusterAPIConnection(config.ClusterAPIHostname, int(config.ClusterAPIPort))
+    log.Debug().Str("hostname", cfg.ClusterAPIHostname).Msg("connecting with cluster api")
+    clusterAPIConn, errCond := getClusterAPIConnection(cfg.ClusterAPIHostname, int(cfg.ClusterAPIPort))
     if errCond != nil {
-        log.Panic().Err(err).Str("hostname", config.ClusterAPIHostname).Msg("impossible to connect with cluster api")
+        log.Panic().Err(err).Str("hostname", cfg.ClusterAPIHostname).Msg("impossible to connect with cluster api")
         panic(err.Error())
         return nil, errCond
     }
@@ -130,18 +106,18 @@ func NewDeploymentManagerService(config *Config) (*DeploymentManagerService, err
     go monitorService.Run()
     log.Info().Msg("Done")
 
-    nalejDNSForPods := strings.Split(config.DNS, ",")
+    nalejDNSForPods := strings.Split(cfg.DNS, ",")
     nalejDNSForPods = append(nalejDNSForPods, "8.8.8.8")
     // Instantiate deployment manager service
-    mgr := handler.NewManager(&exec, config.ClusterPublicHostname, nalejDNSForPods, instanceMonitor)
+    mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, nalejDNSForPods, instanceMonitor)
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
     // Instantiate target server
-    server := tools.NewGenericGRPCServer(config.Port)
+    server := tools.NewGenericGRPCServer(cfg.Port)
 
-    instance := DeploymentManagerService{mgr: mgr, net: net, server: server, configuration: *config}
+    instance := DeploymentManagerService{mgr: mgr, net: net, server: server, configuration: *cfg}
 
     return &instance, nil
 }
