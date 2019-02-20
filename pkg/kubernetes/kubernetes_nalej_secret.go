@@ -17,6 +17,9 @@ import (
 
 const NalejPublicRegistryName = "nalej-public-registry"
 
+// DeployableNalejSecret represents the 'nalej-public-registry' secret on the user namespaces
+// We need DeployableNalejSecret because' nalej-public-registry' secret is special (unique per namespace),
+// DeployableSecrets are builded per each stage
 type DeployableNalejSecret struct {
 	client          coreV1.SecretInterface
 	data            entities.DeploymentMetadata
@@ -62,11 +65,6 @@ func (ds*DeployableNalejSecret)BuildNalejPublicRegistry ()*v1.Secret {
 				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
-				//utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
-				//utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
 			},
 		},
 		Data: map[string][]byte{

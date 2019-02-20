@@ -97,8 +97,6 @@ func (ds*DeployableSecrets) Build() error {
 			ds.secrets[service.ServiceId] = toAdd
 		}
 	}
-	// create nalej-public-registry
-	//ds.secrets["zt-sidecar"] = []*v1.Secret{ds.BuildNalejPublicRegistry()}
 	log.Debug().Interface("Secrets", ds.secrets).Msg("Secrets have been build and are ready to deploy")
 	return nil
 }
