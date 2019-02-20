@@ -67,11 +67,11 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId st
 }
 
 func (m *Manager) RegisterNetworkEntry(organizationId string, organizationName string, appInstanceId string,
-    networkId string, serviceName string, ip string) derrors.Error {
+    networkId string, serviceName string, ip string, serviceGroupInstanceId string, serviceAppInstanceId string) derrors.Error {
 
     // Create the FQDN for this service
-    //fqdn := fmt.Sprintf("%s-%s",serviceName,organizationName)
-    fqdn := GetNetworkingName(serviceName, organizationName, appInstanceId)
+    fqdn := GetNetworkingName(serviceName, organizationId, serviceGroupInstanceId, serviceAppInstanceId)
+
 
     req := pbNetwork.AddDNSEntryRequest{
         NetworkId: networkId,
