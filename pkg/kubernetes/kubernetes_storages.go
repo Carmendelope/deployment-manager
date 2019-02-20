@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/common"
+	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-installer-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -33,8 +35,8 @@ func NewDeployableStorage(
 
 	sc := ""
 		// get storage classs name based on the environment
-	switch(common.CLUSTER_ENV) {
-	case "azure": sc = "managed-premium"
+	switch(config.GetConfig().TargetPlatform) {
+	case grpc_installer_go.Platform_AZURE: sc = "managed-premium"
 	default: sc = ""
 	}
 	return &DeployableStorage{
@@ -104,11 +106,10 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		if ds.class == "" {
-			log.Error().Str("serviceName", service.Name).Str("storage class for", common.CLUSTER_ENV).Msg("not supported ")
+			log.Error().Str("serviceName", service.Name).Interface("targetPlatform", config.GetConfig().TargetPlatform).Msg("not supported ")
 			continue
 		}
 		// construct PVC ID - based on serviceId and storage Index
-		//pvcId := fmt.Sprintf("%s-%s-1%d",service.Name,service.ServiceId,index)
 		pvcId := common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",index))
 		toAdd := ds.generatePVC(pvcId, service.ServiceInstanceId, storage)
 		pvcs = append(pvcs, toAdd)

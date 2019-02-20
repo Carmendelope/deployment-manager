@@ -1,12 +1,17 @@
-package service
+package config
 
 import (
 	"github.com/nalej/deployment-manager/version"
 	"github.com/nalej/derrors"
+	"github.com/nalej/grpc-installer-go"
 	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog/log"
+	"os"
 	"strings"
+	"sync"
 )
+
+const EnvClusterId = "CLUSTER_ID"
 
 // Configuration structure
 type Config struct {
@@ -39,12 +44,32 @@ type Config struct {
 	Password string
 	// List of DNS entries separated by commas
 	DNS string
-	// cluster runtime environment such as aws/google/azure/...
-	ClusterEnvironment string
+	// TargetPlatformName with the name of the targetPlatform
+	TargetPlatformName string
+	// TargetPlatform with the target platform enum
+	TargetPlatform grpc_installer_go.Platform
+	// ClusterId with the cluster identifier.
+	ClusterId string
 	// planet file path
 	PlanetPath string
 	// nalej-public credentials
 	PublicCredentials grpc_application_go.ImageCredentials
+}
+
+func (conf *Config) envOrElse(envName string, paramValue string) string{
+	if paramValue != "" {
+		return paramValue
+	}
+	fromEnv := os.Getenv(envName)
+	if fromEnv != "" {
+		return fromEnv
+	}
+	return ""
+}
+
+func (conf *Config) Resolve() derrors.Error{
+	conf.ClusterId = conf.envOrElse(EnvClusterId, conf.ClusterId)
+	return nil
 }
 
 func (conf *Config) Validate() derrors.Error {
@@ -81,6 +106,11 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("dns list must be set")
 	}
 
+	if conf.TargetPlatformName == "" {
+		return derrors.NewInvalidArgumentError("targetPlatform must be set")
+	}
+	conf.TargetPlatform = grpc_installer_go.Platform(grpc_installer_go.Platform_value[conf.TargetPlatformName])
+
 	if conf.PlanetPath == "" {
 		return derrors.NewInvalidArgumentError("planet path cannot be empty")
 	}
@@ -91,6 +121,7 @@ func (conf *Config) Validate() derrors.Error {
 func (conf *Config) Print() {
 	log.Info().Str("app", version.AppVersion).Str("commit", version.Commit).Msg("Version")
 	log.Info().Uint32("port", conf.Port).Msg("gRPC port")
+	log.Info().Str("Id", conf.ClusterId).Msg("Cluster info")
 	log.Info().Str("URL", conf.DeploymentMgrAddress).Msg("Deployment manager")
 	log.Info().Bool("local", conf.Local).Msg("Kubernetes is local")
 	log.Info().Str("URL", conf.ClusterAPIHostname).Uint32("port", conf.ClusterAPIPort).Bool("TLS", conf.UseTLSForClusterAPI).Msg("Cluster API on management cluster")
@@ -101,5 +132,24 @@ func (conf *Config) Print() {
 	}
 	log.Info().Str("Email", conf.Email).Str("password", strings.Repeat("*", len(conf.Password))).Msg("Application cluster credentials")
 	log.Info().Str("DNS", conf.DNS).Msg("List of DNS ips")
+	log.Info().Str("type", conf.TargetPlatform.String()).Msg("Target platform")
 	log.Info().Str("PlanetPath", conf.PlanetPath).Msg("Planet path")
+
+}
+
+// appConfig defines the configuration that will be set.
+var appConfig *Config
+// instance of the configuration to be reused throughout the application.
+var instance *Config
+var once sync.Once
+
+func SetGlobalConfig(cfg *Config){
+	appConfig = cfg
+}
+
+func GetConfig() *Config {
+	once.Do(func() {
+		instance = appConfig
+	})
+	return instance
 }

@@ -7,6 +7,7 @@
 package cmd
 
 import (
+	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/service"
 	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog"
@@ -48,8 +49,8 @@ func init() {
 	runCmd.Flags().StringP("email", "e", "admin@nalej.com", "email address")
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
+	runCmd.Flags().String("targetPlatform", "MINIKUBE", "Target platform: MINIKUBE or AZURE")
 	runCmd.Flags().String("planetPath", "/zt/planet/planet", "List of dns ips separated by commas")
-	runCmd.Flags().String("runtimeEnv",  "azure", "Cluster runtime environment - azure,google,aws,custom ")
 
 	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
@@ -60,7 +61,7 @@ func init() {
 
 func Run() {
 
-	config := service.Config{
+	config := config.Config{
 		Port:                 uint32(viper.GetInt32("port")),
 		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
 		ClusterAPIHostname:   viper.GetString("clusterAPIHostname"),
@@ -75,8 +76,8 @@ func Run() {
 		Email:                viper.GetString("email"),
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
+		TargetPlatformName:	  viper.GetString("targetPlatform"),
 		PlanetPath:           viper.GetString("planetPath"),
-		ClusterEnvironment:	  viper.GetString("runtimeEnv"),
 		PublicCredentials:    grpc_application_go.ImageCredentials{
 			Username: 			viper.GetString("publicRegistryUserName"),
 			Password: 			viper.GetString("publicRegistryPassword"),
