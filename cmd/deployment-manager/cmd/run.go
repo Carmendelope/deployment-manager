@@ -9,6 +9,7 @@ package cmd
 import (
 	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/service"
+	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -35,7 +36,7 @@ func init() {
 
 	runCmd.Flags().Uint32P("port", "p", 5200, "port where deployment manager listens to")
 	runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
-	runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
+	//runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
 	runCmd.Flags().StringP("networkMgrAddress", "n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
 	runCmd.Flags().StringP("depMgrAddress", "d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
 	runCmd.Flags().String("clusterAPIHostname", "", "Hostname of the cluster API on the management cluster")
@@ -49,6 +50,12 @@ func init() {
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
 	runCmd.Flags().String("targetPlatform", "MINIKUBE", "Target platform: MINIKUBE or AZURE")
+	runCmd.Flags().String("planetPath", "/zt/planet/planet", "List of dns ips separated by commas")
+
+	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
+	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
+	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
+
 	viper.BindPFlags(runCmd.Flags())
 }
 
@@ -70,6 +77,13 @@ func Run() {
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
 		TargetPlatformName:	  viper.GetString("targetPlatform"),
+		PlanetPath:           viper.GetString("planetPath"),
+		PublicCredentials:    grpc_application_go.ImageCredentials{
+			Username: 			viper.GetString("publicRegistryUserName"),
+			Password: 			viper.GetString("publicRegistryPassword"),
+			Email:    			"devops@nalej.com",
+			DockerRepository: 	viper.GetString("publicRegistryURL"),
+		},
 	}
 
 	log.Info().Msg("launching deployment manager...")
