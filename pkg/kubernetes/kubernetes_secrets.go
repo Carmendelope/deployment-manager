@@ -89,6 +89,7 @@ func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.
 	return result
 }
 
+
 func (ds*DeployableSecrets) Build() error {
 	for _, service := range ds.data.Stage.Services {
 		toAdd := ds.BuildSecretsForService(service)

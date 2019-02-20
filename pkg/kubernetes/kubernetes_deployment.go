@@ -33,6 +33,8 @@ const (
     DefaultImagePullPolicy = apiv1.PullAlways
     //Default storage size
     DefaultStorageAllocationSize = int64(100*1024*1024)
+    // Default Nalej public registry
+    DefaultNalejPublicRegistry = "nalej-public-registry"
 )
 
 
@@ -202,6 +204,11 @@ func(d *DeployableDeployments) Build() error {
                         DNSPolicy: apiv1.DNSNone,
                         DNSConfig: &apiv1.PodDNSConfig{
                             Nameservers: d.data.DNSHosts,
+                        },
+                        ImagePullSecrets: []apiv1.LocalObjectReference{
+                          {
+                            Name: DefaultNalejPublicRegistry,
+                          }  ,
                         },
                         Containers: []apiv1.Container{
                             // User defined container
