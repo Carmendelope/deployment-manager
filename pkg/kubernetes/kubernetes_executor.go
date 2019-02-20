@@ -103,6 +103,7 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
         return nil, errors.New("impossible to find the corresponding events controller")
     }
 
+
     err = namespaceDeployable.Deploy(controller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)

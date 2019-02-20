@@ -22,22 +22,22 @@ import (
 
 type DeployableSecrets struct {
 	client          coreV1.SecretInterface
-	planetPath string
+	planetPath      string
 	data            entities.DeploymentMetadata
-	secrets      map[string][]*v1.Secret
-	planetSecret *v1.Secret
+	secrets         map[string][]*v1.Secret
+	planetSecret    *v1.Secret
 }
 
 func NewDeployableSecrets(
-	client *kubernetes.Clientset,
-	planetPath string,
-	data entities.DeploymentMetadata) *DeployableSecrets {
+	client      *kubernetes.Clientset,
+	planetPath  string,
+	data        entities.DeploymentMetadata) *DeployableSecrets {
 	return &DeployableSecrets{
 		client:          client.CoreV1().Secrets(data.Namespace),
-		planetPath: planetPath,
+		planetPath:      planetPath,
 		data:            data,
-		secrets:      make(map[string][]*v1.Secret, 0),
-		planetSecret: &v1.Secret{}}
+		secrets:         make(map[string][]*v1.Secret, 0),
+		planetSecret:    &v1.Secret{}}
 }
 
 func (ds*DeployableSecrets) GetId() string {
@@ -84,6 +84,7 @@ func (ds*DeployableSecrets) generateDockerSecret(serviceId string, serviceInstan
 }
 
 func (ds *DeployableSecrets) generatePlanetSecret (namespace string) *v1.Secret {
+	log.Debug().Interface("Secrets", ds.planetSecret).Msg("Creating ZT Planet secret")
 	planetData, err := ioutil.ReadFile(ds.planetPath)
 	if err != nil {
 		log.Error().Msg("cannot read planet file")
@@ -95,7 +96,7 @@ func (ds *DeployableSecrets) generatePlanetSecret (namespace string) *v1.Secret 
 			APIVersion: "v1",
 		},
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:         "zt-planet",
+			Name:         ztPlanetSecretName,
 			GenerateName: "",
 			Namespace:    namespace,
 			Labels: map[string]string {
@@ -153,13 +154,20 @@ func (ds*DeployableSecrets) Deploy(controller executor.DeploymentController) err
 			numCreated++
 		}
 	}
-	_, err := ds.client.Create(ds.planetSecret)
-	if err != nil {
-		log.Error().Err(err).Interface("toCreate", ds.planetSecret).Msg("cannot create planet secret")
-		return err
+
+	_, planetCheck := ds.client.Get(ZTPlanetSecretName, metaV1.GetOptions{})
+	if  planetCheck != nil {
+		_, err := ds.client.Create(ds.planetSecret)
+		if err != nil {
+			log.Error().Err(err).Interface("toCreate", ds.planetSecret).Msg("cannot create planet secret")
+			return err
+		}
+		log.Debug().Int("created", numCreated).Msg("Secrets have been created")
+		return nil
+	} else {
+		log.Error().Err(planetCheck).Interface("toCreate", ds.planetSecret).Msg("cannot create planet secret")
+		return planetCheck
 	}
-	log.Debug().Int("created", numCreated).Msg("Secrets have been created")
-	return nil
 }
 
 func (ds*DeployableSecrets) Undeploy() error {

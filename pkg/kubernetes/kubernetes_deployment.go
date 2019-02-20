@@ -282,8 +282,8 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                     // volume mount for the zt-planet secret
                                     {
-                                        Name: "zt-planet",
-                                        MountPath: "/var/lib/zerotier-one",
+                                        Name: ZTPlanetSecretName,
+                                        MountPath: "/zt/planet",
                                         ReadOnly: true,
                                     },
                                 },
@@ -301,7 +301,7 @@ func(d *DeployableDeployments) Build() error {
                             },
                             // zt-planet secret
                             {
-                                Name: "zt-planet",
+                                Name: ZTPlanetSecretName,
                                 VolumeSource: apiv1.VolumeSource{
                                     Secret: &apiv1.SecretVolumeSource{
                                         SecretName: ZTPlanetSecretName,
@@ -491,8 +491,8 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                     // volume mount for the zt-planet secret
                                     {
-                                        Name: "zt-planet",
-                                        MountPath: "/var/lib/zerotier-one",
+                                        Name: ZTPlanetSecretName,
+                                        MountPath: "/zt/planet",
                                         ReadOnly: true,
                                     },
                                 },
@@ -511,7 +511,7 @@ func(d *DeployableDeployments) Build() error {
                             },
                             // zt-planet secret
                             {
-                                Name: "zt-planet",
+                                Name: ZTPlanetSecretName,
                                 VolumeSource: apiv1.VolumeSource{
                                     Secret: &apiv1.SecretVolumeSource{
                                         SecretName: ZTPlanetSecretName,
