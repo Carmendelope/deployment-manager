@@ -30,7 +30,6 @@ spec:
         - "run"
         - "--local"
         - "--depMgrAddress=$(DEPLOYMENT_MANAGER_SERVICE_HOST):5200"
-#        - "--clusterAPIAddress=$(MANAGER_CLUSTER_IP):$(MANAGER_CLUSTER_PORT)"
         - "--clusterAPIHostname=$(CLUSTER_API_HOST)"
         - "--clusterAPIPort=443"
         - "--useTLSForClusterAPI=true"
@@ -42,6 +41,9 @@ spec:
         - "--password=$(PASSWORD)"
         - "--dns=$(DNS_HOSTS)"
         - "--planetPath=/zt/planet/planet"
+        - "--publicRegistryUserName=$(PUBLIC_REGISTRY_USERNAME)"
+        - "--publicRegistryPassword=$(PUBLIC_REGISTRY_PASSWORD)"
+        - "--publicRegistryURL=$(PUBLIC_REGISTRY_URL)"
         - "--debug"
         env:
         - name: MANAGER_CLUSTER_IP
@@ -89,6 +91,24 @@ spec:
             configMapKeyRef:
               name: cluster-config
               key: dns_public_ips
+        - name: PUBLIC_REGISTRY_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: credentials-nalej-public-registry
+              optional: true
+              key: username
+        - name: PUBLIC_REGISTRY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: credentials-nalej-public-registry
+              optional: true
+              key: password
+        - name: PUBLIC_REGISTRY_URL
+          valueFrom:
+            secretKeyRef:
+              name: credentials-nalej-public-registry
+              optional: true
+              key: url
         ports:
         - name: api-port
           containerPort: 5200

@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/nalej/deployment-manager/version"
 	"github.com/nalej/derrors"
+	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog/log"
 	"strings"
 )
@@ -42,6 +43,8 @@ type Config struct {
 	ClusterEnvironment string
 	// planet file path
 	PlanetPath string
+	// nalej-public credentials
+	PublicCredentials grpc_application_go.ImageCredentials
 }
 
 func (conf *Config) Validate() derrors.Error {

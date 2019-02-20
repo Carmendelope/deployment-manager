@@ -8,6 +8,7 @@ package cmd
 
 import (
 	"github.com/nalej/deployment-manager/pkg/service"
+	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -49,6 +50,11 @@ func init() {
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
 	runCmd.Flags().String("planetPath", "/zt/planet/planet", "List of dns ips separated by commas")
 	runCmd.Flags().String("runtimeEnv",  "azure", "Cluster runtime environment - azure,google,aws,custom ")
+
+	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
+	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
+	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
+
 	viper.BindPFlags(runCmd.Flags())
 }
 
@@ -71,6 +77,12 @@ func Run() {
 		DNS:                  viper.GetString("dns"),
 		PlanetPath:           viper.GetString("planetPath"),
 		ClusterEnvironment:	  viper.GetString("runtimeEnv"),
+		PublicCredentials:    grpc_application_go.ImageCredentials{
+			Username: 			viper.GetString("publicRegistryUserName"),
+			Password: 			viper.GetString("publicRegistryPassword"),
+			Email:    			"devops@nalej.com",
+			DockerRepository: 	viper.GetString("publicRegistryURL"),
+		},
 	}
 
 	log.Info().Msg("launching deployment manager...")
