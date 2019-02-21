@@ -236,6 +236,8 @@ func(d *DeployableDeployments) Build() error {
                                     "--organizationId", d.data.OrganizationId,
                                     "--organizationName", d.data.OrganizationName,
                                     "--networkId", d.data.ZtNetworkId,
+                                    "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
+                                    "--serviceAppInstanceId", service.AppInstanceId,
                                 },
                                 Env: []apiv1.EnvVar{
                                     // Indicate this is not a ZT proxy
@@ -262,6 +264,8 @@ func(d *DeployableDeployments) Build() error {
                                                 "--organizationId", d.data.OrganizationId,
                                                 "--organizationName", d.data.OrganizationName,
                                                 "--networkId", d.data.ZtNetworkId,
+                                                "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
+                                                "--serviceAppInstanceId", service.AppInstanceId,
                                             },
                                         },
                                     },
@@ -440,6 +444,8 @@ func(d *DeployableDeployments) Build() error {
                                     "--organizationName", d.data.OrganizationName,
                                     "--networkId", d.data.ZtNetworkId,
                                     "--isProxy",
+                                    "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
+                                    "--serviceAppInstanceId", service.AppInstanceId,
                                 },
                                 Env: []apiv1.EnvVar{
                                     // Indicate this is a ZT proxy
@@ -471,6 +477,8 @@ func(d *DeployableDeployments) Build() error {
                                                 "--organizationId", d.data.OrganizationId,
                                                 "--organizationName", d.data.OrganizationName,
                                                 "--networkId", d.data.ZtNetworkId,
+                                                "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
+                                                "--serviceAppInstanceId", service.AppInstanceId,
                                             },
                                         },
                                     },
