@@ -43,7 +43,11 @@ func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeplo
     log.Debug().Msgf("reqister network entry for app %s in organization %s with ip %s ",request.ServiceName,
         request.OrganizationId, request.ServiceIp)
 
-    err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.OrganizationName,request.AppInstanceId, request.NetworkId, request.ServiceName, request.ServiceIp)
+    //err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.OrganizationName,request.AppInstanceId, request.NetworkId, request.ServiceName, request.ServiceIp)
+    err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.OrganizationName,request.AppInstanceId,
+        request.NetworkId, request.ServiceName, request.ServiceIp, request.ServiceGroupInstanceId, request.ServiceAppInstanceId)
+
+
     if err != nil {
         msg := fmt.Sprintf("error registering network entry request %#v", request)
         log.Error().Err(err).Msgf(msg)
