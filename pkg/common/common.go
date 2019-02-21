@@ -36,13 +36,6 @@ var MANAGER_CLUSTER_PORT string
 // Deprecated: Use config.DeploymentMgrAddress
 var DEPLOYMENT_MANAGER_ADDR string
 
-// Cluster ID
-// TODO Create a new variable in the configuration.
-var CLUSTER_ID string
-
-// ClusterEnvironemt such as aws/google/azure/nalejCustom ....
-var CLUSTER_ENV string
-
 // Return the namespace associated with a service.
 //  params:
 //   organizationId

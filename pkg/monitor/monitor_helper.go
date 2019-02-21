@@ -10,14 +10,14 @@ package monitor
 import (
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
+    "github.com/nalej/deployment-manager/pkg/config"
+    "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/login-helper"
+    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/nalej/grpc-cluster-api-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
-    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
-    "github.com/nalej/deployment-manager/pkg/common"
-    "github.com/nalej/deployment-manager/pkg/executor"
     "google.golang.org/grpc/codes"
     grpc_status "google.golang.org/grpc/status"
     "time"
@@ -92,6 +92,7 @@ func (m *MonitorHelper) UpdateStatus() {
         // nothing to do
         return
     }
+    clusterId := config.GetConfig().ClusterId
     // notify fragments. This is equivalent to notify an app
     for _, app := range notificationPending {
         list := make([]*pbConductor.ServiceUpdate,0)
@@ -113,7 +114,7 @@ func (m *MonitorHelper) UpdateStatus() {
                 ServiceInstanceId:     serv.ServiceInstanceID,
                 OrganizationId:        serv.OrganizationId,
                 Status:                entities.ServiceStatusToGRPC[serv.Status],
-                ClusterId:             common.CLUSTER_ID,
+                ClusterId:             clusterId,
                 Endpoints:             endpoints,
                 Info:                  serv.Info,
             }
@@ -123,7 +124,7 @@ func (m *MonitorHelper) UpdateStatus() {
         req := pbConductor.DeploymentServiceUpdateRequest{
             OrganizationId: app.OrganizationId,
             FragmentId:     app.FragmentId,
-            ClusterId:      common.CLUSTER_ID,
+            ClusterId:      clusterId,
             List:           list,
             }
         m.sendUpdateService(req)
@@ -134,7 +135,7 @@ func (m *MonitorHelper) UpdateStatus() {
             DeploymentId: app.DeploymentId,
             FragmentId: app.FragmentId,
             Status: entities.FragmentStatusToGRPC[app.Status],
-            ClusterId: common.CLUSTER_ID,
+            ClusterId: clusterId,
             AppInstanceId: app.AppInstanceId,
             Info: app.Info,
         }
