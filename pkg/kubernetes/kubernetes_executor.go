@@ -103,23 +103,25 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
         return nil, errors.New("impossible to find the corresponding events controller")
     }
 
+    if !namespaceDeployable.exists() {
+        // TODO Check if namespace already exists...
+        err = namespaceDeployable.Deploy(controller)
+        if err != nil {
+            log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
+            return nil,err
+        }
 
-    err = namespaceDeployable.Deploy(controller)
-    if err != nil {
-        log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
-        return nil,err
-    }
-
-    // NP-766. create the nalej-public-registry on the user namespace
-    nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
-    err = nalejSecret.Build()
-    if err != nil {
-        log.Error().Err(err).Msg("impossible to build nalej-public-registry")
-    }
-    err = nalejSecret.Deploy(controller)
-    if err != nil {
-        log.Error().Err(err).Msg("impossible to deploy nalej-public-registry")
-        return nil,err
+        // NP-766. create the nalej-public-registry on the user namespace
+        nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
+        err = nalejSecret.Build()
+        if err != nil {
+            log.Error().Err(err).Msg("impossible to build nalej-public-registry")
+        }
+        err = nalejSecret.Deploy(controller)
+        if err != nil {
+            log.Error().Err(err).Msg("impossible to deploy nalej-public-registry")
+            return nil,err
+        }
     }
 
     var toReturn executor.Deployable
@@ -169,7 +171,7 @@ func (k *KubernetesExecutor) AddEventsController(namespace string, monitored mon
     defer k.mu.Unlock()
     _, found := k.Controllers[namespace]
     if found {
-        log.Error().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
+        log.Warn().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
         return nil
     }
     k.Controllers[namespace] = k8sController
