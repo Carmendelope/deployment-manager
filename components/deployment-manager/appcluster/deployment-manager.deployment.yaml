@@ -44,6 +44,7 @@ spec:
         - "--publicRegistryUserName=$(PUBLIC_REGISTRY_USERNAME)"
         - "--publicRegistryPassword=$(PUBLIC_REGISTRY_PASSWORD)"
         - "--publicRegistryURL=$(PUBLIC_REGISTRY_URL)"
+        - "--targetPlatform=$(PLATFORM_TYPE)"
         - "--debug"
         env:
         - name: MANAGER_CLUSTER_IP
@@ -109,6 +110,11 @@ spec:
               name: credentials-nalej-public-registry
               optional: true
               key: url
+        - name: PLATFORM_TYPE
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: platform_type
         ports:
         - name: api-port
           containerPort: 5200

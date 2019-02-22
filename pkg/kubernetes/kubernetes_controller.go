@@ -9,6 +9,7 @@ package kubernetes
 import (
     "fmt"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
+    "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/utils"
     "time"
     "k8s.io/apimachinery/pkg/runtime"
@@ -332,14 +333,40 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
     // This deployment is monitored.
 
     endpoints := make([]entities.EndpointInstance, 0)
-    if dep.Spec.Type == v1.ServiceTypeLoadBalancer{
-        log.Debug().Interface("analyzing", dep).Msg("Load balancer detected")
-        ep := entities.EndpointInstance{
-            EndpointInstanceId: string(dep.UID),
-            EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-            FQDN:               dep.Spec.LoadBalancerIP,
+
+    purpose, found := dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE]
+
+    if found && purpose == utils.NALEJ_ANNOTATION_DEVICE_GROUP_SERVICE {
+        log.Debug().Interface("analyzing", dep).Msg("Checking service for device group ingestion")
+
+        if dep.Spec.Type == v1.ServiceTypeLoadBalancer{
+
+            log.Debug().Msg("Load balancer detected")
+            if dep.Status.LoadBalancer.Ingress == nil || len(dep.Status.LoadBalancer.Ingress) == 0 {
+                log.Debug().Interface("loadbalancer", dep.Status).Msg("Load balancer is not ready, skip")
+                return
+            }
+
+            for _, ip := range dep.Status.LoadBalancer.Ingress {
+                ep := entities.EndpointInstance{
+                    EndpointInstanceId: string(dep.UID),
+                    EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+                    FQDN:               ip.IP,
+                }
+                log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
+                endpoints = append(endpoints, ep)
+            }
+
+        }else if dep.Spec.Type == v1.ServiceTypeNodePort{
+            log.Debug().Msg("Node port detected")
+            ep := entities.EndpointInstance{
+                EndpointInstanceId: string(dep.UID),
+                EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+                FQDN:               fmt.Sprintf("%s:%d", config.GetConfig().ClusterPublicHostname, dep.Spec.Ports[0].NodePort),
+            }
+            log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
+            endpoints = append(endpoints, ep)
         }
-        endpoints = append(endpoints, ep)
     }
 
     log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).

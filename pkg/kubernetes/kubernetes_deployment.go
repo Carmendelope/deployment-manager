@@ -10,6 +10,7 @@ import (
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/common"
+    "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
     pbConductor "github.com/nalej/grpc-conductor-go"
@@ -234,7 +235,7 @@ func(d *DeployableDeployments) Build() error {
                                     "--serviceName", service.Name,
                                     "--deploymentId", d.data.DeploymentId,
                                     "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                     "--organizationId", d.data.OrganizationId,
                                     "--organizationName", d.data.OrganizationName,
                                     "--networkId", d.data.ZtNetworkId,
@@ -262,7 +263,7 @@ func(d *DeployableDeployments) Build() error {
                                                 "--serviceName", service.Name,
                                                 "--deploymentId", d.data.DeploymentId,
                                                 "--fragmentId", d.data.Stage.FragmentId,
-                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                                 "--organizationId", d.data.OrganizationId,
                                                 "--organizationName", d.data.OrganizationName,
                                                 "--networkId", d.data.ZtNetworkId,
@@ -376,7 +377,8 @@ func(d *DeployableDeployments) Build() error {
                         VolumeSource: apiv1.VolumeSource{
                             PersistentVolumeClaim:&apiv1.PersistentVolumeClaimVolumeSource{
                                 // claim name should be same as pvcID that was generated in BuildStorageForServices.
-                                ClaimName: common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",i)),
+                                // TODO Check storage attached to replicas
+                                ClaimName: common.GeneratePVCName(service.ServiceGroupInstanceId,service.ServiceId,fmt.Sprintf("%d",i)),
                             },
                         },
                     }
@@ -441,7 +443,7 @@ func(d *DeployableDeployments) Build() error {
                                     "--serviceName", common.FormatName(service.Name),
                                     "--deploymentId", d.data.DeploymentId,
                                     "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                     "--organizationId", d.data.OrganizationId,
                                     "--organizationName", d.data.OrganizationName,
                                     "--networkId", d.data.ZtNetworkId,
@@ -475,7 +477,7 @@ func(d *DeployableDeployments) Build() error {
                                                 "--serviceName", common.FormatName(service.Name),
                                                 "--deploymentId", d.data.DeploymentId,
                                                 "--fragmentId", d.data.Stage.FragmentId,
-                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                                 "--organizationId", d.data.OrganizationId,
                                                 "--organizationName", d.data.OrganizationName,
                                                 "--networkId", d.data.ZtNetworkId,
@@ -603,6 +605,7 @@ func(d * DeployableDeployments) addDeviceGroupEnvVariables(previous []apiv1.EnvV
                 Name:      utils.EnvNalejAnnotationDGSecrets,
                 Value:     strings.Join(sr.DeviceGroupJwtSecrets,","),
             }
+            log.Debug().Interface("envVar", toAdd).Interface("sr", sr).Msg("Adding a new environment variable for security groups")
             previous = append(previous, *toAdd)
             return previous
         }

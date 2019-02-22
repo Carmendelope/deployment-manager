@@ -52,6 +52,8 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 		serviceType = v1.ServiceTypeNodePort
 	}
 
+	log.Debug().Str("serviceType", string(serviceType)).Str("platformType", d.platformType.String()).Msg("device group service config")
+
 	// Define the port that will be exposed
 	var exposedPort = v1.ServicePort{
 		Name:       "dg-port",
@@ -86,6 +88,7 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : sr.TargetServiceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_PURPOSE : utils.NALEJ_ANNOTATION_DEVICE_GROUP_SERVICE,
 			},
 		},
 		Spec: v1.ServiceSpec{

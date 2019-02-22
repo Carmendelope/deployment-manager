@@ -12,6 +12,8 @@ import (
 )
 
 const(
+	// Maximum length for a name in kubernetes
+	MaxNameLength = 63
 	// Maximum namespace length
 	NamespaceLength = 63
 	// buzzword to check all services
@@ -31,10 +33,6 @@ var MANAGER_CLUSTER_IP string
 // Port of the manager cluster service.
 // Deprecated: Use config.ClusterAPIPort
 var MANAGER_CLUSTER_PORT string
-
-// Deployment manager address
-// Deprecated: Use config.DeploymentMgrAddress
-var DEPLOYMENT_MANAGER_ADDR string
 
 // Return the namespace associated with a service.
 //  params:
@@ -59,6 +57,16 @@ func FormatName(name string) string {
 	return aux
 }
 
+// GeneratePVCName creates a name for a PVC using the serviceGroupId, serviceId and the index.
+func GeneratePVCName(groupId string, serviceId string, index string) string {
+	fullName := fmt.Sprintf("%s%s-%s", groupId, serviceId, index)
+	if len(fullName) > MaxNameLength {
+		return fullName[len(fullName)-MaxNameLength:]
+	}
+	return fullName
+}
+
+// Deprecated: use GeneratePVCName
 func GetNamePVC(name string, id string, index string) string {
     // remove special chars and spaces except -.
     //https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
