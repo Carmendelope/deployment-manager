@@ -240,27 +240,15 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     resource.Info = info
 
     // set the endpoints for this entry
-    service.Endpoints = endpoints
-    /*
     if len(endpoints) >0 {
         if service.Endpoints == nil {
             service.Endpoints = endpoints
         } else {
-            // add the endpoint if it is new
-            found := false
-            for _, ep := range service.Endpoints {
-                if ep == endpoint {
-                    // It is already there, exit
-                    found = true
-                    break
-                }
-            }
-            if !found {
-                service.Endpoints = append(service.Endpoints, endpoint)
-            }
+            // add the endpoints
+            service.Endpoints = append(service.Endpoints, endpoints...)
         }
     }
-    */
+
 
     // If this is running remove one check
     if resource.Status == entities.NALEJ_SERVICE_RUNNING {
@@ -290,6 +278,8 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 
     service.Status = finalStatus
     service.Info = newServiceInfo
+
+    log.Debug().Interface("service",service).Msg("service after setting status")
 
     // update app status
     // the update will be only done if all the services are under deployed
