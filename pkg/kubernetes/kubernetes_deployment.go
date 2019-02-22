@@ -185,6 +185,8 @@ func(d *DeployableDeployments) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = d.data.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = d.data.ServiceGroupInstanceId
 
+        environmentVariables := d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables)
+        environmentVariables = d.addDeviceGroupEnvVariables(environmentVariables, service.ServiceGroupInstanceId, service.ServiceInstanceId)
 
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
@@ -217,7 +219,7 @@ func(d *DeployableDeployments) Build() error {
                             {
                                 Name:  common.FormatName(service.Name),
                                 Image: service.Image,
-                                Env:   d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables),
+                                Env:   environmentVariables,
                                 Ports: d.getContainerPorts(service.ExposedPorts),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                             },
@@ -594,7 +596,19 @@ func(d *DeployableDeployments) Undeploy() error {
     return nil
 }
 
-
+func(d * DeployableDeployments) addDeviceGroupEnvVariables(previous []apiv1.EnvVar, serviceGroupInstanceId string, serviceInstanceId string) []apiv1.EnvVar {
+    for _, sr := range d.data.Stage.DeviceGroupRules{
+        if sr.TargetServiceGroupInstanceId == serviceGroupInstanceId && sr.TargetServiceInstanceId == serviceInstanceId{
+            toAdd := &apiv1.EnvVar{
+                Name:      utils.EnvNalejAnnotationDGSecrets,
+                Value:     strings.Join(sr.DeviceGroupJwtSecrets,","),
+            }
+            previous = append(previous, *toAdd)
+            return previous
+        }
+    }
+    return previous
+}
 
 
 // Transform a service map of environment variables to the corresponding K8s API structure. Any user-defined

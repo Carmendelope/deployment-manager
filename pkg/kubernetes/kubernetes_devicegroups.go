@@ -63,13 +63,18 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 		},
 	}
 
+	serviceName := fmt.Sprintf("dg-%s-%s", sr.RuleId, sr.TargetServiceInstanceId)
+	if len(serviceName) > 63{
+		serviceName = serviceName[0:63]
+	}
+
 	return &v1.Service{
 		TypeMeta: metaV1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:      fmt.Sprintf("dg-%s-%s", sr.RuleId, sr.TargetServiceInstanceId),
+			Name:      serviceName,
 			Namespace: d.data.Namespace,
 			Labels:    map[string]string{
 				utils.NALEJ_ANNOTATION_ORGANIZATION : d.data.OrganizationId,

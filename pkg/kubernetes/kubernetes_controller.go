@@ -331,13 +331,24 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
     dep := stored.(*v1.Service)
     // This deployment is monitored.
 
+    endpoints := make([]entities.EndpointInstance, 0)
+    if dep.Spec.Type == v1.ServiceTypeLoadBalancer{
+        log.Debug().Interface("analyzing", dep).Msg("Load balancer detected")
+        ep := entities.EndpointInstance{
+            EndpointInstanceId: string(dep.UID),
+            EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+            FQDN:               dep.Spec.LoadBalancerIP,
+        }
+        endpoints = append(endpoints, ep)
+    }
+
     log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
         Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
         Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
         Msg("set service new status to ready")
     pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
         dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"",
-        []entities.EndpointInstance{})
+        endpoints)
 
 }
 
