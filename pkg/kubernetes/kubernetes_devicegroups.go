@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-conductor-go"
@@ -30,6 +31,7 @@ func NewDeployableDeviceGroups(client *kubernetes.Clientset, data entities.Deplo
 	return &DeployableDeviceGroups{
 		client: client.CoreV1().Services(data.Namespace),
 		data: data,
+		platformType: config.GetConfig().TargetPlatform,
 		Services: make([]ServiceInfo,0),
 	}
 }
@@ -42,6 +44,7 @@ func (d* DeployableDeviceGroups) GetServiceInfo() []ServiceInfo{
 	return d.Services
 }
 
+// getK8sService creates a new service with different options depending on the target platform.
 func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupSecurityRuleInstance) *v1.Service{
 
 	var serviceType = v1.ServiceTypeLoadBalancer
