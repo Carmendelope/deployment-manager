@@ -330,11 +330,10 @@ func(d *DeployableDeployments) Build() error {
 
         if service.Credentials != nil {
             log.Debug().Msg("Adding credentials to the deployment")
-            deployment.Spec.Template.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+            deployment.Spec.Template.Spec.ImagePullSecrets = append(deployment.Spec.Template.Spec.ImagePullSecrets,
                 apiv1.LocalObjectReference{
                     Name: service.ServiceId,
-                },
-            }
+                })
         }
 
         if service.RunArguments != nil {
