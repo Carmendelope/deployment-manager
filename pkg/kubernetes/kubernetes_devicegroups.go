@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg/common"
 	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
@@ -66,8 +67,8 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 	}
 
 	serviceName := fmt.Sprintf("dg-%s-%s", sr.RuleId, sr.TargetServiceInstanceId)
-	if len(serviceName) > 63{
-		serviceName = serviceName[0:63]
+	if len(serviceName) > common.MaxNameLength{
+		serviceName = serviceName[0:common.MaxNameLength]
 	}
 
 	return &v1.Service{
@@ -88,7 +89,7 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : sr.TargetServiceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_PURPOSE : utils.NALEJ_ANNOTATION_DEVICE_GROUP_SERVICE,
+				utils.NALEJ_ANNOTATION_SERVICE_PURPOSE : utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE,
 			},
 		},
 		Spec: v1.ServiceSpec{

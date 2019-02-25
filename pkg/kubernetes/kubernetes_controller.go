@@ -336,7 +336,7 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
 
     purpose, found := dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE]
 
-    if found && purpose == utils.NALEJ_ANNOTATION_DEVICE_GROUP_SERVICE {
+    if found && purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE {
         log.Debug().Interface("analyzing", dep).Msg("Checking service for device group ingestion")
 
         if dep.Spec.Type == v1.ServiceTypeLoadBalancer{
@@ -361,13 +361,15 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
 
         }else if dep.Spec.Type == v1.ServiceTypeNodePort{
             log.Debug().Msg("Node port detected")
-            ep := entities.EndpointInstance{
-                EndpointInstanceId: string(dep.UID),
-                EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-                FQDN:               fmt.Sprintf("%s:%d", config.GetConfig().ClusterPublicHostname, dep.Spec.Ports[0].NodePort),
+            for _, port := range dep.Spec.Ports{
+                ep := entities.EndpointInstance{
+                    EndpointInstanceId: string(dep.UID),
+                    EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+                    FQDN:               fmt.Sprintf("%s:%d", config.GetConfig().ClusterPublicHostname, port.NodePort),
+                }
+                log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
+                endpoints = append(endpoints, ep)
             }
-            log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
-            endpoints = append(endpoints, ep)
         }
     }
 
