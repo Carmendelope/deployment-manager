@@ -68,11 +68,12 @@ func GetNamePVC(name string, id string, index string) string {
     name = reg.ReplaceAllString(strings.ToLower(name),"")
     id = reg.ReplaceAllString(strings.ToLower(id),"")
     // Lets try to restrict name and id to NamespaceLength, which should be enough.
-    if len(id) > NamespaceLength {
-        id = id[:NamespaceLength]
+    if len(id) > NamespaceLength-2 {
+        id = id[:NamespaceLength-2]
     }
-    if len(name) > NamespaceLength {
-        name = name[:NamespaceLength]
+    // Ignore name- PVC name is limited to 63 char.
+    if len(name) > NamespaceLength-2 {
+        name = name[:NamespaceLength-2]
     }
-    return fmt.Sprintf("%s-%s-%s",name,id,index)
+    return fmt.Sprintf("%s-%s",id,index)
 }

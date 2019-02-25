@@ -133,7 +133,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		// TODO: Currently handle only cluster_local type, other types in plan phase.
-		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL {
+		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL && storage.Type != grpc_application_go.StorageType_CLUSTER_REPLICA{
 			// TODO:Ideally we should return error and user should know why
 			log.Error().Str("serviceName", service.Name).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
 			// service will fail if we continue, as no PVC can be bound
