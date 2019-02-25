@@ -348,13 +348,15 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
             }
 
             for _, ip := range dep.Status.LoadBalancer.Ingress {
-                ep := entities.EndpointInstance{
-                    EndpointInstanceId: string(dep.UID),
-                    EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-                    FQDN:               ip.IP,
+                for _, port := range dep.Spec.Ports{
+                    ep := entities.EndpointInstance{
+                        EndpointInstanceId: string(dep.UID),
+                        EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+                        FQDN:               fmt.Sprintf("%s:%d", ip.IP, port.Port),
+                    }
+                    log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
+                    endpoints = append(endpoints, ep)
                 }
-                log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
-                endpoints = append(endpoints, ep)
             }
 
         }else if dep.Spec.Type == v1.ServiceTypeNodePort{
