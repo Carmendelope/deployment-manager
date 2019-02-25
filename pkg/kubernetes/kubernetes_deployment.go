@@ -27,7 +27,7 @@ import (
 
 const (
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejops/zt-agent:v0.2.0"
+    ZTAgentImageName = "nalejpublic.azurecr.io/nalej/zt-agent"
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
@@ -213,7 +213,7 @@ func(d *DeployableDeployments) Build() error {
                         ImagePullSecrets: []apiv1.LocalObjectReference{
                           {
                             Name: DefaultNalejPublicRegistry,
-                          }  ,
+                          },
                         },
                         Containers: []apiv1.Container{
                             // User defined container
