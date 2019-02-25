@@ -27,7 +27,7 @@ import (
 
 const (
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejpublic.azurecr.io/nalej/zt-agent"
+    ZTAgentImageName = "nalejpublic.azurecr.io/nalej/zt-agent:v0.2.0"
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
