@@ -10,6 +10,7 @@ import (
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/common"
+    "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
     pbConductor "github.com/nalej/grpc-conductor-go"
@@ -185,6 +186,8 @@ func(d *DeployableDeployments) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = d.data.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = d.data.ServiceGroupInstanceId
 
+        environmentVariables := d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables)
+        environmentVariables = d.addDeviceGroupEnvVariables(environmentVariables, service.ServiceGroupInstanceId, service.ServiceInstanceId)
 
         deployment := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
@@ -217,7 +220,7 @@ func(d *DeployableDeployments) Build() error {
                             {
                                 Name:  common.FormatName(service.Name),
                                 Image: service.Image,
-                                Env:   d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables),
+                                Env:   environmentVariables,
                                 Ports: d.getContainerPorts(service.ExposedPorts),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                             },
@@ -232,7 +235,7 @@ func(d *DeployableDeployments) Build() error {
                                     "--serviceName", service.Name,
                                     "--deploymentId", d.data.DeploymentId,
                                     "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                     "--organizationId", d.data.OrganizationId,
                                     "--organizationName", d.data.OrganizationName,
                                     "--networkId", d.data.ZtNetworkId,
@@ -260,7 +263,7 @@ func(d *DeployableDeployments) Build() error {
                                                 "--serviceName", service.Name,
                                                 "--deploymentId", d.data.DeploymentId,
                                                 "--fragmentId", d.data.Stage.FragmentId,
-                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                                 "--organizationId", d.data.OrganizationId,
                                                 "--organizationName", d.data.OrganizationName,
                                                 "--networkId", d.data.ZtNetworkId,
@@ -374,7 +377,8 @@ func(d *DeployableDeployments) Build() error {
                         VolumeSource: apiv1.VolumeSource{
                             PersistentVolumeClaim:&apiv1.PersistentVolumeClaimVolumeSource{
                                 // claim name should be same as pvcID that was generated in BuildStorageForServices.
-                                ClaimName: common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",i)),
+                                // TODO Check storage attached to replicas
+                                ClaimName: common.GeneratePVCName(service.ServiceGroupInstanceId,service.ServiceId,fmt.Sprintf("%d",i)),
                             },
                         },
                     }
@@ -439,7 +443,7 @@ func(d *DeployableDeployments) Build() error {
                                     "--serviceName", common.FormatName(service.Name),
                                     "--deploymentId", d.data.DeploymentId,
                                     "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                     "--organizationId", d.data.OrganizationId,
                                     "--organizationName", d.data.OrganizationName,
                                     "--networkId", d.data.ZtNetworkId,
@@ -473,7 +477,7 @@ func(d *DeployableDeployments) Build() error {
                                                 "--serviceName", common.FormatName(service.Name),
                                                 "--deploymentId", d.data.DeploymentId,
                                                 "--fragmentId", d.data.Stage.FragmentId,
-                                                "--managerAddr", common.DEPLOYMENT_MANAGER_ADDR,
+                                                "--managerAddr", config.GetConfig().DeploymentMgrAddress,
                                                 "--organizationId", d.data.OrganizationId,
                                                 "--organizationName", d.data.OrganizationName,
                                                 "--networkId", d.data.ZtNetworkId,
@@ -594,7 +598,20 @@ func(d *DeployableDeployments) Undeploy() error {
     return nil
 }
 
-
+func(d * DeployableDeployments) addDeviceGroupEnvVariables(previous []apiv1.EnvVar, serviceGroupInstanceId string, serviceInstanceId string) []apiv1.EnvVar {
+    for _, sr := range d.data.Stage.DeviceGroupRules{
+        if sr.TargetServiceGroupInstanceId == serviceGroupInstanceId && sr.TargetServiceInstanceId == serviceInstanceId{
+            toAdd := &apiv1.EnvVar{
+                Name:      utils.EnvNalejAnnotationDGSecrets,
+                Value:     strings.Join(sr.DeviceGroupJwtSecrets,","),
+            }
+            log.Debug().Interface("envVar", toAdd).Interface("sr", sr).Msg("Adding a new environment variable for security groups")
+            previous = append(previous, *toAdd)
+            return previous
+        }
+    }
+    return previous
+}
 
 
 // Transform a service map of environment variables to the corresponding K8s API structure. Any user-defined
