@@ -517,7 +517,11 @@ func(d *DeployableDeployments) Build() error {
                                 },
                             },
                         },
-
+						ImagePullSecrets: []apiv1.LocalObjectReference{
+							{
+								Name: DefaultNalejPublicRegistry,
+							},
+						},
                         Volumes: []apiv1.Volume{
                             // zerotier sidecar volume
                             {
