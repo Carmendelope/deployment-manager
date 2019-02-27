@@ -22,6 +22,13 @@ import (
 	coreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+const (
+	STORAGE_CLASS_AZURE_CLUSTER_LOCAL =    "managed-premium"
+	STORAGE_CLASS_AZURE_CLUSTER_REPLICA =  "managed-premium"
+	STORAGE_CLASS_NALEJ_CLUSTER_LOCAL =    "nalej-sc-local"
+	STORAGE_CLASS_NALEJ_CLUSTER_REPLICA =  "nalej-sc-local-replica"
+)
+
 type DeployableStorage struct {
 	client          coreV1.PersistentVolumeClaimInterface
 	data            entities.DeploymentMetadata
@@ -100,20 +107,20 @@ func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageTy
           // TODO: if we want we can create nalej storage class for azure to allocate PVs from non replicated pool
         switch(stype) {
         case grpc_application_go.StorageType_CLUSTER_LOCAL:
-            sc = "managed-premium"
+            sc = STORAGE_CLASS_AZURE_CLUSTER_LOCAL
         case grpc_application_go.StorageType_CLUSTER_REPLICA:
-            sc = "managed-premium"
+            sc = STORAGE_CLASS_AZURE_CLUSTER_REPLICA
         default: sc = ""
         }
     case grpc_installer_go.Platform_MINIKUBE:
         switch(stype) {
         case grpc_application_go.StorageType_CLUSTER_LOCAL:
-            sc = "nalej-sc-local"
+            sc = STORAGE_CLASS_NALEJ_CLUSTER_LOCAL
         case grpc_application_go.StorageType_CLUSTER_REPLICA:
         	if ds.nodes < 3 {
 				log.Debug().Interface("Nodes",ds.nodes ).Msg("Less than minimum 3 required for Storage Type CLUSTER_REPLICA")
 			}
-            sc = "nalej-sc-local-replica"
+            sc = STORAGE_CLASS_NALEJ_CLUSTER_REPLICA
         default: sc = ""
         }
     default:
