@@ -36,4 +36,10 @@ const (
     // Annotation for metadata to identify the security rule.
     NALEJ_ANNOTATION_SECURITY_RULE_ID = "nalej-security-rule-id"
 
+    NALEJ_ANNOTATION_SERVICE_PURPOSE = "nalej-service-purpose"
+    NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE = "device-group"
+
+    // EnvNalejAnnotationDGSecrets contains the name of the environemnt variable to store device group secrets.
+    EnvNalejAnnotationDGSecrets= "NALEJ_DG_SHARED_SECRETS"
+
 )

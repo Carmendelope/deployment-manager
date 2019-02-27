@@ -154,7 +154,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		// construct PVC ID - based on serviceId and storage Index
-		pvcId := common.GetNamePVC(service.AppDescriptorId,service.ServiceId,fmt.Sprintf("%d",index))
+		pvcId := common.GeneratePVCName(service.ServiceGroupInstanceId,service.ServiceId,fmt.Sprintf("%d",index))
 		toAdd := ds.generatePVC(pvcId, service.ServiceInstanceId, storage)
 		pvcs = append(pvcs, toAdd)
 	}

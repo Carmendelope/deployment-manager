@@ -44,6 +44,8 @@ type DeployableKubernetesStage struct {
     Secrets * DeployableSecrets
     // Collection of persistence Volume claims
     Storage *DeployableStorage
+    // Collection of endpoints related to device groups.
+    DeviceGroupServices *DeployableDeviceGroups
 }
 
 // Instantiate a new set of resources for a stage to be deployed.
@@ -62,6 +64,7 @@ func NewDeployableKubernetesStage (
         Configmaps: NewDeployableConfigMaps(client, data),
         Secrets:    NewDeployableSecrets(client, planetPath, data),
         Storage:    NewDeployableStorage(client, data),
+        DeviceGroupServices: NewDeployableDeviceGroups(client, data),
     }
 }
 
@@ -80,6 +83,11 @@ func (d DeployableKubernetesStage) Build() error {
     err = d.Services.Build()
     if err != nil {
         log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("impossible to create Services for")
+        return err
+    }
+    err = d.DeviceGroupServices.Build()
+    if err != nil {
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("cannot create device group services")
         return err
     }
 
@@ -151,6 +159,13 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
         return err
     }
 
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Device Group Services")
+    err = d.DeviceGroupServices.Deploy(controller)
+    if err != nil {
+        log.Error().Err(err).Msg("error deploying DeviceGroup Services, aborting")
+        return err
+    }
+
     log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Ingresses")
     err = d.Ingresses.Deploy(controller)
     if err != nil {
@@ -177,6 +192,10 @@ func (d DeployableKubernetesStage) Undeploy() error {
     }
     // Deploy Services
     err = d.Services.Undeploy()
+    if err != nil {
+        return err
+    }
+    err = d.DeviceGroupServices.Undeploy()
     if err != nil {
         return err
     }
