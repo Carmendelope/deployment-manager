@@ -78,7 +78,7 @@ func(n *DeployableNamespace) Deploy(controller executor.DeploymentController) er
 
 func (n *DeployableNamespace) exists() bool{
     _, err := n.client.Get(n.data.Namespace, metav1.GetOptions{IncludeUninitialized: true})
-    return err == nil
+    return err != nil
 }
 
 func(n *DeployableNamespace) Undeploy() error {

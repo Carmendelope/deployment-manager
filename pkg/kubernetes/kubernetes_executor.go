@@ -169,10 +169,10 @@ func (k *KubernetesExecutor) AddEventsController(namespace string, monitored mon
 
     k.mu.Lock()
     defer k.mu.Unlock()
-    _, found := k.Controllers[namespace]
+    retrievedController, found := k.Controllers[namespace]
     if found {
         log.Warn().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
-        return nil
+        return retrievedController
     }
     k.Controllers[namespace] = k8sController
     log.Debug().Interface("controllers", k.Controllers).Msg("added a new events controller")
