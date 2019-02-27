@@ -104,22 +104,24 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
     }
 
     if !namespaceDeployable.exists() {
+        log.Debug().Str("namespace", metadata.Namespace).Msg("create namespace...")
         // TODO Check if namespace already exists...
         err = namespaceDeployable.Deploy(controller)
         if err != nil {
             log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
             return nil,err
         }
+        log.Debug().Str("namespace", metadata.Namespace).Msg("namespace... created")
 
         // NP-766. create the nalej-public-registry on the user namespace
         nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
         err = nalejSecret.Build()
         if err != nil {
-            log.Error().Err(err).Msg("impossible to build nalej-public-registry")
+            log.Error().Err(err).Msg("impossible to build nalej-public-registry secret")
         }
         err = nalejSecret.Deploy(controller)
         if err != nil {
-            log.Error().Err(err).Msg("impossible to deploy nalej-public-registry")
+            log.Error().Err(err).Msg("impossible to deploy nalej-public-registry secret")
             return nil,err
         }
     }

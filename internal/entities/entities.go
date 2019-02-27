@@ -123,8 +123,6 @@ type DeploymentMetadata struct {
     DeploymentId string `json:"deployment_id,omitempty"`
     AppDescriptorId string `json:"app_descriptor_id,omitempty"`
     AppInstanceId string `json:"app_instance_id,omitempty"`
-    ServiceGroupId string `json:"service_group_id,omitempty"`
-    ServiceGroupInstanceId string `json:"service_group_instance_id,omitempty"`
     AppName string `json:"app_name,omitempty"`
     ClusterPublicHostname string `json:"cluster_public_hostname,omitempty"`
     DNSHosts []string `json:"dns_hosts,omitempty"`

@@ -131,13 +131,15 @@ type MonitoredPlatformResource struct {
 }
 
 
-func NewMonitoredPlatformResource(uid string, metadata DeploymentMetadata, serviceId string, serviceInstanceId, info string) MonitoredPlatformResource {
+
+func NewMonitoredPlatformResource(uid string, appDescriptorId string, appInstanceId string, serviceGroupId string,
+    serviceGroupInstanceId string, serviceId string, serviceInstanceId string, info string) MonitoredPlatformResource {
     return MonitoredPlatformResource{
         UID: uid,
-        AppID: metadata.AppDescriptorId,
-        AppInstanceID: metadata.AppInstanceId,
-        ServiceGroupID: metadata.ServiceGroupId,
-        ServiceGroupInstanceID: metadata.ServiceGroupInstanceId,
+        AppID: appDescriptorId,
+        AppInstanceID: appInstanceId,
+        ServiceGroupID: serviceGroupId,
+        ServiceGroupInstanceID: serviceGroupInstanceId,
         ServiceID: serviceId,
         ServiceInstanceID: serviceInstanceId,
         Info: info, Status:NALEJ_SERVICE_SCHEDULED, Pending: true}

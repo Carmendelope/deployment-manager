@@ -54,8 +54,7 @@ func (di * DeployableIngress) GetIngressesEndpoints() map[string][]string{
 	return result
 }
 
-func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId string, serviceInstanceId string,
-	serviceName string, port *grpc_application_go.Port) *v1beta1.Ingress {
+func (di *DeployableIngress) getHTTPIngress(service *grpc_application_go.ServiceInstance, port *grpc_application_go.Port) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
@@ -64,7 +63,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 			toAdd := v1beta1.HTTPIngressPath{
 				Path: endpoint.Path,
 				Backend: v1beta1.IngressBackend{
-					ServiceName: serviceName,
+					ServiceName: service.Name,
 					ServicePort: intstr.IntOrString{IntVal: port.ExposedPort},
 				},
 			}
@@ -75,11 +74,11 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 	}
 
 	if len(paths) == 0 {
-		log.Debug().Str("serviceId", serviceId).Msg("service does not contain any paths")
+		log.Debug().Str("serviceId", service.ServiceId).Msg("service does not contain any paths")
 		return nil
 	}
 
-	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", serviceName, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
+	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", service.Name, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -87,7 +86,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:      fmt.Sprintf("ingress-%s", serviceId),
+			Name:      fmt.Sprintf("ingress-%s", service.ServiceId),
 			Namespace: di.data.Namespace,
 			Labels: map[string]string{
 				"cluster":   "application",
@@ -97,16 +96,16 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : di.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : di.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : di.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : di.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : di.data.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
 			},
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
-				"organizationId":              organizationId,
+				"organizationId":              service.OrganizationId,
 				"appInstanceId":			   di.data.AppInstanceId,
-				"serviceId":                   serviceId,
+				"serviceId":                   service.ServiceId,
 				"portName":                    port.Name,
 			},
 		},
@@ -129,7 +128,7 @@ func (di *DeployableIngress) getHTTPIngress(organizationId string, serviceId str
 func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.ServiceInstance) []*v1beta1.Ingress {
 	ingresses := make([]*v1beta1.Ingress, 0)
 	for _, p := range service.ExposedPorts {
-		toAdd := di.getHTTPIngress(service.OrganizationId, service.ServiceId, service.ServiceInstanceId, service.Name, p)
+		toAdd := di.getHTTPIngress(service, p)
 		if toAdd != nil{
 			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
 			ingresses = append(ingresses, toAdd)
@@ -163,7 +162,11 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", ingresses.ServiceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.data, ingresses.ServiceId, ingresses.ServiceInstanceId, "")
+			//res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.data, ingresses.ServiceId, ingresses.ServiceInstanceId, "")
+			res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+				created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+				created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
+				created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
 			controller.AddMonitoredResource(&res)
 		}
 	}

@@ -56,6 +56,8 @@ func GetConfigMapPath(mountPath string) (string, string) {
 	return mountPath [0: index + 1], mountPath [index + 1: ]
 }
 
+/*
+// TODO this code seems to be unused. Remove it if proceeds
 func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInstanceId string, cf *grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating config map...")
 	_, file := GetConfigMapPath(cf.MountPath)
@@ -84,8 +86,9 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInsta
 		},
 	}
 }
+*/
 
-func (dc* DeployableConfigMaps) generateConsolidateConfigMap(serviceId string, serviceInstanceId string, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
+func (dc* DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_application_go.ServiceInstance, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating consolidate config map...")
 
 	if len(cf) == 0{
@@ -104,17 +107,17 @@ func (dc* DeployableConfigMaps) generateConsolidateConfigMap(serviceId string, s
 			APIVersion: "v1",
 		},
 		ObjectMeta: v12.ObjectMeta{
-			Name:      fmt.Sprintf("config-map-%s-%s", serviceId, serviceInstanceId),
+			Name:      fmt.Sprintf("config-map-%s-%s", service.ServiceId, service.ServiceInstanceId),
 			Namespace: dc.data.Namespace,
 			Labels:    map[string]string{
 				utils.NALEJ_ANNOTATION_ORGANIZATION : dc.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : dc.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : dc.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : dc.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : dc.data.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
 			},
 		},
 		BinaryData: binaryData,
@@ -125,7 +128,8 @@ func (dc* DeployableConfigMaps) generateConsolidateConfigMap(serviceId string, s
 
 func (dc *DeployableConfigMaps) Build() error {
 	for _, service := range dc.data.Stage.Services {
-		toAdd := dc.generateConsolidateConfigMap(service.ServiceId, service.ServiceInstanceId, service.Configs)
+		//toAdd := dc.generateConsolidateConfigMap(service.ServiceId, service.ServiceInstanceId, service.Configs)
+		toAdd := dc.generateConsolidateConfigMap(service, service.Configs)
 		if toAdd != nil {
 			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
 			dc.configmaps[service.ServiceId] = append(dc.configmaps[service.ServiceId], toAdd)
