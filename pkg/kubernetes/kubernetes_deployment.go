@@ -27,7 +27,7 @@ import (
 
 const (
     // Name of the Docker ZT agent image
-    ZTAgentImageName = "nalejops/zt-agent:v0.2.0"
+    ZTAgentImageName = "nalejpublic.azurecr.io/nalej/zt-agent:v0.2.0"
     // Prefix defining Nalej Services
     NalejServicePrefix = "NALEJ_SERV_"
     // Default imagePullPolicy
@@ -213,7 +213,7 @@ func(d *DeployableDeployments) Build() error {
                         ImagePullSecrets: []apiv1.LocalObjectReference{
                           {
                             Name: DefaultNalejPublicRegistry,
-                          }  ,
+                          },
                         },
                         Containers: []apiv1.Container{
                             // User defined container
@@ -330,11 +330,10 @@ func(d *DeployableDeployments) Build() error {
 
         if service.Credentials != nil {
             log.Debug().Msg("Adding credentials to the deployment")
-            deployment.Spec.Template.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+            deployment.Spec.Template.Spec.ImagePullSecrets = append(deployment.Spec.Template.Spec.ImagePullSecrets,
                 apiv1.LocalObjectReference{
                     Name: service.ServiceId,
-                },
-            }
+                })
         }
 
         if service.RunArguments != nil {
@@ -517,7 +516,11 @@ func(d *DeployableDeployments) Build() error {
                                 },
                             },
                         },
-
+						ImagePullSecrets: []apiv1.LocalObjectReference{
+							{
+								Name: DefaultNalejPublicRegistry,
+							},
+						},
                         Volumes: []apiv1.Volume{
                             // zerotier sidecar volume
                             {
