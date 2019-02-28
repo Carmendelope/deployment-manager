@@ -22,10 +22,18 @@ import (
 	coreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+const (
+	STORAGE_CLASS_AZURE_CLUSTER_LOCAL =    "managed-premium"
+	STORAGE_CLASS_AZURE_CLUSTER_REPLICA =  "managed-premium"
+	STORAGE_CLASS_NALEJ_CLUSTER_LOCAL =    "nalej-sc-local"
+	STORAGE_CLASS_NALEJ_CLUSTER_REPLICA =  "nalej-sc-local-replica"
+)
+
 type DeployableStorage struct {
 	client          coreV1.PersistentVolumeClaimInterface
 	data            entities.DeploymentMetadata
 	class    		string
+	nodes 			int
 	pvcs      		map[string][]*v1.PersistentVolumeClaim
 }
 
@@ -34,14 +42,16 @@ func NewDeployableStorage(
 	data entities.DeploymentMetadata) *DeployableStorage {
 
 	sc := ""
-		// get storage classs name based on the environment
-	switch(config.GetConfig().TargetPlatform) {
-	case grpc_installer_go.Platform_AZURE: sc = "managed-premium"
-	default: sc = ""
+	// get number of nodes in a cluster. Log message if storage type is "cluster replica" and nodes < 3
+	numNodes := 0
+	nodes, err := client.CoreV1().Nodes().List(metaV1.ListOptions{Limit:int64(3),})
+	if err == nil {
+		numNodes = len(nodes.Items)
 	}
 	return &DeployableStorage{
 		client:         client.CoreV1().PersistentVolumeClaims(data.Namespace),
 		data:           data,
+		nodes: 			numNodes,
 		class:			sc,
 		pvcs:           make(map[string][]*v1.PersistentVolumeClaim, 0),
 	}
@@ -50,7 +60,6 @@ func NewDeployableStorage(
 func (ds*DeployableStorage) GetId() string {
 	return ds.data.Stage.StageId
 }
-
 
 func (ds*DeployableStorage) generatePVC(storageId string, service *grpc_application_go.ServiceInstance,
 	storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
@@ -88,6 +97,38 @@ func (ds*DeployableStorage) generatePVC(storageId string, service *grpc_applicat
 	}
 }
 
+//This function returns the storage class name based on the storage type and cluster environment
+func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageType) string{
+    sc := ""
+    // Get the right class based on cluster hosting environment
+    switch(config.GetConfig().TargetPlatform) {
+    case grpc_installer_go.Platform_AZURE:
+          // use azure provided storage class. By default managed-premium is local replicated PVs
+          // TODO: if we want we can create nalej storage class for azure to allocate PVs from non replicated pool
+        switch(stype) {
+        case grpc_application_go.StorageType_CLUSTER_LOCAL:
+            sc = STORAGE_CLASS_AZURE_CLUSTER_LOCAL
+        case grpc_application_go.StorageType_CLUSTER_REPLICA:
+            sc = STORAGE_CLASS_AZURE_CLUSTER_REPLICA
+        default: sc = ""
+        }
+    case grpc_installer_go.Platform_MINIKUBE:
+        switch(stype) {
+        case grpc_application_go.StorageType_CLUSTER_LOCAL:
+            sc = STORAGE_CLASS_NALEJ_CLUSTER_LOCAL
+        case grpc_application_go.StorageType_CLUSTER_REPLICA:
+        	if ds.nodes < 3 {
+				log.Debug().Interface("Nodes",ds.nodes ).Msg("Less than minimum 3 required for Storage Type CLUSTER_REPLICA")
+			}
+            sc = STORAGE_CLASS_NALEJ_CLUSTER_REPLICA
+        default: sc = ""
+        }
+    default:
+        sc = ""
+    }
+    return sc
+}
+
 // This function returns an array in case we support other Secrets in the future.
 func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go.ServiceInstance) []*v1.PersistentVolumeClaim {
 	if service.Storage == nil{
@@ -99,14 +140,17 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		// TODO: Currently handle only cluster_local type, other types in plan phase.
-		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL {
+		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL && storage.Type != grpc_application_go.StorageType_CLUSTER_REPLICA{
 			// TODO:Ideally we should return error and user should know why
 			log.Error().Str("serviceName", service.Name).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
 			// service will fail if we continue, as no PVC can be bound
 			continue
 		}
+		ds.class = ds.GetStorageClass(storage.Type)
 		if ds.class == "" {
-			log.Error().Str("serviceName", service.Name).Interface("targetPlatform", config.GetConfig().TargetPlatform).Msg("not supported ")
+
+			log.Error().Str("serviceName", service.Name).Str("storage type: ", grpc_application_go.StorageType_name[int32(storage.Type)]).Str("or cluster environment: ",
+				grpc_installer_go.Platform_name[int32(config.GetConfig().TargetPlatform)]).Msg("not supported ")
 			continue
 		}
 		// construct PVC ID - based on serviceId and storage Index
@@ -120,8 +164,6 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 	}
 	return nil
 }
-
-
 
 // storage should be build only once when platform application cluster modules are deployed.
 func (ds*DeployableStorage) Build() error {
