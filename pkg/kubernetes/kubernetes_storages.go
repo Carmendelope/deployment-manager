@@ -61,7 +61,7 @@ func (ds*DeployableStorage) GetId() string {
 	return ds.data.Stage.StageId
 }
 
-func (ds*DeployableStorage) generatePVC(storageId string, serviceInstanceId string,
+func (ds*DeployableStorage) generatePVC(storageId string, service *grpc_application_go.ServiceInstance,
 	storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
 
 
@@ -83,9 +83,9 @@ func (ds*DeployableStorage) generatePVC(storageId string, serviceInstanceId stri
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : storageId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
 			},
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
@@ -155,7 +155,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 		}
 		// construct PVC ID - based on serviceId and storage Index
 		pvcId := common.GeneratePVCName(service.ServiceGroupInstanceId,service.ServiceId,fmt.Sprintf("%d",index))
-		toAdd := ds.generatePVC(pvcId, service.ServiceInstanceId, storage)
+		toAdd := ds.generatePVC(pvcId, service, storage)
 		pvcs = append(pvcs, toAdd)
 	}
 	log.Debug().Interface("number", len(pvcs)).Str("serviceName", service.Name).Msg("Storage prepared for service")

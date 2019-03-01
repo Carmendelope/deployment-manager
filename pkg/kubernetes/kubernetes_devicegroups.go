@@ -87,8 +87,8 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 				utils.NALEJ_ANNOTATION_SECURITY_RULE_ID : sr.RuleId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : sr.TargetServiceId,
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : sr.TargetServiceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
+				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
+				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_PURPOSE : utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE,
 			},
 		},
@@ -101,8 +101,8 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 				utils.NALEJ_ANNOTATION_STAGE_ID : d.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : sr.TargetServiceId,
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : sr.TargetServiceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
+				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
+				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
 			},
 			Type: serviceType,
 		},
@@ -136,7 +136,11 @@ func (d *DeployableDeviceGroups) Deploy(controller executor.DeploymentController
 		log.Debug().Str("uid",string(created.GetUID())).
 			Str("name", servInfo.Service.Name).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
-		res := entities.NewMonitoredPlatformResource(string(created.GetUID()), d.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+		//res := entities.NewMonitoredPlatformResource(string(created.GetUID()), d.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+		res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+			created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
+			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
 		controller.AddMonitoredResource(&res)
 	}
 	return nil

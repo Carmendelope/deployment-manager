@@ -257,12 +257,12 @@
   version = "v0.0.30"
 
 [[projects]]
-  digest = "1:39ef0eed8c1382463c61b729277ca7af9ffc33fcd13984c2fa5bef117ee8b297"
+  digest = "1:a54a4bb061fd1d11bd13432083767c36bdf5cc70ab98a0b095eafdfc3e5c0b47"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
   pruneopts = ""
-  revision = "53542e1b0bebd1506ffb43fa366047127ef0f2c7"
-  version = "v0.0.84"
+  revision = "6e757fc6dd788ad6e55332f8bc1645b2dd415faa"
+  version = "v0.0.85"
 
 [[projects]]
   digest = "1:b5b80ed95a3c9ddcf0abb3de9c81dbf006686995dccc135ec9f7c3d26278a897"

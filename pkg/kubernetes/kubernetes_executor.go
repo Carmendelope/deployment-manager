@@ -103,23 +103,27 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
         return nil, errors.New("impossible to find the corresponding events controller")
     }
 
+    if !namespaceDeployable.exists() {
+        log.Debug().Str("namespace", metadata.Namespace).Msg("create namespace...")
+        // TODO Check if namespace already exists...
+        err = namespaceDeployable.Deploy(controller)
+        if err != nil {
+            log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
+            return nil,err
+        }
+        log.Debug().Str("namespace", metadata.Namespace).Msg("namespace... created")
 
-    err = namespaceDeployable.Deploy(controller)
-    if err != nil {
-        log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
-        return nil,err
-    }
-
-    // NP-766. create the nalej-public-registry on the user namespace
-    nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
-    err = nalejSecret.Build()
-    if err != nil {
-        log.Error().Err(err).Msg("impossible to build nalej-public-registry")
-    }
-    err = nalejSecret.Deploy(controller)
-    if err != nil {
-        log.Error().Err(err).Msg("impossible to deploy nalej-public-registry")
-        return nil,err
+        // NP-766. create the nalej-public-registry on the user namespace
+        nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
+        err = nalejSecret.Build()
+        if err != nil {
+            log.Error().Err(err).Msg("impossible to build nalej-public-registry secret")
+        }
+        err = nalejSecret.Deploy(controller)
+        if err != nil {
+            log.Error().Err(err).Msg("impossible to deploy nalej-public-registry secret")
+            return nil,err
+        }
     }
 
     var toReturn executor.Deployable
@@ -167,10 +171,10 @@ func (k *KubernetesExecutor) AddEventsController(namespace string, monitored mon
 
     k.mu.Lock()
     defer k.mu.Unlock()
-    _, found := k.Controllers[namespace]
+    retrievedController, found := k.Controllers[namespace]
     if found {
-        log.Error().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
-        return nil
+        log.Warn().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
+        return retrievedController
     }
     k.Controllers[namespace] = k8sController
     log.Debug().Interface("controllers", k.Controllers).Msg("added a new events controller")

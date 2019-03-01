@@ -50,8 +50,6 @@ func(n *DeployableNamespace) Build() error {
                 utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : n.data.AppDescriptorId,
                 utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : n.data.AppInstanceId,
                 utils.NALEJ_ANNOTATION_STAGE_ID : n.data.Stage.StageId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : n.data.ServiceGroupId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : n.data.ServiceGroupInstanceId,
             },
         },
     }

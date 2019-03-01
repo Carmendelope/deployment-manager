@@ -217,13 +217,9 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     if !found {
         log.Warn().Str("appInstanceID", appInstanceID).Str("seviceInstanceId", serviceInstanceId).Str("resource uid", uid).
             Msg("resource was not added before setting a new status. We add it now")
-        metadata := entities.DeploymentMetadata{
-            AppDescriptorId: service.AppDescriptorId,
-            AppInstanceId: service.AppInstanceId,
-            ServiceGroupId: service.ServiceGroupId,
-            ServiceGroupInstanceId: service.ServiceGroupInstanceId,
-        }
-        newResource := entities.NewMonitoredPlatformResource(uid, metadata, appInstanceID,serviceInstanceId, info)
+
+        newResource := entities.NewMonitoredPlatformResource(uid, service.AppDescriptorId, service.AppInstanceId,
+            service.ServiceGroupId, service.ServiceGroupInstanceId, service.ServiceID, service.ServiceInstanceID, info)
         service.AddPendingResource(&newResource)
         resource = service.Resources[uid]
     }

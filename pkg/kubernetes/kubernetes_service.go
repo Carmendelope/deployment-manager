@@ -64,8 +64,8 @@ func(s *DeployableServices) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = s.data.Stage.StageId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
-        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = s.data.ServiceGroupId
-        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = s.data.ServiceGroupInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
+        extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
         ports := getServicePorts(service.ExposedPorts)
         if ports!=nil{
             k8sService := apiv1.Service{
@@ -98,8 +98,8 @@ func(s *DeployableServices) Build() error {
                 utils.NALEJ_ANNOTATION_STAGE_ID : s.data.Stage.StageId,
                 utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
                 utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : s.data.ServiceGroupId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : s.data.ServiceGroupInstanceId,
+                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
+                utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
             }
 
             ztServiceName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
@@ -144,7 +144,11 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
         }
         log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",s.data.AppInstanceId).
             Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
-        res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+        //res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+        res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+            created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+            created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
+            created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
         controller.AddMonitoredResource(&res)
     }
 
@@ -158,7 +162,11 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
         }
         log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",s.data.AppInstanceId).
             Str("serviceID", servInfo.ServiceId).Msg("add zt-agent service resource to be monitored")
-        res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+        //res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+        res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+            created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+            created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
+            created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
         controller.AddMonitoredResource(&res)
     }
     return nil

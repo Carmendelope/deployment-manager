@@ -18,6 +18,7 @@ var _ = ginkgo.Describe("Kubernetes ConfigMap tests", func() {
 	var client *DeployableConfigMaps
 	var deploymentClient *DeployableDeployments
 	var configFiles []*grpc_application_go.ConfigFile
+	var service *grpc_application_go.ServiceInstance
 
 	ginkgo.BeforeSuite(func() {
 		log.Debug().Msg("BeforeSuite")
@@ -54,7 +55,9 @@ var _ = ginkgo.Describe("Kubernetes ConfigMap tests", func() {
 	ginkgo.It("Should be able to create a configMap", func() {
 		log.Debug().Msg("IT")
 
-		config := client.generateConsolidateConfigMap("service_id", "service_instance_id", configFiles)
+		service = &grpc_application_go.ServiceInstance{Name:"service_id"}
+
+		config := client.generateConsolidateConfigMap(service, configFiles)
 		gomega.Expect(len(config.BinaryData)).Should(gomega.Equal(len(configFiles)))
 
 		volumes, volumesMount := deploymentClient.generateAllVolumes("service_id", "service_instance_id", configFiles)

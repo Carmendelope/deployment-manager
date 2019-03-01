@@ -95,8 +95,6 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         ZtNetworkId: request.ZtNetworkId,
         OrganizationName: request.Fragment.OrganizationName,
         OrganizationId: request.Fragment.OrganizationId,
-        ServiceGroupId: request.Fragment.ServiceGroupId,
-        ServiceGroupInstanceId: request.Fragment.ServiceGroupInstanceId,
         DeploymentId: request.Fragment.DeploymentId,
         AppName: request.Fragment.AppName,
         NalejVariables: request.Fragment.NalejVariables,

@@ -56,28 +56,28 @@ func (ds*DeployableSecrets) getDockerConfigJSON(ic *grpc_application_go.ImageCre
 	return toEncode
 }
 
-func (ds*DeployableSecrets) generateDockerSecret(serviceId string, serviceInstanceId string, ic *grpc_application_go.ImageCredentials) *v1.Secret {
+func (ds*DeployableSecrets) generateDockerSecret(service *grpc_application_go.ServiceInstance) *v1.Secret {
 	return &v1.Secret{
 		TypeMeta:   v12.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
 		ObjectMeta: v12.ObjectMeta{
-			Name:         serviceId,
+			Name:         service.Name,
 			Namespace:    ds.data.Namespace,
 			Labels: map[string]string {
 				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
 			},
 		},
 		Data: map[string][]byte{
-			".dockerconfigjson": []byte(ds.getDockerConfigJSON(ic)),
+			".dockerconfigjson": []byte(ds.getDockerConfigJSON(service.Credentials)),
 		},
 		Type: v1.SecretTypeDockerConfigJson,
 	}
@@ -104,8 +104,6 @@ func (ds *DeployableSecrets) generatePlanetSecret (namespace string) *v1.Secret 
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
 				utils.NALEJ_ANNOTATION_STAGE_ID : ds.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : ds.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : ds.data.ServiceGroupInstanceId,
 			},
 		},
 		Data: map[string][]byte{
@@ -120,7 +118,7 @@ func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.
 	if service.Credentials == nil{
 		return nil
 	}
-	dockerSecret := ds.generateDockerSecret(service.ServiceId, service.ServiceInstanceId, service.Credentials)
+	dockerSecret := ds.generateDockerSecret(service)
 	result := []*v1.Secret{dockerSecret}
 	log.Debug().Interface("number", len(result)).Str("serviceName", service.Name).Msg("Secrets prepared for service")
 	return result
