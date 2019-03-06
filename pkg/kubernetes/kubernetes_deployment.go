@@ -166,9 +166,6 @@ func (d *DeployableDeployments) generateAllVolumes (serviceId string, serviceIns
 
 func(d *DeployableDeployments) Build() error {
 
-    //deployments:= make(map[string]appsv1.Deployment,0)
-    //agents:= make(map[string]appsv1.Deployment,0)
-
     for serviceIndex, service := range d.data.Stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d", service.ServiceId,serviceIndex+1,len(d.data.Stage.Services))
 
@@ -176,7 +173,10 @@ func(d *DeployableDeployments) Build() error {
         user0 := int64(0)
         privilegedUser := &user0
 
-        extendedLabels := service.Labels
+        extendedLabels := make(map[string]string, 0)
+        for k, v := range service.Labels {
+            extendedLabels[k] = v
+        }
         extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = d.data.OrganizationId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.data.AppDescriptorId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.data.AppInstanceId

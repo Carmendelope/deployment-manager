@@ -6,6 +6,7 @@ import (
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/extensions/v1beta1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,24 +16,24 @@ import (
 )
 
 type IngressesInfo struct {
-	ServiceId string
+	ServiceId         string
 	ServiceInstanceId string
-	Ingresses []*v1beta1.Ingress
+	Ingresses         []*v1beta1.Ingress
 }
 
 type DeployableIngress struct {
-	client                extV1Beta1.IngressInterface
-	data                  entities.DeploymentMetadata
-	ingresses             []IngressesInfo
+	client    extV1Beta1.IngressInterface
+	data      entities.DeploymentMetadata
+	ingresses []IngressesInfo
 }
 
 func NewDeployableIngress(
 	client *kubernetes.Clientset,
 	data entities.DeploymentMetadata) *DeployableIngress {
 	return &DeployableIngress{
-		client:          client.ExtensionsV1beta1().Ingresses(data.Namespace),
-		data:            data,
-		ingresses:       make([]IngressesInfo, 0),
+		client:    client.ExtensionsV1beta1().Ingresses(data.Namespace),
+		data:      data,
+		ingresses: make([]IngressesInfo, 0),
 	}
 }
 
@@ -40,7 +41,7 @@ func (di *DeployableIngress) GetId() string {
 	return di.data.Stage.StageId
 }
 
-func (di * DeployableIngress) GetIngressesEndpoints() map[string][]string{
+func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 	result := make(map[string][]string, 0)
 
 	for _, ings := range di.ingresses {
@@ -54,23 +55,34 @@ func (di * DeployableIngress) GetIngressesEndpoints() map[string][]string{
 	return result
 }
 
-func (di *DeployableIngress) getHTTPIngress(service *grpc_application_go.ServiceInstance, port *grpc_application_go.Port) *v1beta1.Ingress {
+func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
-	for _, endpoint := range port.Endpoints {
-		if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
-			toAdd := v1beta1.HTTPIngressPath{
-				Path: endpoint.Path,
-				Backend: v1beta1.IngressBackend{
-					ServiceName: service.Name,
-					ServicePort: intstr.IntOrString{IntVal: port.ExposedPort},
-				},
+	found := false
+	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
+		port := service.ExposedPorts[portIndex]
+		if port.ExposedPort == rule.TargetPort {
+			for portIndex := 0; portIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; portIndex ++ {
+				endpoint := service.ExposedPorts[portIndex].Endpoints[portIndex]
+				if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
+					toAdd := v1beta1.HTTPIngressPath{
+						Path: endpoint.Path,
+						Backend: v1beta1.IngressBackend{
+							ServiceName: service.Name,
+							ServicePort: intstr.IntOrString{IntVal: rule.TargetPort},
+						},
+					}
+					paths = append(paths, toAdd)
+					found = true
+				}
 			}
-			paths = append(paths, toAdd)
-		} else {
-			log.Warn().Interface("port", port).Msg("Ignoring endpoint, unsupported type")
 		}
+	}
+
+	if !found {
+		log.Warn().Str("serviceId", service.ServiceId).Msg("rule mismatch for ingress definition")
+		return nil
 	}
 
 	if len(paths) == 0 {
@@ -78,7 +90,12 @@ func (di *DeployableIngress) getHTTPIngress(service *grpc_application_go.Service
 		return nil
 	}
 
-	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", service.Name, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
+	ingressName := service.Name
+	if rule.TargetPort != 80 {
+		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
+	}
+
+	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", ingressName, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -86,27 +103,26 @@ func (di *DeployableIngress) getHTTPIngress(service *grpc_application_go.Service
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:      fmt.Sprintf("ingress-%s", service.ServiceId),
+			Name:      fmt.Sprintf("ingress-%s-%d", service.ServiceId, rule.TargetPort),
 			Namespace: di.data.Namespace,
 			Labels: map[string]string{
-				"cluster":   "application",
-				"component": "ingress-nginx",
-				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:  ingressHostname,
-				utils.NALEJ_ANNOTATION_ORGANIZATION : di.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : di.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : di.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID : di.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
+				"cluster":                                        "application",
+				"component":                                      "ingress-nginx",
+				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:          ingressHostname,
+				utils.NALEJ_ANNOTATION_ORGANIZATION:              di.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            di.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           di.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:                  di.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID:                service.ServiceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
 			},
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",
 				"organizationId":              service.OrganizationId,
-				"appInstanceId":			   di.data.AppInstanceId,
+				"appInstanceId":               di.data.AppInstanceId,
 				"serviceId":                   service.ServiceId,
-				"portName":                    port.Name,
 			},
 		},
 		Spec: v1beta1.IngressSpec{
@@ -124,28 +140,27 @@ func (di *DeployableIngress) getHTTPIngress(service *grpc_application_go.Service
 	}
 }
 
-// TODO Check the rules to build the Ingresses.
-func (di *DeployableIngress) BuildIngressesForService(service *grpc_application_go.ServiceInstance) []*v1beta1.Ingress {
-	ingresses := make([]*v1beta1.Ingress, 0)
-	for _, p := range service.ExposedPorts {
-		toAdd := di.getHTTPIngress(service, p)
-		if toAdd != nil{
-			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
-			ingresses = append(ingresses, toAdd)
-		}
-	}
-	log.Debug().Int("number", len(ingresses)).Str("serviceName", service.Name).Msg("Ingresses prepared for service")
-	return ingresses
-}
 
+
+
+// TODO Check the rules to build the Ingresses.
 func (di *DeployableIngress) Build() error {
-	for _, service := range di.data.Stage.Services {
-		toAdd := di.BuildIngressesForService(service)
-		if toAdd != nil && len(toAdd) > 0 {
-			built := di.BuildIngressesForService(service)
-			di.ingresses = append(di.ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, built})
+	log.Debug().Int("number public rules", len(di.data.Stage.PublicRules)).Msg("Building ingresses")
+
+	for _, publicRule := range di.data.Stage.PublicRules {
+		log.Debug().Interface("rule", publicRule).Msg("Checking public rule")
+		for _, service := range di.data.Stage.Services {
+			log.Debug().Interface("service", service).Msg("Checking service for public ingress")
+			if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
+				toAdd := di.BuildIngressesForServiceWithRule(service, publicRule)
+				if toAdd != nil {
+					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
+					di.ingresses = append(di.ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, []*v1beta1.Ingress{toAdd}})
+				}
+			}
 		}
 	}
+
 	log.Debug().Interface("Ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
 	return nil
 }
@@ -162,7 +177,6 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", ingresses.ServiceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			//res := entities.NewMonitoredPlatformResource(string(created.GetUID()), di.data, ingresses.ServiceId, ingresses.ServiceInstanceId, "")
 			res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
 				created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
 				created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
@@ -175,7 +189,6 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 
 func (di *DeployableIngress) Undeploy() error {
 	deleted := 0
-	//for serviceId, ingresses := range di.ingresses {
 	for _, ingresses := range di.ingresses {
 		for _, toDelete := range ingresses.Ingresses {
 			err := di.client.Delete(toDelete.Name, metaV1.NewDeleteOptions(DeleteGracePeriod))
