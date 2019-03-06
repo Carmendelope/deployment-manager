@@ -166,9 +166,6 @@ func (d *DeployableDeployments) generateAllVolumes (serviceId string, serviceIns
 
 func(d *DeployableDeployments) Build() error {
 
-    //deployments:= make(map[string]appsv1.Deployment,0)
-    //agents:= make(map[string]appsv1.Deployment,0)
-
     for serviceIndex, service := range d.data.Stage.Services {
         log.Debug().Msgf("build deployment %s %d out of %d", service.ServiceId,serviceIndex+1,len(d.data.Stage.Services))
 
