@@ -13,16 +13,16 @@ import (
     "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     "github.com/rs/zerolog/log"
     appsv1 "k8s.io/api/apps/v1"
     apiv1 "k8s.io/api/core/v1"
+    "k8s.io/apimachinery/pkg/api/resource"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/kubernetes/typed/apps/v1"
-    "k8s.io/apimachinery/pkg/api/resource"
     "strings"
-    "github.com/nalej/grpc-application-go"
 )
 
 const (
@@ -173,10 +173,14 @@ func(d *DeployableDeployments) Build() error {
         user0 := int64(0)
         privilegedUser := &user0
 
-        extendedLabels := make(map[string]string, 0)
-        for k, v := range service.Labels {
-            extendedLabels[k] = v
+        var extendedLabels map[string]string
+        if service.Labels != nil {
+            // users have already defined labels for this app
+            extendedLabels = service.Labels
+        } else {
+            extendedLabels = make(map[string]string,0)
         }
+
         extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = d.data.OrganizationId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.data.AppDescriptorId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.data.AppInstanceId
