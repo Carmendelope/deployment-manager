@@ -124,6 +124,8 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
             log.Error().Err(err).Msg("impossible to deploy nalej-public-registry secret")
             return nil,err
         }
+    } else {
+        log.Debug().Str("namespace", metadata.Namespace).Msg("namespace already exists... skip")
     }
 
     var toReturn executor.Deployable

@@ -9,6 +9,7 @@ package service
 import (
     "crypto/tls"
     "fmt"
+    "github.com/nalej/deployment-manager/internal/structures"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/handler"
@@ -105,12 +106,18 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     log.Info().Msg("start monitor helper service...")
     monitorService := monitor2.NewMonitorHelper(clusterAPIConn,clusterAPILoginHelper, instanceMonitor)
     go monitorService.Run()
-    log.Info().Msg("Done")
+    log.Info().Msg("done")
 
     nalejDNSForPods := strings.Split(cfg.DNS, ",")
     nalejDNSForPods = append(nalejDNSForPods, "8.8.8.8")
+
+    // Instantiate a memory queue for requests
+    requestsQueue := structures.NewMemoryRequestQueue()
     // Instantiate deployment manager service
-    mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, nalejDNSForPods, instanceMonitor, cfg.PublicCredentials)
+    log.Info().Msg("star deployment requests manager")
+    mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, requestsQueue, nalejDNSForPods, instanceMonitor, cfg.PublicCredentials)
+    go mgr.Run()
+    log.Info().Msg("done")
 
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)
