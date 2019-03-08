@@ -35,22 +35,14 @@ func (h *Handler) Execute(context context.Context, request *pbDeploymentMgr.Depl
 		return nil, theError
 	}
 
-	go h.triggerExecute(request)
+	// Execute operation will take control now in an asynchronous manner
+	h.m.Execute(request)
 
 	response := pbDeploymentMgr.DeploymentFragmentResponse{RequestId: request.RequestId, Status: pbApplication.ApplicationStatus_DEPLOYING}
 	return &response, nil
 }
 
 
-// It processes the execution of a request in a parallel thread and updates the fragment status accordingly.
-func (h * Handler) triggerExecute(request *pbDeploymentMgr.DeploymentFragmentRequest) {
-	log.Debug().Str("requestId", request.RequestId).Str("fragmentId", request.Fragment.FragmentId).Msg("triggerExecute starts")
-	err := h.m.Execute(request)
-	if err != nil {
-		log.Error().Err(err).Str("requestId", request.RequestId).Msg("failed to execute fragment request")
-	}
-	log.Debug().Str("requestId", request.RequestId).Str("fragmentId", request.Fragment.FragmentId).Msg("triggerExecute finishes")
-}
 
 func (h *Handler) Undeploy(context context.Context, request *pbDeploymentMgr.UndeployRequest) (*grpc_common_go.Success, error) {
 	log.Debug().Interface("request", request).Msg("requested to undeploy application")

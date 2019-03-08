@@ -232,7 +232,6 @@
   revision = "7769cdfff318a31f0cfef2c42b41a91960a626d6"
   version = "v0.0.55"
 
-
 [[projects]]
   digest = "1:04ab94c90e7bce3f0ccf049c17c4c784da6819bca629e6ea98dcfe1f9b3a7f7a"
   name = "github.com/nalej/grpc-authx-go"
@@ -419,6 +418,14 @@
   pruneopts = ""
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:584219e6e873752f446a81bd0b6fb21b897c120a6bddc30b1482c11ca6ee0492"
+  name = "github.com/phf/go-queue"
+  packages = ["queue"]
+  pruneopts = ""
+  revision = "9abe38d0371deb4049011737cbd30e4ba80c673b"
 
 [[projects]]
   digest = "1:36de4f001b7f3fca448ba85270a4de8854f5abcb97d02d57be7fd6fc4a39d259"
@@ -855,6 +862,7 @@
     "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
+    "github.com/phf/go-queue/queue",
     "github.com/rs/zerolog",
     "github.com/rs/zerolog/log",
     "github.com/spf13/cobra",

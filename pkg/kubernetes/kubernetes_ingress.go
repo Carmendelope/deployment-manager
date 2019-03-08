@@ -62,9 +62,10 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 	found := false
 	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
 		port := service.ExposedPorts[portIndex]
-		if port.ExposedPort == rule.TargetPort {
-			for portIndex := 0; portIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; portIndex ++ {
-				endpoint := service.ExposedPorts[portIndex].Endpoints[portIndex]
+		if port.ExposedPort == rule.TargetPort && port.Endpoints != nil {
+			//for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex ++ {
+			for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex ++ {
+				endpoint := service.ExposedPorts[endpointIndex].Endpoints[endpointIndex]
 				if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
 					toAdd := v1beta1.HTTPIngressPath{
 						Path: endpoint.Path,

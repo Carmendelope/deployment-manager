@@ -155,6 +155,7 @@ func (ds*DeployableSecrets) Deploy(controller executor.DeploymentController) err
 	}
 
 	_, planetCheck := ds.client.Get(ZTPlanetSecretName, metaV1.GetOptions{})
+
 	if  planetCheck != nil {
 		_, err := ds.client.Create(ds.planetSecret)
 		if err != nil {
@@ -162,11 +163,11 @@ func (ds*DeployableSecrets) Deploy(controller executor.DeploymentController) err
 			return err
 		}
 		log.Debug().Int("created", numCreated).Msg("Secrets have been created")
-		return nil
 	} else {
-		log.Error().Err(planetCheck).Interface("toCreate", ds.planetSecret).Msg("cannot create planet secret")
-		return planetCheck
+		log.Warn().Err(planetCheck).Interface("toCreate", ds.planetSecret).Msg("planet secret already created")
 	}
+
+	return nil
 }
 
 func (ds*DeployableSecrets) Undeploy() error {

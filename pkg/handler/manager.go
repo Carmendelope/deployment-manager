@@ -9,6 +9,7 @@ import (
     "errors"
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
+    "github.com/nalej/deployment-manager/internal/structures"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
@@ -34,6 +35,8 @@ const (
     StageCheckTime = 10
     // Checkout time after a stage is considered to be failed
     StageCheckTimeout = 240
+    // Time to wait between checks in the queue in milliseconds.
+    CheckQueueSleepTime = 2000
 )
 
 
@@ -48,6 +51,8 @@ type Manager struct {
     dnsHosts []string
     // Structure controlling monitored instances
     monitored monitor.MonitoredInstances
+    // Requests queue
+    queue structures.RequestsQueue
     // Config
     PublicCredentials grpc_application_go.ImageCredentials
 }
@@ -55,6 +60,7 @@ type Manager struct {
 func NewManager(
     executor *executor.Executor,
     clusterPublicHostname string,
+    queue structures.RequestsQueue,
     dnsHosts []string, monitored monitor.MonitoredInstances,
     publicCredentials grpc_application_go.ImageCredentials) *Manager {
         return &Manager{
@@ -62,13 +68,26 @@ func NewManager(
         clusterPublicHostname: clusterPublicHostname,
         dnsHosts: dnsHosts,
         monitored: monitored,
+        queue: queue,
         PublicCredentials: publicCredentials,
     }
 }
 
 
+func(m *Manager) Run() {
+    sleep := time.Tick(time.Millisecond * CheckQueueSleepTime)
+    for {
+        select {
+        case <- sleep:
+            for m.queue.AvailableRequests() {
+                log.Info().Int("queued requests", m.queue.Len()).Msg("there are pending deployment requests")
+                m.processRequest(m.queue.NextRequest())
+            }
+        }
+    }
+}
 
-func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
+func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
     log.Debug().Msgf("execute plan with id %s",request.RequestId)
     // Compute the namespace for this deployment
     namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
@@ -112,11 +131,16 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         log.Error().Err(executionError).Msgf("failed environment preparation for fragment %s",
             request.Fragment.FragmentId)
         log.Info().Msgf("undeploy deployments for preparation in fragment %s",request.Fragment.FragmentId)
-        executionError = preDeployable.Undeploy()
-        if executionError != nil {
-            log.Error().Err(executionError).Msgf("impossible to undeploy preparation for fragment %s",
-                request.Fragment.FragmentId)
+        if preDeployable != nil {
+            executionError = preDeployable.Undeploy()
+            if executionError != nil {
+                log.Error().Err(executionError).Msgf("impossible to undeploy preparation for fragment %s",
+                    request.Fragment.FragmentId)
+            }
+        } else {
+            log.Info().Msg("there is no information to undeploy the object!!")
         }
+
         m.monitored.SetAppStatus(request.Fragment.AppInstanceId, entities.FRAGMENT_ERROR,executionError)
         return errors.New(fmt.Sprintf("failed environment preparation for fragment %s",
             request.Fragment.FragmentId))
@@ -145,18 +169,18 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         m.monitored.AddApp(monitoringData)
 
         switch request.RollbackPolicy {
-            case pbDeploymentMgr.RollbackPolicy_NONE:
-                log.Info().Msgf("rollback policy was set to %s, stop any deployment", request.RollbackPolicy)
-                executionError = m.deploymentLoopStage(request.Fragment, stage, deployable, namespace, NoRetries)
-            case pbDeploymentMgr.RollbackPolicy_ALWAYS_RETRY:
-                log.Info().Msgf("rollback policy was set to %s, retry until done", request.RollbackPolicy)
-                executionError = m.deploymentLoopStage(request.Fragment,stage, deployable, namespace, UnlimitedStageRetries)
-            case pbDeploymentMgr.RollbackPolicy_LIMITED_RETRY:
-                log.Info().Msgf("rollback policy was set to %s, retry limited times", request.RollbackPolicy)
-                executionError = m.deploymentLoopStage(request.Fragment, stage, deployable, namespace, MaxStageRetries)
-            default:
-                log.Warn().Msgf("unknown rollback policy %s, no rollback by default", request.RollbackPolicy)
-                executionError = m.deploymentLoopStage(request.Fragment, stage, deployable, namespace, NoRetries)
+        case pbDeploymentMgr.RollbackPolicy_NONE:
+            log.Info().Msgf("rollback policy was set to %s, stop any deployment", request.RollbackPolicy)
+            executionError = m.deploymentLoopStage(request.Fragment, stage, deployable, namespace, NoRetries)
+        case pbDeploymentMgr.RollbackPolicy_ALWAYS_RETRY:
+            log.Info().Msgf("rollback policy was set to %s, retry until done", request.RollbackPolicy)
+            executionError = m.deploymentLoopStage(request.Fragment,stage, deployable, namespace, UnlimitedStageRetries)
+        case pbDeploymentMgr.RollbackPolicy_LIMITED_RETRY:
+            log.Info().Msgf("rollback policy was set to %s, retry limited times", request.RollbackPolicy)
+            executionError = m.deploymentLoopStage(request.Fragment, stage, deployable, namespace, MaxStageRetries)
+        default:
+            log.Warn().Msgf("unknown rollback policy %s, no rollback by default", request.RollbackPolicy)
+            executionError = m.deploymentLoopStage(request.Fragment, stage, deployable, namespace, NoRetries)
         }
         if executionError != nil {
             log.Error().AnErr("error",executionError).Int("stageNumber",stageNumber).
@@ -176,6 +200,13 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
         log.Info().Msgf("executed fragment %s stage %d / %d",request.Fragment.FragmentId, stageNumber+1, len(request.Fragment.Stages))
     }
     return executionError
+}
+
+
+func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
+    // push the request to the queue
+    m.queue.PushRequest(request)
+    return nil
 }
 
 func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
