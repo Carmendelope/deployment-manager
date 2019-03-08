@@ -202,11 +202,11 @@ func(d *DeployableDeployments) Build() error {
             Spec: appsv1.DeploymentSpec{
                 Replicas: int32Ptr(service.Specs.Replicas),
                 Selector: &metav1.LabelSelector{
-                    MatchLabels: service.Labels,
+                    MatchLabels: extendedLabels,
                 },
                 Template: apiv1.PodTemplateSpec{
                     ObjectMeta: metav1.ObjectMeta{
-                        Labels: service.Labels,
+                        Labels: extendedLabels,
                     },
                     Spec: apiv1.PodSpec{
                         // Set POD DNS policies
@@ -402,7 +402,6 @@ func(d *DeployableDeployments) Build() error {
         ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
         ztAgentLabels := map[string]string{
             "agent": "zt-agent",
-            "app": service.Labels["app"],
         }
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
@@ -418,7 +417,6 @@ func(d *DeployableDeployments) Build() error {
                     utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
                     utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
                     "agent":                                    "zt-agent",
-                    "app":                                      service.Labels["app"],
                 },
             },
             Spec: appsv1.DeploymentSpec{

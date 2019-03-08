@@ -57,7 +57,8 @@ func(s *DeployableServices) Build() error {
     //ztServices := make(map[string]apiv1.Service,0)
     for serviceIndex, service := range s.data.Stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.data.Stage.Services))
-        extendedLabels := service.Labels
+
+        extendedLabels := make(map[string]string,0)
         extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = s.data.OrganizationId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = s.data.AppDescriptorId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = s.data.AppInstanceId
@@ -79,7 +80,7 @@ func(s *DeployableServices) Build() error {
                     Ports: ports,
                     // TODO remove by default we use clusterip.
                     Type: apiv1.ServiceTypeNodePort,
-                    Selector: service.Labels,
+                    Selector: extendedLabels,
                 },
             }
             //services[service.ServiceId] = k8sService
@@ -91,7 +92,6 @@ func(s *DeployableServices) Build() error {
             // Set a different set of labels to identify this agent
             ztAgentLabels := map[string]string {
                 "agent": "zt-agent",
-                "app": service.Labels["app"],
                 utils.NALEJ_ANNOTATION_ORGANIZATION : s.data.OrganizationId,
                 utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : s.data.AppDescriptorId,
                 utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : s.data.AppInstanceId,
