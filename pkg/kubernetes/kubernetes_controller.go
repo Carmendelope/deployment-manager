@@ -314,7 +314,7 @@ func checkDeployments(stored interface{}, pending monitor.MonitoredInstances){
         log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
             Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
-            Msg("set deployment new status to ready")
+            Msgf("set deployment new status to %s",foundStatus)
         pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] ,string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
     }
