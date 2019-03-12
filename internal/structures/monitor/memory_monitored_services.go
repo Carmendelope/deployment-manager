@@ -232,6 +232,10 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     }
 
     // Modify the status
+    // If this resource goes into a non-running state, we have a new pending check
+    if resource.Status == entities.NALEJ_SERVICE_RUNNING {
+        service.NumPendingChecks++
+    }
     resource.Status = status
     resource.Info = info
 
@@ -248,6 +252,8 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 
     // If this is running remove one check
     if resource.Status == entities.NALEJ_SERVICE_RUNNING {
+        log.Debug().Str("appInstanceID", appInstanceID).Str("serviceInstanceId", serviceInstanceId).Str("uid",uid).
+            Interface("status",status).Str("info",info).Msg("resource is running, stop monitoring it")
         service.RemovePendingResource(resource.UID)
     }
 
@@ -268,8 +274,14 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
         }
     }
     if finalStatus != previousStatus {
-        log.Debug().Str("serviceInstanceID", service.ServiceInstanceID).Interface("status",finalStatus).Msg("service changed status")
+        log.Debug().Str("serviceInstanceID", service.ServiceInstanceID).Interface("status",finalStatus).
+            Msg("service changed status")
         service.NewStatus = true
+        if previousStatus == entities.NALEJ_SERVICE_RUNNING {
+            // we have change the status but this service was already running monitor it again
+            log.Debug().Str("serviceInstanceID", service.ServiceInstanceID).Interface("status",finalStatus).
+                Msg("service stopped working, monitor it")
+        }
     }
 
     service.Status = finalStatus
