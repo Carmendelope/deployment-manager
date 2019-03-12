@@ -422,15 +422,20 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
         }
     }
 
-    if ready {
+    if ready && len(dep.Spec.Rules) > 0{
+
+        // Take the local cluster hostname.
+        hostname := dep.Spec.Rules[0].Host
+
         log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
             Str("uid", string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
             Msg("set ingress new status to ready")
+
         pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
             "", []entities.EndpointInstance{entities.EndpointInstance{
-                FQDN: dep.Labels[utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT],
+                FQDN: hostname,
                 EndpointInstanceId: string(dep.UID),
                 EndpointType: entities.ENDPOINT_TYPE_WEB,
             }})
