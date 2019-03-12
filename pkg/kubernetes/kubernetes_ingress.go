@@ -96,7 +96,9 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
 	}
 
-	ingressHostname := fmt.Sprintf("%s.%s.appcluster.%s", ingressName, di.data.AppInstanceId[0:5], di.data.ClusterPublicHostname)
+	// labels cannot be higher than 63 characters
+	ingressPrefixName := fmt.Sprintf("%s.%s.%s", ingressName, service.ServiceGroupInstanceId[0:6], di.data.AppInstanceId[0:6])
+	ingressHostname := fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, service.ServiceGroupInstanceId[0:6], di.data.AppInstanceId[0:6], di.data.ClusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -109,7 +111,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 			Labels: map[string]string{
 				"cluster":                                        "application",
 				"component":                                      "ingress-nginx",
-				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:          ingressHostname,
+				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:          ingressPrefixName,
 				utils.NALEJ_ANNOTATION_ORGANIZATION:              di.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            di.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           di.data.AppInstanceId,
