@@ -287,14 +287,6 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     service.Status = finalStatus
     service.Info = newServiceInfo
 
-    // update app status
-    // the update will be only done if all the services are under deployed
-    // get the worst status found in the services
-    //if len(app.Services) != app.TotalServices {
-    //    return
-    //}
-
-
     var newAppStatus entities.NalejServiceStatus
     newAppStatus = entities.NALEJ_SERVICE_RUNNING
     newAppInfo := app.Info
