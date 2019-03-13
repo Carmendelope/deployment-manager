@@ -30,6 +30,7 @@ spec:
         - "run"
         - "--local"
         - "--depMgrAddress=$(DEPLOYMENT_MANAGER_SERVICE_HOST):5200"
+        - "--managementHostname=$(MANAGEMENT_HOST)"
         - "--clusterAPIHostname=$(CLUSTER_API_HOST)"
         - "--clusterAPIPort=443"
         - "--useTLSForClusterAPI=true"
@@ -47,7 +48,7 @@ spec:
         - "--targetPlatform=$(PLATFORM_TYPE)"
         - "--debug"
         env:
-        - name: MANAGER_CLUSTER_IP
+        - name: MANAGEMENT_HOST
           valueFrom:
             configMapKeyRef:
               name: cluster-config

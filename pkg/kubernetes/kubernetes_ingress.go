@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
+	"github.com/nalej/deployment-manager/pkg/config"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
@@ -14,6 +15,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	extV1Beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 )
+
+const InstPrefixLength = 6
+const OrgPrefixLength = 8
 
 type IngressesInfo struct {
 	ServiceId         string
@@ -55,6 +59,27 @@ func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 	return result
 }
 
+
+func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string){
+	ingressName := service.Name
+	if rule.TargetPort != 80 {
+		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
+	}
+	serviceGroupInstPrefix := service.ServiceGroupInstanceId
+	if len(serviceGroupInstPrefix) > InstPrefixLength {
+		serviceGroupInstPrefix = serviceGroupInstPrefix[0:InstPrefixLength]
+	}
+	appInstPrefix := service.AppInstanceId
+	if len(appInstPrefix) > InstPrefixLength {
+		appInstPrefix = appInstPrefix[0:InstPrefixLength]
+	}
+	orgPrefix := di.data.OrganizationId
+	if len(orgPrefix) > OrgPrefixLength {
+		orgPrefix = orgPrefix[0:OrgPrefixLength]
+	}
+	return ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix
+}
+
 func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
@@ -91,14 +116,13 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		return nil
 	}
 
-	ingressName := service.Name
-	if rule.TargetPort != 80 {
-		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
-	}
+
+	ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix := di.getNamePrefixes(service, rule)
 
 	// labels cannot be higher than 63 characters
-	ingressPrefixName := fmt.Sprintf("%s.%s.%s", ingressName, service.ServiceGroupInstanceId[0:6], di.data.AppInstanceId[0:6])
-	ingressHostname := fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, service.ServiceGroupInstanceId[0:6], di.data.AppInstanceId[0:6], di.data.ClusterPublicHostname)
+	ingressPrefixName := fmt.Sprintf("%s.%s.%s", ingressName, serviceGroupInstPrefix, appInstPrefix)
+	ingressGlobalFqdn := fmt.Sprintf("%s.%s.%s.%s.ep.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix, config.GetConfig().ManagementHostname)
+	ingressHostname := fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, config.GetConfig().ClusterPublicHostname)
 
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
@@ -130,8 +154,18 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		},
 		Spec: v1beta1.IngressSpec{
 			Rules: []v1beta1.IngressRule{
+				// Ingress hostname with the DNS entry pointing to the application cluster.
 				{
 					Host: ingressHostname,
+					IngressRuleValue: v1beta1.IngressRuleValue{
+						HTTP: &v1beta1.HTTPIngressRuleValue{
+							Paths: paths,
+						},
+					},
+				},
+				// Ingress hostname with the DNS entry pointing to the global fqdn.
+				{
+					Host: ingressGlobalFqdn,
 					IngressRuleValue: v1beta1.IngressRuleValue{
 						HTTP: &v1beta1.HTTPIngressRuleValue{
 							Paths: paths,
