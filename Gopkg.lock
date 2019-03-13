@@ -177,12 +177,12 @@
   version = "v1.0"
 
 [[projects]]
-  digest = "1:b79fc583e4dc7055ed86742e22164ac41bf8c0940722dbcb600f1a3ace1a8cb5"
+  digest = "1:12d3de2c11e54ea37d7f00daf85088ad5e61ec4e8a1f828d6c8b657976856be7"
   name = "github.com/json-iterator/go"
   packages = ["."]
   pruneopts = ""
-  revision = "1624edc4454b8682399def8740d46db5e4362ba4"
-  version = "v1.1.5"
+  revision = "0ff49de124c6f76f8494e194af75bde0f1a49a29"
+  version = "v1.1.6"
 
 [[projects]]
   digest = "1:961dc3b1d11f969370533390fdf203813162980c858e1dabe827b60940c909a5"
@@ -225,12 +225,12 @@
   version = "v2.0.0"
 
 [[projects]]
-  digest = "1:0c0cfa282d99b03ba534ccbebaad2e7386058269c062348b22792849ab5adcb8"
+  digest = "1:0e27e6441c49745881710b61a48f481e1b66f7f9cbebd3850bd50053108adbf1"
   name = "github.com/nalej/grpc-application-go"
   packages = ["."]
   pruneopts = ""
-  revision = "79040c9131d9c20a205311bf565bc05b87e03a12"
-  version = "v0.0.58"
+  revision = "40f9143b49015d976f28c8eca34e69f9218a8214"
+  version = "v0.0.59"
 
 [[projects]]
   digest = "1:04ab94c90e7bce3f0ccf049c17c4c784da6819bca629e6ea98dcfe1f9b3a7f7a"
@@ -375,7 +375,7 @@
   version = "v1.8.0"
 
 [[projects]]
-  digest = "1:c8f0c8c28c9c1c51db72d0e7f04797cfe5d0d50528274099b6b2d6c314db7f97"
+  digest = "1:dbafce2fddb1ca331646fe2ac9c9413980368b19a60a4406a6e5861680bd73be"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -392,8 +392,8 @@
     "types",
   ]
   pruneopts = ""
-  revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
-  version = "v1.4.3"
+  revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
+  version = "v1.5.0"
 
 [[projects]]
   digest = "1:894aef961c056b6d85d12bac890bf60c44e99b46292888bfa66caf529f804457"
@@ -484,24 +484,24 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:b98ee2c3f1469ab3b494859d3a9c9e595ec2c63660dea130a5154cfcd427b608"
+  digest = "1:90fe60ab6f827e308b0c8cc1e11dce8ff1e96a927c8b171271a3cb04dd517606"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = ""
-  revision = "6d33b5a963d922d182c91e8a1c88d81fd150cfd4"
-  version = "v1.3.1"
+  revision = "9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9"
+  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:f1282b7b8f47533e585be65217b076a5fa31c8b78aa2a3bd353e2bf5dcd8ce2e"
+  digest = "1:ab3e9a81a5ec54c5d1ed41d0d6898ba88c6799fa401b784b06bdee8e432d872b"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = ""
-  revision = "c2843e01d9a2bc60bb26ad24e09734fdc2d9ec58"
+  revision = "a1f597ede03a7bef967a422b5b3a5bd08805a01e"
 
 [[projects]]
   branch = "master"
-  digest = "1:a51d832881595a7312e766821f874b3172602f9adfbc5e6ddf6f5a75d55a23cc"
+  digest = "1:e9152dabd6b276edd0f1d51598e5745dcda9411315d216863bb46b13e523300c"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -517,7 +517,7 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "d8887717615a059821345a5c23649351b52a1c0b"
+  revision = "5c2c250b6a70e39b74bb544433a348a892b10530"
 
 [[projects]]
   branch = "master"

@@ -34,6 +34,8 @@ type Config struct {
 	UseTLSForLogin bool
 	// ClusterPublicHostname contains the public host where the application cluster can be reached from the outside. Required for the ingresses.
 	ClusterPublicHostname string
+	// ManagementHostname contains the public host of the root domain of the management cluster.
+	ManagementHostname string
 	// DeploymentManager address
 	DeploymentMgrAddress string
 	// is kubernetes locally available
@@ -102,6 +104,10 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("clusterPublicHostname must be set")
 	}
 
+	if conf.ManagementHostname == "" {
+		return derrors.NewInvalidArgumentError("managementHostname must be set")
+	}
+
 	if conf.DNS == "" {
 		return derrors.NewInvalidArgumentError("dns list must be set")
 	}
@@ -126,6 +132,7 @@ func (conf *Config) Print() {
 	log.Info().Bool("local", conf.Local).Msg("Kubernetes is local")
 	log.Info().Str("URL", conf.ClusterAPIHostname).Uint32("port", conf.ClusterAPIPort).Bool("TLS", conf.UseTLSForClusterAPI).Msg("Cluster API on management cluster")
 	log.Info().Str("URL", conf.LoginHostname).Uint32("port", conf.LoginPort).Bool("TLS", conf.UseTLSForLogin).Msg("Login API on management cluster")
+	log.Info().Str("URL", conf.ManagementHostname).Msg("Management hostname")
 	log.Info().Str("URL", conf.ClusterPublicHostname).Msg("Cluster public hostname")
 	if conf.ClusterAPIAddress != "" {
 		log.Warn().Str("address", conf.ClusterAPIAddress).Msg("Deprecated Cluster API address is set")

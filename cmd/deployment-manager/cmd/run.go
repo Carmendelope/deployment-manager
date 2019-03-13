@@ -39,6 +39,7 @@ func init() {
 	//runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
 	runCmd.Flags().StringP("networkMgrAddress", "n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
 	runCmd.Flags().StringP("depMgrAddress", "d", "localhost:5200", "deployment manager address e.g.: deployment-manager.nalej:5200")
+	runCmd.Flags().String("managementHostname", "", "Hostname of the management cluster")
 	runCmd.Flags().String("clusterAPIHostname", "", "Hostname of the cluster API on the management cluster")
 	runCmd.Flags().Uint32("clusterAPIPort", 8000, "Port where the cluster API is listening")
 	runCmd.Flags().Bool("useTLSForClusterAPI", true, "Use TLS to connect to the Cluster API")
@@ -64,6 +65,7 @@ func Run() {
 	config := config.Config{
 		Port:                 uint32(viper.GetInt32("port")),
 		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
+		ManagementHostname: viper.GetString("managementHostname"),
 		ClusterAPIHostname:   viper.GetString("clusterAPIHostname"),
 		ClusterAPIPort:       uint32(viper.GetInt32("clusterAPIPort")),
 		UseTLSForClusterAPI:  viper.GetBool("useTLSForClusterAPI"),
