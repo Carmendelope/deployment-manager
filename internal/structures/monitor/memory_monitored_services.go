@@ -261,7 +261,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     // get the worst status found in the resources required by this service
     previousStatus := service.Status
     var finalStatus entities.NalejServiceStatus
-    finalStatus = entities.NALEJ_SERVICE_ERROR
+    finalStatus = entities.NALEJ_SERVICE_RUNNING
     newServiceInfo := service.Info
     for _,res := range service.Resources {
         if res.Status == entities.NALEJ_SERVICE_ERROR {
@@ -287,18 +287,16 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
     service.Status = finalStatus
     service.Info = newServiceInfo
 
-    log.Debug().Interface("service",service).Msg("service after setting status")
-
     // update app status
     // the update will be only done if all the services are under deployed
     // get the worst status found in the services
-    if len(app.Services) != app.TotalServices {
-        return
-    }
+    //if len(app.Services) != app.TotalServices {
+    //    return
+    //}
 
 
     var newAppStatus entities.NalejServiceStatus
-    newAppStatus = entities.NALEJ_SERVICE_ERROR
+    newAppStatus = entities.NALEJ_SERVICE_RUNNING
     newAppInfo := app.Info
     for _, serv := range app.Services {
         if serv.Status == entities.NALEJ_SERVICE_ERROR {
@@ -310,6 +308,9 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
             newAppInfo = serv.Info
         }
     }
+
+    log.Debug().Interface("previous",app.Status).Interface("now",newAppStatus).
+        Msg("final status of the app after updating services")
 
     app.Status = entities.ServicesToFragmentStatus[newAppStatus]
     app.Info = newAppInfo
