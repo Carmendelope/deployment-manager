@@ -58,9 +58,9 @@ func (m *MonitorHelper) Run() {
 
 
 func (m *MonitorHelper) sendFragmentStatus(req pbConductor.DeploymentFragmentUpdateRequest) {
-    log.Debug().Str("fragmentId", req.FragmentId).Str("deploymentId", req.DeploymentId).
-        Str("organizationId",req.OrganizationId).Msg("send update fragment status")
-    //TODO find how to populate the cluster id entry
+    log.Debug().Str("status",req.Status.String()).Str("fragmentId", req.FragmentId).
+        Str("deploymentId", req.DeploymentId).Str("organizationId",req.OrganizationId).
+        Msg("send update fragment status")
 
     ctx, cancel := m.ClusterAPILoginHelper.GetContext()
     defer cancel()
@@ -84,6 +84,9 @@ func (m *MonitorHelper) sendFragmentStatus(req pbConductor.DeploymentFragmentUpd
     if err != nil {
         log.Error().Err(err).Msg("error updating fragment status")
     }
+    log.Debug().Str("status",req.Status.String()).Str("fragmentId", req.FragmentId).
+        Str("deploymentId", req.DeploymentId).Str("organizationId",req.OrganizationId).
+        Msg("send fragment update done")
 }
 
 func (m *MonitorHelper) UpdateStatus() {
@@ -146,6 +149,9 @@ func (m *MonitorHelper) UpdateStatus() {
 
 
 func (m *MonitorHelper) sendUpdateService(req pbConductor.DeploymentServiceUpdateRequest) {
+    log.Debug().Str("fragmentId", req.FragmentId).
+        Str("organizationId",req.OrganizationId).
+        Msg("send update service status")
     ctx, cancel := m.ClusterAPILoginHelper.GetContext()
     defer cancel()
 
@@ -164,5 +170,8 @@ func (m *MonitorHelper) sendUpdateService(req pbConductor.DeploymentServiceUpdat
             log.Error().Err(err).Msgf("error updating service status")
         }
     }
+    log.Debug().Str("fragmentId", req.FragmentId).
+        Str("organizationId",req.OrganizationId).
+        Msg("send fragment done")
 }
 
