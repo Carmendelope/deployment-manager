@@ -114,6 +114,7 @@ func (m *MonitorHelper) UpdateStatus() {
                 ServiceGroupId: serv.ServiceGroupId,
                 ServiceGroupInstanceId: serv.ServiceGroupInstanceId,
                 ServiceId: serv.ServiceID,
+                ServiceName: serv.ServiceName,
                 ServiceInstanceId:     serv.ServiceInstanceID,
                 OrganizationId:        serv.OrganizationId,
                 Status:                entities.ServiceStatusToGRPC[serv.Status],

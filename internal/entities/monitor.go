@@ -62,6 +62,8 @@ type MonitoredServiceEntry struct {
     FragmentId string `json: "fragment_id, omitempty"`
     // Service identifier
     ServiceID string `json: "service_id, omitempty"`
+    //ServiceName
+    ServiceName string `json: "service_name, omitempty"`
     // Service instance identifier
     ServiceInstanceID string `json: "service_instance_id, omitempty"`
     // Number of pending checks to be done
