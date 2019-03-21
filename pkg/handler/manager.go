@@ -328,6 +328,7 @@ func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment
             ServiceGroupId: s.ServiceGroupId,
             OrganizationId: s.OrganizationId,
             ServiceID: s.ServiceId,
+            ServiceName: s.Name,
             ServiceInstanceID: s.ServiceInstanceId,
             Info: "",
             Endpoints: make([]entities.EndpointInstance,0),
