@@ -353,7 +353,7 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                     ep := entities.EndpointInstance{
                         EndpointInstanceId: string(dep.UID),
                         EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-                        FQDN:               fmt.Sprintf("%s", ip.IP),
+                        FQDN:               ip.IP,
                         Port:               port.Port,
                     }
                     log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
@@ -367,7 +367,7 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                 ep := entities.EndpointInstance{
                     EndpointInstanceId: string(dep.UID),
                     EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-                    FQDN:               fmt.Sprintf("%s", config.GetConfig().ClusterPublicHostname),
+                    FQDN:               config.GetConfig().ClusterPublicHostname,
                     Port:               port.NodePort,
                 }
                 log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
@@ -426,10 +426,14 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
     }
 
     if ready && len(dep.Spec.Rules) > 0{
-
-        port, err := strconv.ParseInt (dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT], 10, 32)
-        if err != nil {
-            log.Error().Str("port", dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT]).Msg("unable to convert to int")
+        endpointPort := int32(0)
+        port, exists := dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT]
+        if exists {
+            portValue, err := strconv.ParseInt(port, 10, 32)
+            if err != nil {
+                log.Error().Str("port", dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT]).Msg("unable to convert to int")
+            }
+            endpointPort = int32(portValue)
         }
 
         // Take the local cluster hostname.
@@ -446,7 +450,7 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
                 FQDN: hostname,
                 EndpointInstanceId: string(dep.UID),
                 EndpointType: entities.ENDPOINT_TYPE_WEB,
-                Port: int32(port),
+                Port: endpointPort,
             }})
     }
 }
