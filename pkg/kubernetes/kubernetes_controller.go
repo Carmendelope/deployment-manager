@@ -352,7 +352,8 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                     ep := entities.EndpointInstance{
                         EndpointInstanceId: string(dep.UID),
                         EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-                        FQDN:               fmt.Sprintf("%s:%d", ip.IP, port.Port),
+                        FQDN:               fmt.Sprintf("%s", ip.IP),
+                        Port:               port.Port,
                     }
                     log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
                     endpoints = append(endpoints, ep)
@@ -365,7 +366,8 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                 ep := entities.EndpointInstance{
                     EndpointInstanceId: string(dep.UID),
                     EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
-                    FQDN:               fmt.Sprintf("%s:%d", config.GetConfig().ClusterPublicHostname, port.NodePort),
+                    FQDN:               fmt.Sprintf("%s", config.GetConfig().ClusterPublicHostname),
+                    Port:               port.NodePort,
                 }
                 log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
                 endpoints = append(endpoints, ep)
