@@ -8,22 +8,21 @@ package kubernetes
 
 import (
     "fmt"
+    "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/config"
+    "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
-    "strconv"
-    "time"
+    "github.com/rs/zerolog/log"
+    "k8s.io/api/core/v1"
+    "k8s.io/api/extensions/v1beta1"
+    "k8s.io/apimachinery/pkg/fields"
     "k8s.io/apimachinery/pkg/runtime"
     utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-    "k8s.io/apimachinery/pkg/fields"
     "k8s.io/apimachinery/pkg/util/wait"
     "k8s.io/client-go/tools/cache"
     "k8s.io/client-go/util/workqueue"
-    "k8s.io/api/extensions/v1beta1"
-    "github.com/rs/zerolog/log"
-    "k8s.io/api/core/v1"
-    "github.com/nalej/deployment-manager/pkg/executor"
-    "github.com/nalej/deployment-manager/internal/entities"
+    "time"
 )
 
 // The kubernetes controllers has a set of queues monitoring k8s related operations.
@@ -426,14 +425,10 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
     }
 
     if ready && len(dep.Spec.Rules) > 0{
-        endpointPort := int32(0)
-        port, exists := dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT]
-        if exists {
-            portValue, err := strconv.ParseInt(port, 10, 32)
-            if err != nil {
-                log.Error().Str("port", dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT]).Msg("unable to convert to int")
-            }
-            endpointPort = int32(portValue)
+
+        port := int32(0)
+        if len (dep.Spec.Rules) > 0 && len(dep.Spec.Rules[0].IngressRuleValue.HTTP.Paths) > 0 {
+            port = dep.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.ServicePort.IntVal
         }
 
         // Take the local cluster hostname.
@@ -450,7 +445,7 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
                 FQDN: hostname,
                 EndpointInstanceId: string(dep.UID),
                 EndpointType: entities.ENDPOINT_TYPE_WEB,
-                Port: endpointPort,
+                Port: port,
             }})
     }
 }

@@ -35,8 +35,6 @@ const (
     NALEJ_ANNOTATION_INGRESS_ENDPOINT = "nalej-endpoint"
     // Annotation for metadata to identify the security rule.
     NALEJ_ANNOTATION_SECURITY_RULE_ID = "nalej-security-rule-id"
-    // Annotation for metadata to identify the security rule port.
-    NAlEJ_ANNOTATION_SERCURITY_RULE_PORT = "nalej-security-rule-port"
 
     NALEJ_ANNOTATION_SERVICE_PURPOSE = "nalej-service-purpose"
     NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE = "device-group"
