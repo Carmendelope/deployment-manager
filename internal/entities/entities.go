@@ -155,6 +155,7 @@ type EndpointInstance struct {
     EndpointInstanceId string `json:"endpoint_instance_id,omitempty"`
     EndpointType EndpointType `json:"endpoint_type,omitempty"`
     FQDN string `json:"fqdn,omitempty"`
+    Port int32    `json:"port,omitempty"`
 }
 
 func(ei *EndpointInstance) ToGRPC() *pbApplication.EndpointInstance {
@@ -162,5 +163,6 @@ func(ei *EndpointInstance) ToGRPC() *pbApplication.EndpointInstance {
         EndpointInstanceId: ei.EndpointInstanceId,
         Type: EndpointTypeToGRPC[ei.EndpointType],
         Fqdn: ei.FQDN,
+        Port: ei.Port,
     }
 }
