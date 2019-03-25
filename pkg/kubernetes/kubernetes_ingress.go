@@ -144,6 +144,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
+				utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT:       fmt.Sprintf("%d", rule.TargetPort),
 			},
 			Annotations: map[string]string{
 				"kubernetes.io/ingress.class": "nginx",

@@ -11,6 +11,7 @@ import (
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "strconv"
     "time"
     "k8s.io/apimachinery/pkg/runtime"
     utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -426,6 +427,11 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
 
     if ready && len(dep.Spec.Rules) > 0{
 
+        port, err := strconv.ParseInt (dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT], 10, 32)
+        if err != nil {
+            log.Error().Str("port", dep.Labels[utils.NAlEJ_ANNOTATION_SERCURITY_RULE_PORT]).Msg("unable to convert to int")
+        }
+
         // Take the local cluster hostname.
         hostname := dep.Spec.Rules[0].Host
 
@@ -440,6 +446,7 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
                 FQDN: hostname,
                 EndpointInstanceId: string(dep.UID),
                 EndpointType: entities.ENDPOINT_TYPE_WEB,
+                Port: int32(port),
             }})
     }
 }
