@@ -59,6 +59,9 @@ func(p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status enti
     } else {
         // Add new services if they were not previously added
         log.Debug().Str("instanceId",appInstanceId).Interface("status",status).Msg("set instance status")
+        if status != current.Status {
+            current.NewStatus = true
+        }
         current.Status = status
         if err !=  nil {
             current.Info = err.Error()
@@ -310,14 +313,14 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 
 func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.MonitoredAppEntry) {
     p.mu.RLock()
-    p.mu.RUnlock()
+    defer p.mu.RUnlock()
     toReturn := make([]*entities.MonitoredAppEntry,0)
     for _, app := range p.monitoredApps {
         pendingServices := make(map[string]*entities.MonitoredServiceEntry,0)
         // for every monitored app
         for _, x := range app.Services {
             // for every monitored service
-            if x.NewStatus {
+            if app.NewStatus || x.NewStatus {
                 pendingServices[x.ServiceInstanceID] = x
             }
         }
@@ -344,7 +347,7 @@ func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.Monit
 //  array with the collection of entities with a service with a status pending of notification
 func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] *entities.MonitoredServiceEntry {
     p.mu.RLock()
-    p.mu.RUnlock()
+    defer p.mu.RUnlock()
     toNotify := make([]*entities.MonitoredServiceEntry,0)
     for _, app := range p.monitoredApps {
         // for every monitored app
@@ -361,8 +364,9 @@ func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] *entities.Mo
 // Set to already notified all services.
 func (p *MemoryMonitoredInstances) ResetServicesUnnotifiedStatus() {
     p.mu.Lock()
-    p.mu.Unlock()
+    defer p.mu.Unlock()
     for _, stage := range p.monitoredApps {
+        stage.NewStatus = false
         // for every monitored stage
         for _, x := range stage.Services {
             // for every monitored service
