@@ -74,23 +74,24 @@ type Executor interface {
 
     // Generate an events controller for a given namespace.
     //  params:
-    //   namespace to be supervised
+    //   application to be supervised
     //   monitored data structure to monitor incoming events
+    //   namespace to be observed
     //  return:
     //   deployment controller in charge of this namespace
-    AddEventsController(namespace string, monitored monitor.MonitoredInstances) DeploymentController
+    AddEventsController(appInstanceId string, monitored monitor.MonitoredInstances, namespace string) DeploymentController
 
     // Start an event controller for the namespace.
     //  params:
-    //   namespace to be supervised
+    //   appInstanceId to be supervised
     //  return:
     //   deployment controller in charge of this namespace
-    StartControlEvents(namespace string) DeploymentController
+    StartControlEvents(appInstanceId string) DeploymentController
 
     // Stop the control of events for a given namespace.
     //  params:
-    //   namespace to stop the control
-    StopControlEvents(namespace string)
+    //   appInstanceId to stop supervising
+    StopControlEvents(appInstanceId string)
 }
 
 // A monitor system to inform the cluster API about the current status

@@ -90,16 +90,16 @@ func(m *Manager) Run() {
 func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
     log.Debug().Msgf("execute plan with id %s",request.RequestId)
     // Compute the namespace for this deployment
-    namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId)
+    namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId, int(request.NumRetry))
 
     var executionError error
 
-    // Add a new events controller
-    log.Info().Str("namespace", namespace).Msg("add monitoring controller for namespace")
-    controller := m.executor.AddEventsController(namespace, m.monitored)
+    // Add a new events controller for this application
+    log.Info().Str("appInstanceId", request.Fragment.AppInstanceId).Msg("add monitoring controller for app")
+    controller := m.executor.AddEventsController(request.Fragment.AppInstanceId, m.monitored, namespace)
     if controller == nil{
         err := errors.New(fmt.Sprintf("impossible to create deployment controller for namespace %s",namespace))
-        log.Error().Err(err).Str("namespace", namespace).Msg("failed creating controller")
+        log.Error().Err(err).Str("appInstanceId", request.Fragment.AppInstanceId).Msg("failed creating controller")
         //return err
         executionError = err
         m.monitored.SetAppStatus(request.Fragment.AppInstanceId,entities.FRAGMENT_ERROR,executionError)
@@ -212,22 +212,20 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
 func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Str("appInstanceID", request.AppInstanceId).Msg("undeploy app instance with id")
 
-    targetNS := common.GetNamespace(request.OrganizationId, request.AppInstanceId)
-
-    log.Info().Str("namespace", targetNS).Msg("stop events controller")
-    m.executor.StopControlEvents(targetNS)
-
     // Remove stage entries
     m.monitored.RemoveApp(request.AppInstanceId)
+	// Stop monitoring events
+	// TODO check if this operation is really required
+    //m.executor.StopControlEvents(request.AppInstanceId)
 
-
+	// Undeploy the namespace
 	err := m.executor.UndeployNamespace(request)
 	if err != nil {
 		log.Error().Err(err).Msgf("impossible to undeploy app %s", request.AppInstanceId)
 		return err
 	}
 
-	return nil
+    return nil
 }
 
 // Private function to execute a stage in a loop of retries.
@@ -243,9 +241,9 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
     toDeploy executor.Deployable, namespace string, maxRetries int) error {
 
     // Start controller here so we can consume already occurred events
-    controller := m.executor.StartControlEvents(namespace)
+    controller := m.executor.StartControlEvents(fragment.AppInstanceId)
     if controller == nil {
-        return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for namespace %s",namespace))
+        return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for appInstanceId %s",fragment.AppInstanceId))
     }
 
 
@@ -284,9 +282,9 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
         }
         // execute
         // Start controller here so we can consume already occurred events
-        controller := m.executor.StartControlEvents(namespace)
+        controller := m.executor.StartControlEvents(fragment.AppInstanceId)
         if controller == nil {
-            return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for namespace %s",namespace))
+            return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for appInstanceId %s",fragment.AppInstanceId))
         }
 
         err = m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)

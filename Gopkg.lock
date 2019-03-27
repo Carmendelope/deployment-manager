@@ -265,12 +265,12 @@
   version = "v0.0.87"
 
 [[projects]]
-  digest = "1:a024155847c1b3c1cac3c9295c840eefb71f6bdcc0943fdd92cca102ef443af4"
+  digest = "1:5f5bea40cacea90b0ac53d2eb19516d45c321aca19a78b23cb8f189094773de5"
   name = "github.com/nalej/grpc-deployment-manager-go"
   packages = ["."]
   pruneopts = ""
-  revision = "50e92c023d6ce62c2b0f36affdc2d7c3f8257501"
-  version = "v0.0.49"
+  revision = "1e821a4a94b2bdde393fad39c27dfdc7ad53e06b"
+  version = "v0.0.50"
 
 [[projects]]
   digest = "1:8f1edf5c58d91034b9d696926aeddada013e74e3c92399f0241aa5f43869b20f"
