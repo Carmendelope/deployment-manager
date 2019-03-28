@@ -34,8 +34,7 @@ const (
     // Time between sleeps to check if an application is up
     StageCheckTime = 10
     // Checkout time after a stage is considered to be failed
-    //StageCheckTimeout = 240
-    StageCheckTimeout = 60
+    StageCheckTimeout = 240
     // Time to wait between checks in the queue in milliseconds.
     CheckQueueSleepTime = 2000
 )
