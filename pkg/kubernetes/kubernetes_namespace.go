@@ -5,15 +5,20 @@
 package kubernetes
 
 import (
+    "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/derrors"
     "github.com/rs/zerolog/log"
     apiv1 "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
     v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
+
+// Seconds for a timeout when listing namespaces
+const NamespaceListTimeout = 2
 
 // Deployable namespace
 // A namespace is associated with a fragment. This is a special case of deployable that is only intended to be
@@ -80,10 +85,31 @@ func (n *DeployableNamespace) exists() bool{
 }
 
 func(n *DeployableNamespace) Undeploy() error {
-    if !n.exists(){
-        log.Warn().Str("targetNamespace", n.data.Namespace).Msg("Target namespace does not exists, considering undeploy successful")
-        return nil
+
+    // Delete any namespace labelled with appinstanceid and organizationid
+
+    // query existing namespaces
+    queryString := fmt.Sprintf("%s=%s,%s=%s",
+        utils.NALEJ_ANNOTATION_ORGANIZATION, n.data.OrganizationId,
+        utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, n.data.AppInstanceId,
+        )
+    options := metav1.ListOptions {
+        IncludeUninitialized: true,
+        LabelSelector: queryString,
     }
-    err := n.client.Delete(n.data.Namespace, metav1.NewDeleteOptions(DeleteGracePeriod))
-    return err
+
+    list, err := n.client.List(options)
+    if err != nil {
+        return derrors.AsError(err, "impossible to undeploy namespace")
+    }
+
+    for _, l := range list.Items {
+        log.Debug().Str("namespace", l.Namespace).Msg("execute undeploy for namespace")
+        err = n.client.Delete(l.Name, metav1.NewDeleteOptions(DeleteGracePeriod))
+        if err != nil {
+            log.Error().Err(err).Msg("impossible to deploy namespace")
+        }
+    }
+
+    return nil
 }

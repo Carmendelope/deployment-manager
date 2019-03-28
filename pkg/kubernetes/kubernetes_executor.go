@@ -7,20 +7,19 @@
 package kubernetes
 
 import (
-	"errors"
-	"flag"
+    "errors"
+    "flag"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/executor"
-	pbConductor "github.com/nalej/grpc-conductor-go"
-	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-	"github.com/rs/zerolog/log"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"path/filepath"
-    "github.com/nalej/deployment-manager/pkg/common"
+    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    "github.com/rs/zerolog/log"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/rest"
+    "k8s.io/client-go/tools/clientcmd"
+    "os"
+    "path/filepath"
     "sync"
 )
 
@@ -96,9 +95,9 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
        return nil, err
     }
 
-    controller, found := k.Controllers[metadata.Namespace]
+    controller, found := k.Controllers[metadata.AppInstanceId]
     if !found {
-        log.Error().Str("namespace",metadata.Namespace).
+        log.Error().Str("appInstanceId",metadata.AppInstanceId).
             Msg("impossible to find the corresponding events controller")
         return nil, errors.New("impossible to find the corresponding events controller")
     }
@@ -145,7 +144,7 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
     k8sDeploy = toDeploy.(*DeployableKubernetesStage)
 
     // get the previously generated controller for this namespace
-    controller, found := k.Controllers[k8sDeploy.data.Namespace]
+    controller, found := k.Controllers[k8sDeploy.data.AppInstanceId]
     if !found {
         log.Error().Str("namespace",k8sDeploy.data.Namespace).Str("stageId",stage.StageId).
             Msg("impossible to find the corresponding events controller")
@@ -164,7 +163,8 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
 }
 
 
-func (k *KubernetesExecutor) AddEventsController(namespace string, monitored monitor.MonitoredInstances) executor.DeploymentController {
+func (k *KubernetesExecutor) AddEventsController(appInstanceId string, monitored monitor.MonitoredInstances,
+    namespace string) executor.DeploymentController {
     // Instantiate a new controller
     deployController := NewKubernetesController(k, monitored, namespace)
 
@@ -173,12 +173,12 @@ func (k *KubernetesExecutor) AddEventsController(namespace string, monitored mon
 
     k.mu.Lock()
     defer k.mu.Unlock()
-    retrievedController, found := k.Controllers[namespace]
+    retrievedController, found := k.Controllers[appInstanceId]
     if found {
-        log.Warn().Str("namespace", namespace).Msg("a kubernetes controller already exists for this namespace")
+        log.Warn().Str("appInstanceId", appInstanceId).Msg("a kubernetes controller already exists for this namespace")
         return retrievedController
     }
-    k.Controllers[namespace] = k8sController
+    k.Controllers[appInstanceId] = k8sController
     log.Debug().Interface("controllers", k.Controllers).Msg("added a new events controller")
     return k8sController
 }
@@ -186,14 +186,14 @@ func (k *KubernetesExecutor) AddEventsController(namespace string, monitored mon
 
 // Generate a events controller for a given namespace.
 //  params:
-//   namespace to be supervised
+//   appInstanceId to be supervised
 //   monitored data structure to monitor incoming events
-func (k *KubernetesExecutor) StartControlEvents(namespace string) executor.DeploymentController {
+func (k *KubernetesExecutor) StartControlEvents(appInstanceId string) executor.DeploymentController {
     k.mu.Lock()
     defer k.mu.Unlock()
-    toReturn, found := k.Controllers[namespace]
+    toReturn, found := k.Controllers[appInstanceId]
     if !found {
-        log.Error().Str("namespace",namespace).Msg("the kubernetes controller was not found")
+        log.Error().Str("appInstanceId",appInstanceId).Msg("the kubernetes controller was not found")
         return nil
     }
     toReturn.Run()
@@ -202,18 +202,18 @@ func (k *KubernetesExecutor) StartControlEvents(namespace string) executor.Deplo
 
 // Stop the control of events for a given namespace.
 //  params:
-//   namespace to stop the control
-func (k *KubernetesExecutor) StopControlEvents(namespace string) {
+//   appInstanceId to stop the control
+func (k *KubernetesExecutor) StopControlEvents(appInstanceId string) {
     k.mu.Lock()
     defer k.mu.Unlock()
-    log.Info().Str("namespace", namespace).Interface("controllers",k.Controllers).Msg("stop events controller")
-    controller, found := k.Controllers[namespace]
+    log.Info().Str("appInstanceId", appInstanceId).Interface("controllers",k.Controllers).Msg("stop events controller")
+    controller, found := k.Controllers[appInstanceId]
     if !found {
-        log.Error().Str("namespace",namespace).Msg("impossible to stop controller, namespace not found")
+        log.Error().Str("appInstanceId",appInstanceId).Msg("impossible to stop controller, appInstanceId not found")
     }
     controller.Stop()
     // delete the instance
-    delete(k.Controllers,namespace)
+    delete(k.Controllers,appInstanceId)
 }
 
 
@@ -237,11 +237,9 @@ func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentSt
 }
 
 func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
-    targetNS := common.GetNamespace(request.OrganizationId, request.AppInstanceId)
-    log.Info().Str("app_instance_id", request.AppInstanceId).Str("targetNS", targetNS).Msg("undeploy app namespace")
 
-    // partially fill a deployment metadata entry with the target namespace
-    metadata := entities.DeploymentMetadata{Namespace: targetNS}
+    // A partially filled namespace object should be enough to find the target namespace
+    metadata := entities.DeploymentMetadata{OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId}
 
     ns := NewDeployableNamespace(k.Client, metadata)
     err := ns.Build()
@@ -252,10 +250,8 @@ func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.Undeploy
 
     err = ns.Undeploy()
     if err != nil {
-        log.Error().Msgf("error undeploying application %s in namespace %s", request.AppInstanceId, ns.namespace.Name)
         return err
     }
-
 
     return nil
 }

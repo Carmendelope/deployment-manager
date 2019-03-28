@@ -50,7 +50,6 @@ func (m *MonitorHelper) Run() {
     for {
         select {
         case <-tick:
-            // TODO Send the status
             m.UpdateStatus()
         }
     }

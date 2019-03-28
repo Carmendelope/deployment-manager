@@ -33,6 +33,9 @@ type MonitoredAppEntry struct {
     Info string `json: "num_pending_checks, omitempty"`
     // Total services
     TotalServices int `json: "total_services, omitempty"`
+    // Flag indicating if a new status has been set without notification
+    NewStatus bool `json: "new_status, omitempty"`
+
 }
 
 // Add a new application entry. If the entry already exists, it adds the new services.

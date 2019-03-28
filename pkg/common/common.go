@@ -38,13 +38,14 @@ var MANAGER_CLUSTER_PORT string
 //  params:
 //   organizationId
 //   appInstanceId
+//   numRetry
 //  return:
 //   associated namespace
-func GetNamespace(organizationId string, appInstanceId string) string {
-	target := fmt.Sprintf("%s-%s", organizationId, appInstanceId)
+func GetNamespace(organizationId string, appInstanceId string, numRetry int) string {
+	target := fmt.Sprintf("%d-%s-%s", numRetry,organizationId[0:18], appInstanceId)
 	// check if the namespace is larger than the allowed k8s namespace length
 	if len(target) > NamespaceLength {
-		return target[:NamespaceLength]
+		return target[len(target)-NamespaceLength:]
 	}
 	return target
 }
