@@ -102,8 +102,7 @@ func createVolumeName(name string) string {
         res = res[:len(res)-1]
     }
 
-    return strings.Replace(res, "/", "_", -1)
-
+    return strings.Replace(res, "/", "-", -1)
 }
 
 func (d *DeployableDeployments) generateAllVolumes (serviceId string, serviceInstanceId string, configFiles []*grpc_application_go.ConfigFile) ([]apiv1.Volume, []apiv1.VolumeMount) {
@@ -561,7 +560,7 @@ func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) 
 
         deployed, err := d.client.Create(&depInfo.Deployment)
         if err != nil {
-            log.Error().Err(err).Msgf("error creating deployment %s",depInfo.Deployment.Name)
+            log.Error().Interface("deployment", depInfo.Deployment).Err(err).Msgf("error creating deployment %s",depInfo.Deployment.Name)
             return err
         }
         log.Debug().Str("uid",string(deployed.GetUID())).Str("appInstanceID",d.data.AppInstanceId).
