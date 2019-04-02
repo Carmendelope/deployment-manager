@@ -412,33 +412,30 @@ func (p *MemoryMonitoredInstances)  RemoveApp(appInstanceId string) bool {
     return true
 }
 
-// Return true if the passed uid corresponds to a resource being monitored.
-/*
-func (p *MemoryMonitoredInstances) getResource (appInstanceID string, serviceID, uid string) *entities.MonitoredPlatformResource {
+
+func (p *MemoryMonitoredInstances) GetNumApps() int {
+    return len(p.monitoredApps)
+}
+
+
+func (p *MemoryMonitoredInstances) GetNumServices() int {
     p.mu.RLock()
     defer p.mu.RUnlock()
-    appEntry, found := p.monitoredApps[appInstanceID]
-    if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Msg("impossible to get resource. App not monitored.")
-        return nil
+    accum := 0
+    for _, entry := range p.monitoredApps {
+        accum = accum + len(entry.Services)
     }
-
-    // Get the service
-    service, found := appEntry.Services[serviceID]
-    if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Str("stageID", serviceID).
-            Msg("impossible to get resource. Service not monitored.")
-        return nil
-    }
-
-    // -> resource
-    pendingResource, found := service.Resources[uid]
-    if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Str("stageID", serviceID).Str("resource uid", uid).
-            Msg("impossible to get resource. Resource not monitored")
-        return nil
-    }
-
-    return pendingResource
+    return accum
 }
-*/
+
+func (p *MemoryMonitoredInstances) GetNumResources() int {
+    p.mu.RLock()
+    defer p.mu.RUnlock()
+    accum := 0
+    for _, entry := range p.monitoredApps {
+        for _, serv := range entry.Services {
+            accum = accum + len(serv.Resources)
+        }
+    }
+    return accum
+}

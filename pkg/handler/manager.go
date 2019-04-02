@@ -23,7 +23,7 @@ import (
 
 const (
     // No rollback stage retries
-    NoRetries = 0
+    NoRetries = 1
     // Maximum number of retries for a stage rollback
     MaxStageRetries = 3
     // Unlimited retries
@@ -34,7 +34,7 @@ const (
     // Time between sleeps to check if an application is up
     StageCheckTime = 10
     // Checkout time after a stage is considered to be failed
-    StageCheckTimeout = 240
+    StageCheckTimeout = 480
     // Time to wait between checks in the queue in milliseconds.
     CheckQueueSleepTime = 2000
 )
@@ -240,46 +240,10 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, stage *pbConductor.DeploymentStage,
     toDeploy executor.Deployable, namespace string, maxRetries int) error {
 
-    // Start controller here so we can consume already occurred events
-    controller := m.executor.StartControlEvents(fragment.AppInstanceId)
-    if controller == nil {
-        return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for appInstanceId %s",fragment.AppInstanceId))
-    }
-
-
-    m.monitored.SetAppStatus(fragment.AppInstanceId,entities.FRAGMENT_DEPLOYING,nil)
-
-    // first attempt
-    err := m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)
-    if err != nil {
-        return err
-    }
-
-    // run the controller
-    log.Info().Str("namespace",namespace).Str("appInstanceId",fragment.AppInstanceId).
-        Str("stage", stage.StageId).Msg("wait for pending checks to finish")
-    stageErr := m.monitored.WaitPendingChecks(fragment.AppInstanceId, StageCheckTime, StageCheckTimeout)
-    log.Debug().Msg("Finished waiting for pending checks")
-
-    if stageErr == nil {
-        // Everything was OK, stage deployed
-        return nil
-    }
-
     // something happened. We reach the retry loop
     for retries := 0; retries < maxRetries; retries++ {
-        m.monitored.SetAppStatus(fragment.AppInstanceId,entities.FRAGMENT_RETRYING,stageErr)
+        m.monitored.SetAppStatus(fragment.AppInstanceId,entities.FRAGMENT_DEPLOYING,nil)
 
-        // It didn't work. Go into a retry loop
-        time.Sleep(SleepBetweenRetries * time.Millisecond)
-
-        // undeploy
-        err = toDeploy.Undeploy()
-        if err != nil {
-            log.Error().Err(err).Msgf("there was a problem when undeploying stage %s from fragment %s",
-                stage.StageId, fragment.FragmentId)
-            return err
-        }
         // execute
         // Start controller here so we can consume already occurred events
         controller := m.executor.StartControlEvents(fragment.AppInstanceId)
@@ -287,11 +251,12 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
             return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for appInstanceId %s",fragment.AppInstanceId))
         }
 
-        err = m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)
+        err := m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)
 
         if err != nil {
             log.Error().Err(err).Msgf("there was a problem when retrying stage %s from fragment %s",
                 stage.StageId, fragment.FragmentId)
+            m.monitored.SetAppStatus(fragment.AppInstanceId,entities.FRAGMENT_RETRYING,err)
         }
 
         log.Info().Str("namespace",namespace).Str("appInstanceId",fragment.AppInstanceId).
@@ -304,7 +269,21 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
             return nil
         }
 
+        // Stop events control
+        m.executor.StopControlEvents(fragment.AppInstanceId)
+
+        // undeploy
+        err = toDeploy.Undeploy()
+        if err != nil {
+            log.Error().Err(err).Msgf("there was a problem when undeploying stage %s from fragment %s",
+                stage.StageId, fragment.FragmentId)
+            return err
+        }
+
         log.Info().Msgf("failed retry %d out of %d for stage %s in fragment %s", retries +1, maxRetries, stage.StageId, fragment.FragmentId)
+
+        // It didn't work. Go into a retry loop
+        time.Sleep(SleepBetweenRetries * time.Millisecond)
     }
 
     return errors.New(fmt.Sprintf("exceeded number of retries for stage %s in fragment %s", stage.StageId, fragment.FragmentId))
@@ -352,6 +331,7 @@ func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment
         NumPendingChecks: len(services),
         Info:             "",
         TotalServices:    totalNumberServices,
+        NewStatus:        true,
     }
     return toReturn
 }

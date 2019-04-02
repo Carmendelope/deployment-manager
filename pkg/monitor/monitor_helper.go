@@ -89,6 +89,10 @@ func (m *MonitorHelper) sendFragmentStatus(req pbConductor.DeploymentFragmentUpd
 }
 
 func (m *MonitorHelper) UpdateStatus() {
+    if m.Monitored.GetNumApps() > 0 {
+        log.Debug().Msgf("monitored %d apps with %d services and %d resources", m.Monitored.GetNumApps(),
+            m.Monitored.GetNumServices(),m.Monitored.GetNumResources())
+    }
     notificationPending := m.Monitored.GetPendingNotifications()
     if len(notificationPending) == 0 {
         // nothing to do
@@ -99,8 +103,6 @@ func (m *MonitorHelper) UpdateStatus() {
     for _, app := range notificationPending {
         list := make([]*pbConductor.ServiceUpdate,0)
         for _, serv := range app.Services {
-
-            log.Debug().Interface("service",serv).Msg("update service status")
 
             endpoints := make([]*pbApplication.EndpointInstance,len(serv.Endpoints))
             for i, e := range serv.Endpoints {
@@ -172,6 +174,6 @@ func (m *MonitorHelper) sendUpdateService(req pbConductor.DeploymentServiceUpdat
     }
     log.Debug().Str("fragmentId", req.FragmentId).
         Str("organizationId",req.OrganizationId).
-        Msg("send fragment done")
+        Msg("send update service status done")
 }
 
