@@ -46,6 +46,7 @@ func(m *MonitoredAppEntry) AppendServices(new *MonitoredAppEntry) {
             // This is new. Add it
             m.Services[serv.ServiceInstanceID] = serv
             m.NumPendingChecks = m.NumPendingChecks + 1
+            m.TotalServices = m.TotalServices + 1
         }
     }
 }

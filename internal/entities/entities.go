@@ -6,8 +6,8 @@
 package entities
 
 import (
-    pbConductor "github.com/nalej/grpc-conductor-go"
     pbApplication "github.com/nalej/grpc-application-go"
+    pbConductor "github.com/nalej/grpc-conductor-go"
     "k8s.io/api/extensions/v1beta1"
 )
 
@@ -81,7 +81,7 @@ func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) Na
         result = NALEJ_SERVICE_WAITING
     }
 
-    // log.Debug().Msgf("translate condition status %v into %s",kStatus.Conditions, result)
+    // log.Debug().Msgf("translate condition status %v into %v",kStatus.Conditions, result)
 
     return result
 }
