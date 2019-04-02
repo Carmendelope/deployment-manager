@@ -336,7 +336,7 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
 
     purpose, found := dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE]
 
-    if found && (purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE || purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE){
+    if found && purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE {
         log.Debug().Interface("analyzing", dep).Msg("Checking service for device group ingestion")
 
         if dep.Spec.Type == v1.ServiceTypeLoadBalancer{
@@ -371,6 +371,29 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                 }
                 log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
                 endpoints = append(endpoints, ep)
+            }
+        }
+    }else if found && purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE{
+        log.Debug().Interface("analyzing", dep).Msg("Checking service for load balancer")
+        if dep.Spec.Type == v1.ServiceTypeLoadBalancer {
+
+            log.Debug().Msg("Load balancer detected")
+            if dep.Status.LoadBalancer.Ingress == nil || len(dep.Status.LoadBalancer.Ingress) == 0 {
+                log.Debug().Interface("loadbalancer", dep.Status).Msg("Load balancer is not ready, skip")
+                return
+            }
+
+            for _, ip := range dep.Status.LoadBalancer.Ingress {
+                for _, port := range dep.Spec.Ports {
+                    ep := entities.EndpointInstance{
+                        EndpointInstanceId: string(dep.UID),
+                        EndpointType:       entities.ENDPOINT_TYPE_WEB,
+                        FQDN:               ip.IP,
+                        Port:               port.Port,
+                    }
+                    log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
+                    endpoints = append(endpoints, ep)
+                }
             }
         }
     }

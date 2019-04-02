@@ -16,19 +16,6 @@ import (
 	v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-/*
-type Deployable interface {
-    // Get the unique identifier for this deployable.
-    GetId() string
-    // Build the deployable and construct the corresponding internal structures.
-    Build() error
-    // Deploy this element using a deployment controller to check when the operation is fully done.
-    Deploy(controller DeploymentController) error
-    // Undeploy this element
-    Undeploy() error
-}
- */
-
 type LoadBalancerInfo struct {
 	ServiceId         string
 	ServiceInstanceId string
@@ -40,7 +27,7 @@ type LoadBalancerInfo struct {
 	 client v12.ServiceInterface
 	 // Deployment metadata
 	 data entities.DeploymentMetadata
-	 loadBalancer []ServiceInfo
+	 loadBalancers []ServiceInfo
 }
 
 func NewDeployableLoadBalancer(client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableLoadBalancer {
@@ -48,7 +35,7 @@ func NewDeployableLoadBalancer(client *kubernetes.Clientset, data entities.Deplo
 	return &DeployableLoadBalancer{
 		client: client.CoreV1().Services(data.Namespace),
 		data: data,
-		loadBalancer: make([]ServiceInfo,0),
+		loadBalancers: make([]ServiceInfo,0),
 	}
 }
 
@@ -69,6 +56,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 	found := false
 	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
 		port := service.ExposedPorts[portIndex]
+		// if there is a rule with a port and in the service definition this port has no endpoint -> Create a TCP load balancer
 		if port.ExposedPort == rule.TargetPort && (port.Endpoints == nil || len(port.Endpoints) == 0 ){
 			found = true
 
@@ -116,19 +104,19 @@ func (dl *DeployableLoadBalancer) Build() error {
 				toAdd := dl.BuildLoadBalancerForServiceWithRule(service, publicRule)
 				if toAdd != nil {
 					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new load Balancer for service")
-					dl.loadBalancer = append(dl.loadBalancer, ServiceInfo{service.ServiceId, service.ServiceInstanceId, *toAdd})
+					dl.loadBalancers = append(dl.loadBalancers, ServiceInfo{service.ServiceId, service.ServiceInstanceId, *toAdd})
 				}
 			}
 		}
 	}
 
-	log.Debug().Interface("Load Balancers", dl.loadBalancer).Msg("Load Balancers have been build and are ready to deploy")
+	log.Debug().Interface("Load Balancers", dl.loadBalancers).Msg("Load Balancers have been build and are ready to deploy")
 
 	return nil
 }
 
 func (dl *DeployableLoadBalancer) Deploy(controller executor.DeploymentController) error {
-	for _, servInfo := range dl.loadBalancer {
+	for _, servInfo := range dl.loadBalancers {
 		created, err := dl.client.Create(&servInfo.Service)
 		if err != nil {
 			log.Error().Err(err).Msgf("error creating service %s",servInfo.Service.Name)
@@ -146,7 +134,7 @@ func (dl *DeployableLoadBalancer) Deploy(controller executor.DeploymentControlle
 }
 
 func (dl *DeployableLoadBalancer) Undeploy() error {
-	for _, servInfo := range dl.loadBalancer {
+	for _, servInfo := range dl.loadBalancers {
 		err := dl.client.Delete(common.FormatName(servInfo.Service.Name), metav1.NewDeleteOptions(*int64Ptr(DeleteGracePeriod)))
 		if err != nil {
 			log.Error().Err(err).Msgf("error deleting service %s", servInfo.Service.Name)
