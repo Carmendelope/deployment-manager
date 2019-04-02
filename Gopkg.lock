@@ -602,7 +602,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4b40c17c844ea1c6300acae1b151c9f4e30e74b489f9e59c961cae257aa5f448"
+  digest = "1:8cdef6da940ed0c6146559d452b3665683f56d276ed0b0455c461411e9476b81"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -612,7 +612,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = ""
-  revision = "d831d65fe17df2e52bcc4316d4a9f7a418701f43"
+  revision = "f467c93bbac2133ff463e1f93d18d8f9f3f04451"
 
 [[projects]]
   digest = "1:9e9c6b3804858b1a058ef81027270d307b74f4ddd727d2edff0ca002dd304adb"

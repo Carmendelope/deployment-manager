@@ -55,6 +55,17 @@ func NewDeployableLoadBalancer(client *kubernetes.Clientset, data entities.Deplo
 
 func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) *apiv1.Service {
 
+	extendedLabels := make(map[string]string,0)
+	extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = dl.data.OrganizationId
+	extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = dl.data.AppDescriptorId
+	extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = dl.data.AppInstanceId
+	extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = dl.data.Stage.StageId
+	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
+	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
+	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE] = utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE
+
 	found := false
 	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
 		port := service.ExposedPorts[portIndex]
@@ -72,13 +83,13 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: dl.data.Namespace,
 					Name: fmt.Sprintf("lb%s", common.FormatName(service.Name)),
-					//Labels: extendedLabels,
+					Labels: extendedLabels,
 				},
 				Spec: apiv1.ServiceSpec{
 					ExternalName: fmt.Sprintf("lb%s", common.FormatName(service.Name)),
 					Ports: ports,
 					Type: apiv1.ServiceTypeLoadBalancer,
-					//Selector: extendedLabels,
+					Selector: extendedLabels,
 				},
 			}
 

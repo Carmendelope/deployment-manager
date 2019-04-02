@@ -336,7 +336,7 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
 
     purpose, found := dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE]
 
-    if found && purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE {
+    if found && (purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE || purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE){
         log.Debug().Interface("analyzing", dep).Msg("Checking service for device group ingestion")
 
         if dep.Spec.Type == v1.ServiceTypeLoadBalancer{
