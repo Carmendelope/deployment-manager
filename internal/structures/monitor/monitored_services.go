@@ -86,6 +86,21 @@ type MonitoredInstances interface {
     //  true if the app was deleted
     RemoveApp(appInstanceId string) bool
 
+    // Return the total number of monitored applications
+    // return:
+    //  number of monitored applications
+    GetNumApps() int
+
+    // Return the total number of monitored services
+    // return:
+    //  number of monitored services
+    GetNumServices() int
+
+    // Return the total number of monitored resources
+    // return:
+    //  number of monitored resources
+    GetNumResources() int
+
 }
 
 
