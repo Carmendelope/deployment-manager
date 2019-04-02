@@ -373,6 +373,29 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                 endpoints = append(endpoints, ep)
             }
         }
+    }else if found && purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE{
+        log.Debug().Interface("analyzing", dep).Msg("Checking service for load balancer")
+        if dep.Spec.Type == v1.ServiceTypeLoadBalancer {
+
+            log.Debug().Msg("Load balancer detected")
+            if dep.Status.LoadBalancer.Ingress == nil || len(dep.Status.LoadBalancer.Ingress) == 0 {
+                log.Debug().Interface("loadbalancer", dep.Status).Msg("Load balancer is not ready, skip")
+                return
+            }
+
+            for _, ip := range dep.Status.LoadBalancer.Ingress {
+                for _, port := range dep.Spec.Ports {
+                    ep := entities.EndpointInstance{
+                        EndpointInstanceId: string(dep.UID),
+                        EndpointType:       entities.ENDPOINT_TYPE_WEB,
+                        FQDN:               ip.IP,
+                        Port:               port.Port,
+                    }
+                    log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
+                    endpoints = append(endpoints, ep)
+                }
+            }
+        }
     }
 
     log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
