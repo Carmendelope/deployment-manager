@@ -19,6 +19,8 @@ import (
 const InstPrefixLength = 6
 const OrgPrefixLength = 8
 
+const ANNOTATION_PATH = "nginx.ingress.kubernetes.io/app-root"
+
 type IngressesInfo struct {
 	ServiceId         string
 	ServiceInstanceId string
@@ -84,16 +86,19 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
+	annotationPath := ""
+
 	found := false
 	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
 		port := service.ExposedPorts[portIndex]
 		if port.ExposedPort == rule.TargetPort && port.Endpoints != nil {
-			//for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex ++ {
 			for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex ++ {
 				endpoint := service.ExposedPorts[endpointIndex].Endpoints[endpointIndex]
 				if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
+					if endpoint.Path != "/" {
+						annotationPath = endpoint.Path
+					}
 					toAdd := v1beta1.HTTPIngressPath{
-						Path: endpoint.Path,
 						Backend: v1beta1.IngressBackend{
 							ServiceName: service.Name,
 							ServicePort: intstr.IntOrString{IntVal: rule.TargetPort},
@@ -124,6 +129,18 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 	ingressGlobalFqdn := fmt.Sprintf("%s.%s.%s.%s.ep.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix, config.GetConfig().ManagementHostname)
 	ingressHostname := fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, config.GetConfig().ClusterPublicHostname)
 
+
+	// create the ingress annotations
+	annotations := map[string]string{
+		"kubernetes.io/ingress.class": "nginx",
+		"organizationId":              service.OrganizationId,
+		"appInstanceId":               di.data.AppInstanceId,
+		"serviceId":                   service.ServiceId,
+	}
+	if annotationPath != "" {
+		annotations[ANNOTATION_PATH] = annotationPath
+	}
+
 	return &v1beta1.Ingress{
 		TypeMeta: metaV1.TypeMeta{
 			Kind:       "Ingress",
@@ -145,12 +162,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
 			},
-			Annotations: map[string]string{
-				"kubernetes.io/ingress.class": "nginx",
-				"organizationId":              service.OrganizationId,
-				"appInstanceId":               di.data.AppInstanceId,
-				"serviceId":                   service.ServiceId,
-			},
+			Annotations: annotations,
 		},
 		Spec: v1beta1.IngressSpec{
 			Rules: []v1beta1.IngressRule{
