@@ -38,6 +38,7 @@ const (
 
     NALEJ_ANNOTATION_SERVICE_PURPOSE = "nalej-service-purpose"
     NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE = "device-group"
+    NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE = "load-balancer"
 
     // EnvNalejAnnotationDGSecrets contains the name of the environemnt variable to store device group secrets.
     EnvNalejAnnotationDGSecrets= "NALEJ_DG_SHARED_SECRETS"

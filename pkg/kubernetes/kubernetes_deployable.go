@@ -46,6 +46,8 @@ type DeployableKubernetesStage struct {
     Storage *DeployableStorage
     // Collection of endpoints related to device groups.
     DeviceGroupServices *DeployableDeviceGroups
+    // Colletion of load balacers
+    LoadBalancers *DeployableLoadBalancer
 }
 
 // Instantiate a new set of resources for a stage to be deployed.
@@ -65,6 +67,7 @@ func NewDeployableKubernetesStage (
         Secrets:    NewDeployableSecrets(client, planetPath, data),
         Storage:    NewDeployableStorage(client, data),
         DeviceGroupServices: NewDeployableDeviceGroups(client, data),
+        LoadBalancers: NewDeployableLoadBalancer(client, data),
     }
 }
 
@@ -115,6 +118,13 @@ func (d DeployableKubernetesStage) Build() error {
         log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("impossible to create storage for")
         return err
     }
+
+    err = d.LoadBalancers.Build()
+    if err != nil {
+        log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("impossible to create load balancers for")
+        return err
+    }
+
     return nil
 }
 
@@ -173,6 +183,13 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
         return err
     }
 
+    log.Debug().Str("stageId", d.data.Stage.StageId).Msg("Deploy Load Balancer")
+    err = d.LoadBalancers.Deploy(controller)
+    if err != nil {
+        log.Error().Err(err).Msg("error deploying Load Balancers, aborting")
+        return err
+    }
+
     return nil
 }
 
@@ -208,6 +225,11 @@ func (d DeployableKubernetesStage) Undeploy() error {
         return err
     }
     err = d.Secrets.Undeploy()
+    if err != nil {
+        return err
+    }
+
+    err = d.Storage.Undeploy()
     if err != nil {
         return err
     }
