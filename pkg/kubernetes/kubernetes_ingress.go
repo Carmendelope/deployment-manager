@@ -137,7 +137,8 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		"appInstanceId":               di.data.AppInstanceId,
 		"serviceId":                   service.ServiceId,
 	}
-	// Defines the Application Root that the Controller must redirect 
+	// Overwrite the application root path with the user specified one so that when
+	// the user accesses the endpoint through the DNS it is automatically redirected
 	if annotationPath != "" {
 		annotations[ANNOTATION_PATH] = annotationPath
 	}
