@@ -153,7 +153,6 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
     }
 
     // Create Services for agents
-    //for serviceId, serv := range s.ztAgents {
     for _, servInfo := range s.ztAgents {
         created, err := s.client.Create(&servInfo.Service)
         if err != nil {
