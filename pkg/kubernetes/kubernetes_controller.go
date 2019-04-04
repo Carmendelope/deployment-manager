@@ -387,7 +387,7 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
                 for _, port := range dep.Spec.Ports {
                     ep := entities.EndpointInstance{
                         EndpointInstanceId: string(dep.UID),
-                        EndpointType:       entities.ENDPOINT_TYPE_WEB,
+                        EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
                         FQDN:               ip.IP,
                         Port:               port.Port,
                     }
