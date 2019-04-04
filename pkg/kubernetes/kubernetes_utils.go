@@ -6,7 +6,6 @@
 package kubernetes
 
 import (
-    "github.com/rs/zerolog/log"
     "regexp"
 )
 
@@ -32,7 +31,6 @@ var kubernetesInvalidLabelChar = regexp.MustCompile(KUBERNETES_LABEL_INVALID_EXP
 func ReformatLabel(input string) string {
     _, fullString := kubernetesLabelsChecker.LiteralPrefix()
     if fullString {
-        log.Debug().Msg("label matches k8s definition")
         return input
     }
     adapted := kubernetesInvalidLabelChar.ReplaceAllString(input,"")
