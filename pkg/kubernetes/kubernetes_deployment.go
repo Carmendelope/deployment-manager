@@ -102,7 +102,8 @@ func createVolumeName(name string) string {
         res = res[:len(res)-1]
     }
 
-    return strings.Replace(res, "/", "-", -1)
+    return ReformatLabel(res)
+
 }
 
 func (d *DeployableDeployments) generateAllVolumes (serviceId string, serviceInstanceId string, configFiles []*grpc_application_go.ConfigFile) ([]apiv1.Volume, []apiv1.VolumeMount) {
