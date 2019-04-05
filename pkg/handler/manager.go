@@ -81,7 +81,7 @@ func(m *Manager) Run() {
         case <- sleep:
             for m.queue.AvailableRequests() {
                 log.Info().Int("queued requests", m.queue.Len()).Msg("there are pending deployment requests")
-                m.processRequest(m.queue.NextRequest())
+                go m.processRequest(m.queue.NextRequest())
             }
         }
     }
