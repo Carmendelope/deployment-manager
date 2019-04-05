@@ -93,7 +93,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		port := service.ExposedPorts[portIndex]
 		if port.ExposedPort == rule.TargetPort && port.Endpoints != nil {
 			for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex ++ {
-				endpoint := service.ExposedPorts[endpointIndex].Endpoints[endpointIndex]
+				endpoint := service.ExposedPorts[portIndex].Endpoints[endpointIndex]
 				if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
 					if endpoint.Path != "/" {
 						annotationPath = endpoint.Path
