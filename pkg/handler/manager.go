@@ -82,6 +82,8 @@ func(m *Manager) Run() {
             for m.queue.AvailableRequests() {
                 log.Info().Int("queued requests", m.queue.Len()).Msg("there are pending deployment requests")
                 go m.processRequest(m.queue.NextRequest())
+                // give it a second
+                time.Sleep(time.Second)
             }
         }
     }

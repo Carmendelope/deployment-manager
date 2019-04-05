@@ -25,7 +25,7 @@ import (
 
 const(
     // Time to sleep between checks
-    CheckSleepTime = 15
+    CheckSleepTime = 5
 )
 
 type MonitorHelper struct {
