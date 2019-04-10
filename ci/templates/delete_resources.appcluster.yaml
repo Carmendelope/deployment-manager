@@ -1,0 +1,9 @@
+parameters:
+  kubeconfig: "$HOME/.kube/config"
+
+steps:
+  - script: |
+      kubectl --kubeconfig ${{ parameters.kubeconfig }} delete clusterrolebindings deployment-manager
+    displayName: "Clean up non namespaced resources"
+    condition: always()
+    continueOnError: true

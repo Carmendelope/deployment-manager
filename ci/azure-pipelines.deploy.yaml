@@ -111,6 +111,10 @@ jobs:
     parameters:
       kubeconfig: $(kubeconfig)
       namespace: $(namespace)
+  
+  - template: templates/delete_resources.appcluster.yaml
+    parameters:
+      kubeconfig: $(kubeconfig)
 
   - template: k8s/yaml/render.yaml@ci_templates
     parameters:
