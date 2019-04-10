@@ -1,0 +1,153 @@
+trigger: none
+pr: none
+
+variables:
+  - group: common-vars
+  - group: slack-webhooks
+  - group: docker-registries
+  - name: componentList
+    value: "deployment-manager"
+  - name: namespace
+    value: $(Build.SourceVersion)-$(Build.BuildId)
+  - name: kubeconfig
+    value: $(Agent.TempDirectory)/ci_kubeconfig.yaml
+  - name: authorName
+    value: ""
+
+resources:
+  repositories:
+    - repository: ci_templates
+      type: github
+      name: nalej/ci-templates
+      endpoint: nalej
+
+jobs:
+- job: DeployComponent
+  pool:
+    vmImage: 'Ubuntu-16.04'
+  
+  steps:
+  - template: misc/variables.yaml@ci_templates
+
+  - template: slack/build/start.yaml@ci_templates
+    parameters:
+      author: $(authorName)
+      repository: $(Build.Repository.Name)
+      branch: $(Build.SourceBranch)
+      commit: $(Build.SourceVersionMessage)
+      buildUrl: $(buildUrl)$(Build.BuildId)
+      slackWebhook: $(slackBuilds)
+  
+  - template: k8s/yaml/render.yaml@ci_templates
+    parameters:
+      namespace: "__NPH_NAMESPACE"
+      componentList: $(componentList)
+      dockerRegistry: $(stagingDockerRegistry)
+
+  - template: k8s/configmaps/create.yaml@ci_templates
+    parameters:
+      name: cluster-config
+      namespace: "__NPH_NAMESPACE"
+      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/appcluster
+      yamlFile: musician.configmap.yaml
+      contents: "{'cluster_id': 'test', 'platform_type': 'AZURE', 'dns_public_ips': '127.0.0.1', 'cluster_public_hostname': 'localhost', 'login_api_hostname': 'localhost', 'cluster_api_hostname': 'localhost', 'management_public_host': 'localhost', 'management_public_port': 12345}"
+  
+  - template: k8s/secrets/create.yaml@ci_templates
+    parameters:
+      name: cluster-user-credentials
+      namespace: "__NPH_NAMESPACE"
+      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/appcluster
+      yamlFile: cluster-user-credentials.secret.yaml
+      contents: "{'email': 'jarvis@nalej.com', 'password': 'password'}"
+
+  - template: k8s/secrets/create.yaml@ci_templates
+    parameters:
+      name: credentials-nalej-public-registry
+      namespace: "__NPH_NAMESPACE"
+      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/appcluster
+      yamlFile: credentials-nalej-public-registry.secret.yaml
+      contents: "{'url': 'localhost', 'username': 'test', 'password': 'password'}"
+
+  - template: k8s/secrets/create.yaml@ci_templates
+    parameters:
+      name: zt-planet
+      namespace: "__NPH_NAMESPACE"
+      yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/appcluster
+      yamlFile: zt-planet.secret.yaml
+      contents: "{'test': 'test'}"
+  
+  - template: k8s/yaml/publish.yaml@ci_templates
+    parameters:
+      yamlIdentifier: testing
+      yamlPath: dist/yaml/$(stagingDockerRegistry)
+  
+  - template: k8s/yaml/namespace.yaml@ci_templates
+    parameters:
+      namespace: $(namespace)
+      yamlPath: dist/yaml/$(stagingDockerRegistry)
+
+  - task: DownloadSecureFile@1
+    inputs:
+      secureFile: ci_kubeconfig.yaml
+    displayName: "Get K8S configuration file"
+  
+  - template: k8s/ns/create.yaml@ci_templates
+    parameters:
+      kubeconfig: $(kubeconfig)
+      namespace: $(namespace)
+
+  - template: k8s/resources/create.yaml@ci_templates
+    parameters:
+      kubeconfig: $(kubeconfig)
+      platform: appcluster
+      dockerRegistry: $(stagingDockerRegistry)
+  
+  - template: templates/verify_deploy.yaml
+    parameters:
+      kubeconfig: $(kubeconfig)
+      namespace: $(namespace)
+
+  - template: k8s/ns/delete.yaml@ci_templates
+    parameters:
+      kubeconfig: $(kubeconfig)
+      namespace: $(namespace)
+
+  - template: k8s/yaml/render.yaml@ci_templates
+    parameters:
+      namespace: nalej
+      componentList: $(componentList)
+      dockerRegistry: $(stagingDockerRegistry)
+  
+  - template: k8s/yaml/publish.yaml@ci_templates
+    parameters:
+      yamlIdentifier: staging
+      yamlPath: dist/yaml/$(stagingDockerRegistry)
+
+  - template: k8s/yaml/render.yaml@ci_templates
+    parameters:
+      namespace: nalej
+      componentList: $(componentList)
+      dockerRegistry: $(productionDockerRegistry)
+  
+  - template: k8s/yaml/publish.yaml@ci_templates
+    parameters:
+      yamlIdentifier: production
+      yamlPath: dist/yaml/$(productionDockerRegistry)
+  
+  - template: slack/build/finish.yaml@ci_templates
+    parameters:
+      author: $(authorName)
+      repository: $(Build.Repository.Name)
+      branch: $(Build.SourceBranch)
+      commit: $(Build.SourceVersionMessage)
+      buildUrl: $(buildUrl)$(Build.BuildId)
+      slackWebhook: $(slackBuilds)
+  
+  - template: slack/build/failed.yaml@ci_templates
+    parameters:
+      author: $(authorName)
+      repository: $(Build.Repository.Name)
+      branch: $(Build.SourceBranch)
+      commit: $(Build.SourceVersionMessage)
+      buildUrl: $(buildUrl)$(Build.BuildId)
+      slackWebhook: $(slackCIFailed)

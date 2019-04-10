@@ -1,0 +1,14 @@
+parameters:
+  downloadPath: ""
+
+steps:
+  - task: DownloadPipelineArtifact@1
+    inputs:
+      buildType: "specific"
+      project: "nalej"
+      pipeline: 41 # deployment-manager - Deployment
+      buildVersionToDownload: "latestFromBranch"
+      branchName: "refs/heads/master"
+      artifactName: testing-k8sYAMLfiles
+      downloadPath: ${{ parameters.downloadPath }}
+    displayName: Download deployment-manager YAML files

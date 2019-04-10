@@ -7,12 +7,12 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 
+VERSION=$(shell cat .version)
+
 # Docker configuration
 registry:=dev
 AZURE_CR=nalejdev
-DOCKER_REGISTRY=$(AZURE_CR).azurecr.io
 DOCKER_REPO=$(shell whoami)
-VERSION=$(shell cat .version)
 
 ifeq ($(registry),staging)
 	AZURE_CR=nalejstaging
@@ -23,6 +23,8 @@ ifeq ($(registry),production)
 	AZURE_CR=nalejregistry
 	DOCKER_REPO=nalej
 endif
+
+DOCKER_REGISTRY=$(AZURE_CR).azurecr.io
 
 # Use ldflags to pass commit and branch information
 # TODO: Integrate this into the compilation process
