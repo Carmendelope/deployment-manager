@@ -49,8 +49,8 @@ jobs:
       name: cluster-config
       namespace: "__NPH_NAMESPACE"
       yamlPath: $(system.defaultWorkingDirectory)/dist/yaml/$(stagingDockerRegistry)/appcluster
-      yamlFile: musician.configmap.yaml
-      contents: "{'cluster_id': 'test', 'platform_type': 'AZURE', 'dns_public_ips': '127.0.0.1', 'cluster_public_hostname': 'localhost', 'login_api_hostname': 'localhost', 'cluster_api_hostname': 'localhost', 'management_public_host': 'localhost', 'management_public_port': 12345}"
+      yamlFile: cluster-config.configmap.yaml
+      contents: "{'cluster_id': 'test', 'platform_type': 'AZURE', 'dns_public_ips': '127.0.0.1', 'cluster_public_hostname': 'localhost', 'login_api_hostname': 'localhost', 'cluster_api_hostname': 'localhost', 'management_public_host': 'localhost', 'management_public_port': '12345'}"
   
   - template: k8s/secrets/create.yaml@ci_templates
     parameters:
