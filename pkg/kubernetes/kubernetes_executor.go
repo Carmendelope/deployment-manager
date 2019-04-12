@@ -207,11 +207,12 @@ func (k *KubernetesExecutor) StopControlEvents(appInstanceId string) {
     k.mu.Lock()
     defer k.mu.Unlock()
     log.Info().Str("appInstanceId", appInstanceId).Interface("controllers",k.Controllers).Msg("stop events controller")
-    controller, found := k.Controllers[appInstanceId]
-    if !found {
-        log.Error().Str("appInstanceId",appInstanceId).Msg("impossible to stop controller, appInstanceId not found")
-    }
-    controller.Stop()
+    // TODO this is not required as K8s stops the channels
+    //controller, found := k.Controllers[appInstanceId]
+    //if !found {
+    //    log.Error().Str("appInstanceId",appInstanceId).Msg("impossible to stop controller, appInstanceId not found")
+    //}
+    //controller.Stop()
     // delete the instance
     delete(k.Controllers,appInstanceId)
 }
