@@ -1,7 +1,6 @@
 # deployment-manager
 Deployment manager in charge of controlling application deployments at a cluster level
 
-
 ## Integration tests
 
 The following set of variables have go be set in order to proceed with integration tests.
