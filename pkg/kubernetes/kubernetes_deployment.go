@@ -14,7 +14,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/grpc-application-go"
-    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbApplication "github.com/nalej/grpc-application-go"
     "github.com/rs/zerolog/log"
     appsv1 "k8s.io/api/apps/v1"
     apiv1 "k8s.io/api/core/v1"
@@ -658,7 +658,7 @@ func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string
 //   ports list of exposed ports
 //  return:
 //   list of ports into k8s api format
-func (d *DeployableDeployments) getContainerPorts(ports []*pbConductor.Port) []apiv1.ContainerPort {
+func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) []apiv1.ContainerPort {
     obtained := make([]apiv1.ContainerPort, 0, len(ports))
     for _, p := range ports {
         obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})

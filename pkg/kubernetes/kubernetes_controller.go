@@ -426,6 +426,9 @@ func checkNamespacesDeployed(stored interface{}, pending monitor.MonitoredInstan
         pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
             "", []entities.EndpointInstance{})
+    } else if dep.Status.Phase == v1.NamespaceTerminating {
+        // if the namespace is being terminated set the deployment fragment as terminating
+        pending.SetAppStatus(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, entities.FRAGMENT_TERMINATING, nil)
     }
 
 }

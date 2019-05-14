@@ -21,14 +21,17 @@ const (
     NALEJ_SERVICE_DEPLOYING
     NALEJ_SERVICE_RUNNING
     NALEJ_SERVICE_ERROR
+    NALEJ_SERVICE_TERMINATING
+
 )
 
-var ServiceStatusToGRPC = map[NalejServiceStatus] pbConductor.ServiceStatus {
-    NALEJ_SERVICE_SCHEDULED: pbConductor.ServiceStatus_SERVICE_SCHEDULED,
-    NALEJ_SERVICE_WAITING:   pbConductor.ServiceStatus_SERVICE_WAITING,
-    NALEJ_SERVICE_DEPLOYING: pbConductor.ServiceStatus_SERVICE_DEPLOYING,
-    NALEJ_SERVICE_RUNNING:   pbConductor.ServiceStatus_SERVICE_RUNNING,
-    NALEJ_SERVICE_ERROR:     pbConductor.ServiceStatus_SERVICE_ERROR,
+var ServiceStatusToGRPC = map[NalejServiceStatus] pbApplication.ServiceStatus {
+    NALEJ_SERVICE_SCHEDULED: pbApplication.ServiceStatus_SERVICE_SCHEDULED,
+    NALEJ_SERVICE_WAITING:   pbApplication.ServiceStatus_SERVICE_WAITING,
+    NALEJ_SERVICE_DEPLOYING: pbApplication.ServiceStatus_SERVICE_DEPLOYING,
+    NALEJ_SERVICE_RUNNING:   pbApplication.ServiceStatus_SERVICE_RUNNING,
+    NALEJ_SERVICE_ERROR:     pbApplication.ServiceStatus_SERVICE_ERROR,
+    NALEJ_SERVICE_TERMINATING: pbApplication.ServiceStatus_SERVICE_TERMINATING,
 }
 
 // Equivalence table between status services and their corresponding fragment status.
@@ -38,6 +41,7 @@ var ServicesToFragmentStatus = map[NalejServiceStatus] FragmentStatus {
     NALEJ_SERVICE_DEPLOYING: FRAGMENT_DEPLOYING,
     NALEJ_SERVICE_RUNNING:   FRAGMENT_DONE,
     NALEJ_SERVICE_ERROR:     FRAGMENT_ERROR,
+    NALEJ_SERVICE_TERMINATING: FRAGMENT_TERMINATING,
 }
 
 
@@ -101,6 +105,7 @@ const (
     FRAGMENT_DONE
     FRAGMENT_ERROR
     FRAGMENT_RETRYING
+    FRAGMENT_TERMINATING
 )
 
 var FragmentStatusToGRPC = map[FragmentStatus] pbConductor.DeploymentFragmentStatus {
@@ -109,6 +114,7 @@ var FragmentStatusToGRPC = map[FragmentStatus] pbConductor.DeploymentFragmentSta
     FRAGMENT_DONE : pbConductor.DeploymentFragmentStatus_DONE,
     FRAGMENT_ERROR : pbConductor.DeploymentFragmentStatus_ERROR,
     FRAGMENT_RETRYING : pbConductor.DeploymentFragmentStatus_RETRYING,
+    FRAGMENT_TERMINATING : pbConductor.DeploymentFragmentStatus_TERMINATING,
 }
 
 // Deployment metadata

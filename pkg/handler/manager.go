@@ -214,18 +214,23 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
 func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Str("appInstanceID", request.AppInstanceId).Msg("undeploy app instance with id")
 
-    // Remove stage entries
-    m.monitored.RemoveApp(request.AppInstanceId)
-	// Stop monitoring events
+    // Stop monitoring events
 	// TODO check if this operation is really required
     //m.executor.StopControlEvents(request.AppInstanceId)
 
 	// Undeploy the namespace
 	err := m.executor.UndeployNamespace(request)
+	// set the requested application as terminating
+	m.monitored.SetAppStatus(request.AppInstanceId, entities.FRAGMENT_TERMINATING,nil)
+
 	if err != nil {
 		log.Error().Err(err).Msgf("impossible to undeploy app %s", request.AppInstanceId)
 		return err
 	}
+
+    // Remove stage entries
+    m.monitored.RemoveApp(request.AppInstanceId)
+
 
     return nil
 }
