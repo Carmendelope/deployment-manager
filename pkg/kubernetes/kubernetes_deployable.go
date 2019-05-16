@@ -6,7 +6,7 @@ package kubernetes
 
 import (
     "github.com/nalej/deployment-manager/internal/entities"
-    pbConductor "github.com/nalej/grpc-conductor-go"
+    pbApplication "github.com/nalej/grpc-application-go"
     apiv1 "k8s.io/api/core/v1"
     "github.com/rs/zerolog/log"
     "k8s.io/apimachinery/pkg/util/intstr"
@@ -46,7 +46,7 @@ type DeployableKubernetesStage struct {
     Storage *DeployableStorage
     // Collection of endpoints related to device groups.
     DeviceGroupServices *DeployableDeviceGroups
-    // Colletion of load balacers
+    // Collection of load balancers
     LoadBalancers *DeployableLoadBalancer
 }
 
@@ -241,7 +241,7 @@ func (d DeployableKubernetesStage) Undeploy() error {
     return nil
 }
 
-func getServicePorts(ports []*pbConductor.Port) []apiv1.ServicePort {
+func getServicePorts(ports []*pbApplication.Port) []apiv1.ServicePort {
     obtained := make([]apiv1.ServicePort, 0, len(ports))
     for _, p := range ports {
         obtained = append(obtained, apiv1.ServicePort{

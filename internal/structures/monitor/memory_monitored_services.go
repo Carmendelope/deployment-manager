@@ -313,9 +313,13 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 
 func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.MonitoredAppEntry) {
     p.mu.RLock()
-    defer p.mu.RUnlock()
     toReturn := make([]*entities.MonitoredAppEntry,0)
+    // list of apps to be removed
+    toRemove := make([]string, 0)
     for _, app := range p.monitoredApps {
+        if app.Status == entities.FRAGMENT_TERMINATING {
+            toRemove = append(toRemove, app.AppInstanceId)
+        }
         pendingServices := make(map[string]*entities.MonitoredServiceEntry,0)
         // for every monitored app
         for _, x := range app.Services {
@@ -339,6 +343,13 @@ func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.Monit
             toReturn = append(toReturn, &newApp)
         }
     }
+    // remove entries in terminating status
+    for _, appId := range toRemove {
+        log.Debug().Str("appInstanceId", appId).Msg("remove terminating app from the list of monitored")
+        defer p.RemoveApp(appId)
+    }
+    // This is the latest unlock to be deferred to respect the order and avoid race conditions
+    defer p.mu.RUnlock()
     return toReturn
 }
 
@@ -401,6 +412,7 @@ func (p *MemoryMonitoredInstances) UpdateAppStatus(appInstanceID string) {
 func (p *MemoryMonitoredInstances)  RemoveApp(appInstanceId string) bool {
     p.mu.Lock()
     defer p.mu.Unlock()
+    log.Debug().Str("appInstanceId", appInstanceId).Msg("remove app from the list of monitored")
 
     _, found := p.monitoredApps[appInstanceId]
     if !found {
