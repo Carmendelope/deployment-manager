@@ -228,10 +228,6 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 		return err
 	}
 
-    // Remove stage entries
-    m.monitored.RemoveApp(request.AppInstanceId)
-
-
     return nil
 }
 
