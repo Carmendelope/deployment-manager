@@ -348,7 +348,7 @@ func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.Monit
         log.Debug().Str("appInstanceId", appId).Msg("remove terminating app from the list of monitored")
         defer p.RemoveApp(appId)
     }
-    // This is the latest unlock to be defered to respect the order and avoid race conditions
+    // This is the latest unlock to be deferred to respect the order and avoid race conditions
     defer p.mu.RUnlock()
     return toReturn
 }
