@@ -1,0 +1,38 @@
+# No print when Makefile switches directory, clutters the output
+ifndef VERBOSE
+MAKEFLAGS += --no-print-directory
+endif
+
+# Target directory
+TARGET=bin
+
+# Component variables
+VERSION=$(shell cat .version)
+COMMIT=$(shell git rev-parse HEAD)
+APPS=$(shell jq -r '.application_list[]' .nalej-component.json)
+
+# Docker variables
+ACR_DEVELOPMENT=nalejdev
+ACR_STAGING=nalejstaging
+ACR_PRODUCTION=nalejregistry
+ACR_PUBLIC=nalejpublic
+DOCKER_REGISTRY:=development
+AZURE_CR=$(ACR_DEVELOPMENT)
+DOCKER_REPOSITORY=$(shell whoami)
+
+ifeq ($(DOCKER_REGISTRY),staging)
+	AZURE_CR=$(ACR_STAGING)
+	DOCKER_REPOSITORY=nalej
+endif
+
+ifeq ($(DOCKER_REGISTRY),production)
+	AZURE_CR=$(ACR_PRODUCTION)
+	DOCKER_REPOSITORY=nalej
+endif
+
+ifeq ($(DOCKER_REGISTRY),public)
+	AZURE_CR=$(ACR_PUBLIC)
+	DOCKER_REPOSITORY=nalej
+endif
+
+REGISTRY_HOST=$(AZURE_CR).azurecr.io

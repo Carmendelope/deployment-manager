@@ -1,0 +1,113 @@
+# REQUIRES Makefile.common, Makefile.docker and Makefile.k8s
+
+# Commands
+GOCMD=go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOTEST=$(GOCMD) test
+GOMETALINTER=gometalinter
+GOFMT=gofmt
+DEPCMD=dep
+
+# Build variables
+LDFLAGS=-ldflags "-X main.MainVersion=${VERSION} -X main.MainCommit=${COMMIT}"
+BUILDOS=linux
+BUILDARCH=amd64
+
+# Testing variables
+TESTFLAGS=
+COVERAGE_FILE=$(TARGET)/coverage.out
+
+.PHONY: all
+all: dep build test yaml image
+
+# Binary building
+define go-build-recipe
+@for app in $(APPS); do \
+	if [ -d cmd/$$app ]; then \
+		${GOBUILDFLAGS} ${GOBUILD} $(LDFLAGS) -o ${DISTPATH}/$$app${1} ./cmd/$$app && \
+		echo " - Built $$app binary"; \
+	fi ; \
+done
+endef
+
+.PHONY: build build-custom build-docker
+
+build: GOBUILDFLAGS=
+build: DISTPATH=${TARGET}
+build: CURRENTOS:=$(shell go tool dist env | grep GOOS | cut -d'=' -f 2 | tr -d '"')
+build:
+	@echo ">>> Building binaries for your OS"
+ifeq ($(CURRENTOS),windows)
+	$(call go-build-recipe,.exe)
+else
+	$(call go-build-recipe,)
+endif
+	@echo ">>> Finished building binaries for your OS"
+
+build-custom: GOBUILDFLAGS=CGO_ENABLED=0 GOOS=${BUILDOS} GOARCH=${BUILDARCH}
+build-custom: DISTPATH=${TARGET}/${BUILDOS}_${BUILDARCH}
+build-custom:
+	@echo ">>> Building binaries for ${BUILDOS} ${BUILDARCH}"
+ifeq ($(BUILDOS),windows)
+	$(call go-build-recipe,.exe)
+else
+	$(call go-build-recipe,)
+endif
+	@echo ">>> Finished building binaries for ${BUILDOS} ${BUILDARCH}"
+
+image: CONTEXTPATH=$(TARGET)/$(BUILDOS)_$(BUILDARCH)
+image: build-custom docker-build
+
+# Dependency download
+define dep-recipe
+@if [ ! -d vendor ]; then \
+	echo "vendor directory does not exist, creating it" ; \
+	mkdir vendor ; \
+fi ;
+@echo ">>> Updating dependencies"
+@dep ensure ${DEPOPTS}
+@echo ">>> Finished updating dependencies"
+endef
+
+.PHONY: dep dep-update
+
+dep: DEPOPTS=-v
+dep: 
+	$(dep-recipe)
+
+dep-update: DEPOPTS=-v -update
+dep-update:
+	$(dep-recipe)
+
+# Testing
+define go-test-recipe
+@${GOTEST} ${TESTFLAGS} ./...
+endef
+
+.PHONY: test test-race test-coverage test-all
+
+test:
+	@echo ">>> Running tests"
+	$(go-test-recipe)
+
+test-race: TESTFLAGS=-race
+test-race:
+	@echo ">>> Running tests (Race detector enabled)"
+	$(go-test-recipe)
+
+test-coverage: TESTFLAGS=-coverprofile=${COVERAGE_FILE} -covermode=atomic
+test-coverage:
+	@echo ">>> Running tests (With code coverage)"
+	$(go-test-recipe)
+
+test-all: test test-race test-coverage
+
+# DEPRECATED TARGETS
+.PHONY: local linux
+local: 
+	@echo "'make local' is DEPRECATED and will be removed soon. Use 'make build' instead"
+	@$(MAKE) build
+linux:
+	@echo "'make linux' is DEPRECATED and will be removed soon. Use 'make build-custom' instead"
+	@$(MAKE) build-custom
