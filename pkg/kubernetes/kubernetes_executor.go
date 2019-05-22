@@ -95,9 +95,9 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
        return nil, err
     }
 
-    controller, found := k.Controllers[metadata.AppInstanceId]
+    controller, found := k.Controllers[metadata.FragmentId]
     if !found {
-        log.Error().Str("appInstanceId",metadata.AppInstanceId).
+        log.Error().Str("fragmentId",metadata.FragmentId).
             Msg("impossible to find the corresponding events controller")
         return nil, errors.New("impossible to find the corresponding events controller")
     }
@@ -130,7 +130,6 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
     var toReturn executor.Deployable
     toReturn = namespaceDeployable
 
-
     return toReturn, nil
 }
 
@@ -144,7 +143,7 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
     k8sDeploy = toDeploy.(*DeployableKubernetesStage)
 
     // get the previously generated controller for this namespace
-    controller, found := k.Controllers[k8sDeploy.data.AppInstanceId]
+    controller, found := k.Controllers[k8sDeploy.data.FragmentId]
     if !found {
         log.Error().Str("namespace",k8sDeploy.data.Namespace).Str("stageId",stage.StageId).
             Msg("impossible to find the corresponding events controller")
@@ -163,7 +162,7 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
 }
 
 
-func (k *KubernetesExecutor) AddEventsController(appInstanceId string, monitored monitor.MonitoredInstances,
+func (k *KubernetesExecutor) AddEventsController(fragmentId string, monitored monitor.MonitoredInstances,
     namespace string) executor.DeploymentController {
     // Instantiate a new controller
     deployController := NewKubernetesController(k, monitored, namespace)
@@ -173,12 +172,12 @@ func (k *KubernetesExecutor) AddEventsController(appInstanceId string, monitored
 
     k.mu.Lock()
     defer k.mu.Unlock()
-    retrievedController, found := k.Controllers[appInstanceId]
+    retrievedController, found := k.Controllers[fragmentId]
     if found {
-        log.Warn().Str("appInstanceId", appInstanceId).Msg("a kubernetes controller already exists for this namespace")
+        log.Warn().Str("fragmentId", fragmentId).Msg("a kubernetes controller already exists for this namespace")
         return retrievedController
     }
-    k.Controllers[appInstanceId] = k8sController
+    k.Controllers[fragmentId] = k8sController
     log.Debug().Interface("controllers", k.Controllers).Msg("added a new events controller")
     return k8sController
 }
@@ -186,14 +185,14 @@ func (k *KubernetesExecutor) AddEventsController(appInstanceId string, monitored
 
 // Generate a events controller for a given namespace.
 //  params:
-//   appInstanceId to be supervised
+//   fragmentId to be supervised
 //   monitored data structure to monitor incoming events
-func (k *KubernetesExecutor) StartControlEvents(appInstanceId string) executor.DeploymentController {
+func (k *KubernetesExecutor) StartControlEvents(fragmentId string) executor.DeploymentController {
     k.mu.Lock()
     defer k.mu.Unlock()
-    toReturn, found := k.Controllers[appInstanceId]
+    toReturn, found := k.Controllers[fragmentId]
     if !found {
-        log.Error().Str("appInstanceId",appInstanceId).Msg("the kubernetes controller was not found")
+        log.Error().Str("fragmentId",fragmentId).Msg("the kubernetes controller was not found")
         return nil
     }
     toReturn.Run()
@@ -203,10 +202,10 @@ func (k *KubernetesExecutor) StartControlEvents(appInstanceId string) executor.D
 // Stop the control of events for a given namespace.
 //  params:
 //   appInstanceId to stop the control
-func (k *KubernetesExecutor) StopControlEvents(appInstanceId string) {
+func (k *KubernetesExecutor) StopControlEvents(fragmentId string) {
     k.mu.Lock()
     defer k.mu.Unlock()
-    log.Info().Str("appInstanceId", appInstanceId).Interface("controllers",k.Controllers).Msg("stop events controller")
+    log.Info().Str("fragmentId", fragmentId).Interface("controllers",k.Controllers).Msg("stop events controller")
     // TODO this is not required as K8s stops the channels
     //controller, found := k.Controllers[appInstanceId]
     //if !found {
@@ -214,7 +213,7 @@ func (k *KubernetesExecutor) StopControlEvents(appInstanceId string) {
     //}
     //controller.Stop()
     // delete the instance
-    delete(k.Controllers,appInstanceId)
+    delete(k.Controllers,fragmentId)
 }
 
 

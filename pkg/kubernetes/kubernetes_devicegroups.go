@@ -80,6 +80,7 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 			Name:      serviceName,
 			Namespace: d.data.Namespace,
 			Labels:    map[string]string{
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : d.data.FragmentId,
 				utils.NALEJ_ANNOTATION_ORGANIZATION : d.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : d.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : d.data.AppInstanceId,
@@ -87,8 +88,6 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 				utils.NALEJ_ANNOTATION_SECURITY_RULE_ID : sr.RuleId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : sr.TargetServiceId,
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : sr.TargetServiceInstanceId,
-				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
-				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_PURPOSE : utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE,
 			},
 		},
@@ -101,8 +100,6 @@ func (d*DeployableDeviceGroups) getK8sService(sr *grpc_conductor_go.DeviceGroupS
 				utils.NALEJ_ANNOTATION_STAGE_ID : d.data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : sr.TargetServiceId,
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : sr.TargetServiceInstanceId,
-				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : d.data.ServiceGroupId,
-				//utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : d.data.ServiceGroupInstanceId,
 			},
 			Type: serviceType,
 		},
@@ -137,7 +134,7 @@ func (d *DeployableDeviceGroups) Deploy(controller executor.DeploymentController
 			Str("name", servInfo.Service.Name).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
 		//res := entities.NewMonitoredPlatformResource(string(created.GetUID()), d.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
-		res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+		res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],string(created.GetUID()),
 			created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")

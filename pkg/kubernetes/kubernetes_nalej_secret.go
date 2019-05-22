@@ -62,6 +62,7 @@ func (ds*DeployableNalejSecret)BuildNalejPublicRegistry ()*v1.Secret {
 			Name:         NalejPublicRegistryName,
 			Namespace:    ds.data.Namespace,
 			Labels: map[string]string {
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : ds.data.FragmentId,
 				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,

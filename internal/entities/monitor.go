@@ -114,6 +114,8 @@ func (m *MonitoredServiceEntry) RemovePendingResource(uid string) {
 
 
 type MonitoredPlatformResource struct {
+    // Fragment Id
+    FragmentId string `json: "fragment_id, omitempty"`
     // AppID for this resource
     AppID string `json: "app_id, omitempty"`
     // Stage this resource belongs to
@@ -138,9 +140,10 @@ type MonitoredPlatformResource struct {
 
 
 
-func NewMonitoredPlatformResource(uid string, appDescriptorId string, appInstanceId string, serviceGroupId string,
+func NewMonitoredPlatformResource(fragmentId string, uid string, appDescriptorId string, appInstanceId string, serviceGroupId string,
     serviceGroupInstanceId string, serviceId string, serviceInstanceId string, info string) MonitoredPlatformResource {
     return MonitoredPlatformResource{
+        FragmentId: fragmentId,
         UID: uid,
         AppID: appDescriptorId,
         AppInstanceID: appInstanceId,

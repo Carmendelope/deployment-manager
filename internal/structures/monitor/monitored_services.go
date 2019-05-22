@@ -16,19 +16,26 @@ type MonitoredInstances interface {
     // Check iteratively if the app has any pending resource to be deployed. This is done using the kubernetes controller.
     // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
     // params:
-    //  appInstanceId
+    //  fragmentId
     //  timecheck seconds between checks
     //  timeout seconds to wait until considering the task to be failed
     // return:
     //  error if any
-    WaitPendingChecks(appInstanceId string, timecheck int, timeout int) error
+    WaitPendingChecks(fragmentId string, timecheck int, timeout int) error
 
     // Add a new app to be monitored. If the application already exists, the services are added to the current instance.
     // params:
     //  toAdd application to be added.
-    AddApp(toAdd *entities.MonitoredAppEntry)
+    AddEntry(toAdd *entities.MonitoredAppEntry)
 
     // Set the status of a fragment
+    // params:
+    //  fragmentId
+    //  status
+    //  err execution error
+    SetEntryStatus(fragmentId string, status entities.FragmentStatus, err error)
+
+    // Modify the status of all the entries with the application id
     // params:
     //  appInstanceId
     //  status
@@ -58,12 +65,12 @@ type MonitoredInstances interface {
     // Set the status of a resource. This function determines how to change the service status
     // depending on the combination of the statuses of its related resources.
     // params:
-    //  appInstanceId stage identifier
+    //  fragmentId deployment identifier
     //  uid native resource identifier
     //  status of the native resource
     //  info textual information if proceeds
     //  endpoints optional array of endpoints
-    SetResourceStatus(appInstanceId string, serviceInstanceId string, uid string, status entities.NalejServiceStatus, info string,
+    SetResourceStatus(fragmentId string, serviceInstanceId string, uid string, status entities.NalejServiceStatus, info string,
         endpoints []entities.EndpointInstance)
 
     // This function returns a list of monitored apps with pending notifications and their services with pending notifications.
@@ -76,19 +83,24 @@ type MonitoredInstances interface {
 
     // Check the status of the services and set the app status and update entries accordingly.
     //  params:
-    //   appInstanceID identifier of the application
-    UpdateAppStatus(appInstanceID string)
+    //   fragmentId identifier of the fragment
+    UpdateAppStatus(fragmentId string)
 
-    // Remove an existing app
+    // Remove an existing entry
     // params:
     //  appInstanceId app to be removed
     // return:
     //  true if the app was deleted
-    RemoveApp(appInstanceId string) bool
+    RemoveEntry(fragmentId string) bool
 
-    // Return the total number of monitored applications
+    // Return the number of monitored fragments
     // return:
-    //  number of monitored applications
+    //  number of monitored fragments
+    GetNumFragments() int
+
+    // Return the total number of monitored apps
+    // return:
+    //  number of monitored apps
     GetNumApps() int
 
     // Return the total number of monitored services

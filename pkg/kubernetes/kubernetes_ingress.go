@@ -154,6 +154,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 			Labels: map[string]string{
 				"cluster":                                        "application",
 				"component":                                      "ingress-nginx",
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       di.data.FragmentId,
 				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:          ingressPrefixName,
 				utils.NALEJ_ANNOTATION_ORGANIZATION:              di.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            di.data.AppDescriptorId,
@@ -228,7 +229,7 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			}
 			log.Debug().Str("serviceId", ingresses.ServiceId).Str("uid", string(created.GetUID())).Msg("Ingress has been created")
 			numCreated++
-			res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+			res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT], string(created.GetUID()),
 				created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
 				created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
 				created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")

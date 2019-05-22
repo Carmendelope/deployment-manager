@@ -89,8 +89,8 @@ func (m *MonitorHelper) sendFragmentStatus(req pbConductor.DeploymentFragmentUpd
 }
 
 func (m *MonitorHelper) UpdateStatus() {
-    if m.Monitored.GetNumApps() > 0 {
-        log.Debug().Msgf("monitored %d apps with %d services and %d resources", m.Monitored.GetNumApps(),
+    if m.Monitored.GetNumFragments() > 0 {
+        log.Debug().Msgf("monitored %d fragments with %d services and %d resources", m.Monitored.GetNumFragments(),
             m.Monitored.GetNumServices(),m.Monitored.GetNumResources())
     }
     notificationPending := m.Monitored.GetPendingNotifications()
@@ -98,11 +98,13 @@ func (m *MonitorHelper) UpdateStatus() {
         // nothing to do
         return
     }
+
+    log.Debug().Int("pendingNotifications",len(notificationPending)).Msg("there are pending notifications")
     clusterId := config.GetConfig().ClusterId
-    // notify fragments. This is equivalent to notify an app
-    for _, app := range notificationPending {
+    // notify fragments. This is equivalent to notify an entry
+    for _, entry := range notificationPending {
         list := make([]*pbConductor.ServiceUpdate,0)
-        for _, serv := range app.Services {
+        for _, serv := range entry.Services {
 
             endpoints := make([]*pbApplication.EndpointInstance,len(serv.Endpoints))
             for i, e := range serv.Endpoints {
@@ -127,8 +129,8 @@ func (m *MonitorHelper) UpdateStatus() {
         }
 
         req := pbConductor.DeploymentServiceUpdateRequest{
-            OrganizationId: app.OrganizationId,
-            FragmentId:     app.FragmentId,
+            OrganizationId: entry.OrganizationId,
+            FragmentId:     entry.FragmentId,
             ClusterId:      clusterId,
             List:           list,
             }
@@ -136,13 +138,13 @@ func (m *MonitorHelper) UpdateStatus() {
 
         // Set a request for the fragment
         reqApp := pbConductor.DeploymentFragmentUpdateRequest{
-            OrganizationId: app.OrganizationId,
-            DeploymentId: app.DeploymentId,
-            FragmentId: app.FragmentId,
-            Status: entities.FragmentStatusToGRPC[app.Status],
-            ClusterId: clusterId,
-            AppInstanceId: app.AppInstanceId,
-            Info: app.Info,
+            OrganizationId: entry.OrganizationId,
+            DeploymentId:   entry.DeploymentId,
+            FragmentId:     entry.FragmentId,
+            Status:         entities.FragmentStatusToGRPC[entry.Status],
+            ClusterId:      clusterId,
+            AppInstanceId:  entry.AppInstanceId,
+            Info:           entry.Info,
         }
         m.sendFragmentStatus(reqApp)
     }

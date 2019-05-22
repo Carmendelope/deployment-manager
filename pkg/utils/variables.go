@@ -15,6 +15,8 @@ const (
     MANAGER_CLUSTER_PORT = "MANAGER_CLUSTER_PORT"
 
 
+    // Annotation for the deployment fragment
+    NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT = "nalej-deployment-fragment"
     // Annotation for the organization
     NALEJ_ANNOTATION_ORGANIZATION = "nalej-organization"
     // Annotation application descriptor

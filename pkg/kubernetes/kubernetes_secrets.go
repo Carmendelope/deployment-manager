@@ -66,6 +66,7 @@ func (ds*DeployableSecrets) generateDockerSecret(service *grpc_application_go.Se
 			Name:         service.Name,
 			Namespace:    ds.data.Namespace,
 			Labels: map[string]string {
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : ds.data.FragmentId,
 				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
@@ -100,6 +101,7 @@ func (ds *DeployableSecrets) generatePlanetSecret (namespace string) *v1.Secret 
 			GenerateName: "",
 			Namespace:    namespace,
 			Labels: map[string]string {
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : ds.data.FragmentId,
 				utils.NALEJ_ANNOTATION_ORGANIZATION : ds.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : ds.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : ds.data.AppInstanceId,
