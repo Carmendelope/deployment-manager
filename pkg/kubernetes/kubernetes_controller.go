@@ -223,7 +223,7 @@ func (c *KubernetesObserver) updatePendingChecks(key string) error {
 
     if !exists {
         // Below we will warm up our cache with a Pod, so that we will see a delete for one pod
-        log.Debug().Msgf("deployment %s does not exist anymore", key)
+        log.Debug().Msgf("deployment %s does not exist any longer", key)
     } else {
         // Note that you also have to check the uid if you have a local controlled resource, which
         // is dependent on the actual instance, to detect that a Pod was recreated with the same name
