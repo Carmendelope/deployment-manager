@@ -51,6 +51,7 @@ func(n *DeployableNamespace) Build() error {
         ObjectMeta: metav1.ObjectMeta{
             Name: n.data.Namespace,
             Labels: map[string]string{
+                utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : n.data.FragmentId,
                 utils.NALEJ_ANNOTATION_ORGANIZATION : n.data.OrganizationId,
                 utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : n.data.AppDescriptorId,
                 utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : n.data.AppInstanceId,

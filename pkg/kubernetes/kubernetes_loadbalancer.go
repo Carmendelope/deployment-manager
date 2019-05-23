@@ -43,6 +43,7 @@ func NewDeployableLoadBalancer(client *kubernetes.Clientset, data entities.Deplo
 func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) *apiv1.Service {
 
 	extendedLabels := make(map[string]string,0)
+	extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] =  dl.data.FragmentId
 	extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = dl.data.OrganizationId
 	extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = dl.data.AppDescriptorId
 	extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = dl.data.AppInstanceId
@@ -54,6 +55,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE] = utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE
 
 	extendedSelectors := map[string]string{
+		utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : dl.data.FragmentId,
 		utils.NALEJ_ANNOTATION_ORGANIZATION: dl.data.OrganizationId,
 		utils.NALEJ_ANNOTATION_APP_DESCRIPTOR: dl.data.AppDescriptorId,
 		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: dl.data.AppInstanceId,
@@ -137,7 +139,7 @@ func (dl *DeployableLoadBalancer) Deploy(controller executor.DeploymentControlle
 		}
 		log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",dl.data.AppInstanceId).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
-		res := entities.NewMonitoredPlatformResource(string(created.GetUID()),
+		res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],string(created.GetUID()),
 			created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")

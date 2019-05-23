@@ -98,13 +98,13 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
 
     // Add a new events controller for this application
     log.Info().Str("appInstanceId", request.Fragment.AppInstanceId).Msg("add monitoring controller for app")
-    controller := m.executor.AddEventsController(request.Fragment.AppInstanceId, m.monitored, namespace)
+    controller := m.executor.AddEventsController(request.Fragment.FragmentId, m.monitored, namespace)
     if controller == nil{
         err := errors.New(fmt.Sprintf("impossible to create deployment controller for namespace %s",namespace))
-        log.Error().Err(err).Str("appInstanceId", request.Fragment.AppInstanceId).Msg("failed creating controller")
+        log.Error().Err(err).Str("fragmentId", request.Fragment.FragmentId).Msg("failed creating controller")
         //return err
         executionError = err
-        m.monitored.SetAppStatus(request.Fragment.AppInstanceId,entities.FRAGMENT_ERROR,executionError)
+        m.monitored.SetEntryStatus(request.Fragment.FragmentId,entities.FRAGMENT_ERROR,executionError)
         return executionError
     }
 
@@ -143,7 +143,7 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
             log.Info().Msg("there is no information to undeploy the object!!")
         }
 
-        m.monitored.SetAppStatus(request.Fragment.AppInstanceId, entities.FRAGMENT_ERROR,executionError)
+        m.monitored.SetEntryStatus(request.Fragment.FragmentId, entities.FRAGMENT_ERROR,executionError)
         return errors.New(fmt.Sprintf("failed environment preparation for fragment %s",
             request.Fragment.FragmentId))
     }
@@ -160,15 +160,15 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
 
         if executionError != nil {
             log.Error().Err(executionError).Msgf("impossible to build deployment for fragment %s",request.Fragment.FragmentId)
-            m.monitored.SetAppStatus(request.Fragment.AppInstanceId,entities.FRAGMENT_ERROR,executionError)
+            m.monitored.SetEntryStatus(request.Fragment.FragmentId,entities.FRAGMENT_ERROR,executionError)
             return executionError
         }
 
         // Add deployment stage to monitor entries
         // Platform resources will be filled by the corresponding deployables
-        log.Info().Str("appInstanceID",request.Fragment.AppInstanceId).Msg("add monitoring data")
+        log.Info().Str("fragmentId",request.Fragment.FragmentId).Msg("add monitoring data")
         monitoringData := m.getMonitoringData(stage, request.Fragment)
-        m.monitored.AddApp(monitoringData)
+        m.monitored.AddEntry(monitoringData)
 
         switch request.RollbackPolicy {
         case pbDeploymentMgr.RollbackPolicy_NONE:
@@ -194,7 +194,7 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
             if err != nil {
                 log.Error().Err(err).Str("fragmentId", request.Fragment.FragmentId).Msgf("impossible to undeploy preparation for fragment")
             }
-            m.monitored.SetAppStatus(request.Fragment.AppInstanceId,entities.FRAGMENT_ERROR,executionError)
+            m.monitored.SetEntryStatus(request.Fragment.FragmentId,entities.FRAGMENT_ERROR,executionError)
             return executionError
         }
 
@@ -231,6 +231,14 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
     return nil
 }
 
+
+func (m *Manager) UndeployFragment (request *pbDeploymentMgr.UndeployFragmentRequest) error {
+    return errors.New("non implemented operation")
+}
+
+
+
+
 // Private function to execute a stage in a loop of retries.
 //  params:
 //   fragment this stage belongs to
@@ -245,11 +253,11 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
 
     // something happened. We reach the retry loop
     for retries := 0; retries < maxRetries; retries++ {
-        m.monitored.SetAppStatus(fragment.AppInstanceId,entities.FRAGMENT_DEPLOYING,nil)
+        m.monitored.SetEntryStatus(fragment.FragmentId,entities.FRAGMENT_DEPLOYING,nil)
 
         // execute
         // Start controller here so we can consume already occurred events
-        controller := m.executor.StartControlEvents(fragment.AppInstanceId)
+        controller := m.executor.StartControlEvents(fragment.FragmentId)
         if controller == nil {
             return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for appInstanceId %s",fragment.AppInstanceId))
         }
@@ -259,12 +267,13 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
         if err != nil {
             log.Error().Err(err).Msgf("there was a problem when retrying stage %s from fragment %s",
                 stage.StageId, fragment.FragmentId)
-            m.monitored.SetAppStatus(fragment.AppInstanceId,entities.FRAGMENT_RETRYING,err)
+            m.monitored.SetEntryStatus(fragment.FragmentId,entities.FRAGMENT_RETRYING,err)
         }
 
-        log.Info().Str("namespace",namespace).Str("appInstanceId",fragment.AppInstanceId).
+        log.Info().Str("namespace",namespace).Str("fragmentIdappInstanceId",fragment.AppInstanceId).
+            Str("fragmentId", fragment.FragmentId).
             Str("stage", stage.StageId).Msg("wait for pending checks to finish")
-        stageErr := m.monitored.WaitPendingChecks(fragment.AppInstanceId, StageCheckTime, StageCheckTimeout)
+        stageErr := m.monitored.WaitPendingChecks(fragment.FragmentId, StageCheckTime, StageCheckTimeout)
         log.Debug().Msg("Finished waiting for pending checks")
 
         if stageErr == nil {

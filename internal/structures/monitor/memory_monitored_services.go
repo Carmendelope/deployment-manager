@@ -22,8 +22,8 @@ import (
 // belongs to.
 type MemoryMonitoredInstances struct {
     // Monitored resources for a given stage
-    // app instance id -> entry
-    monitoredApps map[string]*entities.MonitoredAppEntry
+    // fragment id -> entry
+    monitoredEntries map[string]*entities.MonitoredAppEntry
     // Mutex
     mu sync.RWMutex
 }
@@ -31,34 +31,34 @@ type MemoryMonitoredInstances struct {
 // Constructor to instantiate a basic memory monitored instances object.
 func NewMemoryMonitoredInstances() MonitoredInstances {
     return &MemoryMonitoredInstances{
-        monitoredApps: make(map[string]*entities.MonitoredAppEntry,0),
+        monitoredEntries: make(map[string]*entities.MonitoredAppEntry,0),
     }
 }
 
-func (p *MemoryMonitoredInstances) AddApp(toAdd *entities.MonitoredAppEntry) {
+func (p *MemoryMonitoredInstances) AddEntry(toAdd *entities.MonitoredAppEntry) {
     p.mu.Lock()
     defer p.mu.Unlock()
-    current, found := p.monitoredApps[toAdd.AppInstanceId]
+    current, found := p.monitoredEntries[toAdd.FragmentId]
     if !found {
         // new entry
-        log.Debug().Str("instanceId",toAdd.AppInstanceId).Msg("new app to be monitorized")
-        p.monitoredApps[toAdd.AppInstanceId] = toAdd
+        log.Debug().Str("fragmentId",toAdd.FragmentId).Msg("new fragment to be monitorized")
+        p.monitoredEntries[toAdd.FragmentId] = toAdd
     } else {
         // Add new services if they were not previously added
-        log.Debug().Str("instanceId",toAdd.AppInstanceId).Msg("append new services to app")
+        log.Debug().Str("fragmentId",toAdd.FragmentId).Msg("append new services to fragment")
         current.AppendServices(toAdd)
     }
 }
 
-func(p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status entities.FragmentStatus, err error) {
+func(p *MemoryMonitoredInstances) SetEntryStatus(fragmentId string, status entities.FragmentStatus, err error) {
     p.mu.Lock()
     defer p.mu.Unlock()
-    current, found := p.monitoredApps[appInstanceId]
+    current, found := p.monitoredEntries[fragmentId]
     if !found {
-        log.Debug().Str("instanceId",appInstanceId).Msg("impossible to set status. No monitored app")
+        log.Debug().Str("fragmentId",fragmentId).Msg("impossible to set status. No monitored app")
     } else {
         // Add new services if they were not previously added
-        log.Debug().Str("instanceId",appInstanceId).Interface("status",status).Msg("set instance status")
+        log.Debug().Str("fragmentId",fragmentId).Interface("status",status).Msg("set instance status")
         if status != current.Status {
             current.NewStatus = true
         }
@@ -71,29 +71,48 @@ func(p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status enti
     }
 }
 
+func (p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status entities.FragmentStatus, err error) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    // iterate and update the status of the entries
+    for _, current := range p.monitoredEntries {
+        if current.AppInstanceId == appInstanceId {
+            if status != current.Status {
+                current.NewStatus = true
+                current.Status = status
+            }
+            if err != nil {
+                current.Info = err.Error()
+            } else {
+                current.Info = ""
+            }
+        }
+    }
+}
+
 
 // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
 // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
-func(p *MemoryMonitoredInstances) WaitPendingChecks(appInstanceId string, checkingSleepTime int, stageCheckingTimeout int) error {
-    log.Info().Msgf("app %s wait until services for the instance are ready",appInstanceId)
+func(p *MemoryMonitoredInstances) WaitPendingChecks(fragmentId string, checkingSleepTime int, stageCheckingTimeout int) error {
+    log.Info().Msgf("fragment %s wait until services for the instance are ready", fragmentId)
     timeout := time.After(time.Second * time.Duration(stageCheckingTimeout))
     tick := time.Tick(time.Second * time.Duration(checkingSleepTime))
     for {
         select {
         // Got a timeout! Error
         case <-timeout:
-            log.Error().Str("instanceId",appInstanceId).Msg("checking pendingStages resources exceeded for stage")
-            return errors.New(fmt.Sprintf("checking pendingStages resources exceeded for app %s", appInstanceId))
+            log.Error().Str("fragmentId", fragmentId).Msg("checking pendingStages resources exceeded for stage")
+            return errors.New(fmt.Sprintf("checking pendingStages resources exceeded for fragment %s", fragmentId))
             // Next check
         case <-tick:
-            p.UpdateAppStatus(appInstanceId)
-            monitoredEntry, found := p.monitoredApps[appInstanceId]
+            p.UpdateAppStatus(fragmentId)
+            monitoredEntry, found := p.monitoredEntries[fragmentId]
             if !found {
-                log.Info().Str("appInstanceID", appInstanceId).Msg("app not monitored")
-                return errors.New(fmt.Sprintf("not monitored app %s", appInstanceId))
+                log.Info().Str("fragmentId", fragmentId).Msg("fragment not monitored")
+                return errors.New(fmt.Sprintf("not monitored fragment %s", fragmentId))
             }
             if monitoredEntry.NumPendingChecks == 0 {
-                log.Info().Str("instanceId",appInstanceId).Msg("app has no pendingStages checks. Exit checking stage")
+                log.Info().Str("fragmentId",fragmentId).Msg("fragment has no pendingStages checks. Exit checking stage")
                 return nil
             }
         }
@@ -109,40 +128,40 @@ func(p *MemoryMonitoredInstances) AddPendingResource(newResource *entities.Monit
 
     log.Debug().Interface("newResource", newResource).Msg("add new pending resource")
 
-    appEntry, found := p.monitoredApps[newResource.AppInstanceID]
+    appEntry, found := p.monitoredEntries[newResource.FragmentId]
     if !found {
-        log.Error().Str("appInstanceID", newResource.AppInstanceID).Msg("impossible to add resource. App not monitored.")
+        log.Error().Str("appInstanceID", newResource.FragmentId).Msg("impossible to add resource. Fragment not monitored.")
         return false
     }
 
     // Get the service
     service, found := appEntry.Services[newResource.ServiceInstanceID]
     if !found {
-        log.Error().Str("appInstanceID", newResource.AppInstanceID).Str("serviceInstanceID", newResource.ServiceInstanceID).
+        log.Error().Str("fragmentId", newResource.FragmentId).Str("serviceInstanceID", newResource.ServiceInstanceID).
             Msg("impossible to add resource. Service not monitored.")
         return false
     }
     service.AddPendingResource(newResource)
 
-    log.Debug().Str("appInstanceID", newResource.AppInstanceID).Int("pending checks",service.NumPendingChecks).
+    log.Debug().Str("fragmentId", newResource.FragmentId).Int("pending checks",service.NumPendingChecks).
         Msg("a new resource has been added")
     return true
 }
 
-func(p *MemoryMonitoredInstances) RemovePendingResource(appInstanceID string, serviceInstanceID string, uid string) bool {
+func(p *MemoryMonitoredInstances) RemovePendingResource(fragmentId string, serviceInstanceID string, uid string) bool {
     p.mu.Lock()
     defer p.mu.Unlock()
 
-    appEntry, found := p.monitoredApps[appInstanceID]
+    appEntry, found := p.monitoredEntries[fragmentId]
     if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Msg("impossible to remove resource. App not monitored.")
+        log.Error().Str("fragmentId", fragmentId).Msg("impossible to remove resource. Fragment not monitored.")
         return false
     }
 
     // Get the service
     service, found := appEntry.Services[serviceInstanceID]
     if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Str("serviceInstanceID", serviceInstanceID).
+        log.Error().Str("fragmentId", fragmentId).Str("serviceInstanceID", serviceInstanceID).
             Msg("impossible to remove resource. Service not monitored.")
         return false
     }
@@ -150,8 +169,8 @@ func(p *MemoryMonitoredInstances) RemovePendingResource(appInstanceID string, se
     // -> resource
     pendingResource, found := service.Resources[uid]
     if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Str("serviceInstanceID", serviceInstanceID).Str("resource uid", uid).
-            Msg("impossible to remove resource. Resource not monitored")
+        log.Error().Str("fragmentId", fragmentId).Str("serviceInstanceID", serviceInstanceID).
+            Str("resource uid", uid).Msg("impossible to remove resource. Resource not monitored")
         return false
     }
 
@@ -168,10 +187,10 @@ func(p *MemoryMonitoredInstances) RemovePendingResource(appInstanceID string, se
 
 
 // Return true if the passed uid corresponds to a resource being monitored.
-func (p *MemoryMonitoredInstances) IsMonitoredResource(appInstanceID string, serviceInstanceID string, uid string) bool {
+func (p *MemoryMonitoredInstances) IsMonitoredResource(fragmentId string, serviceInstanceID string, uid string) bool {
     p.mu.RLock()
     defer p.mu.RUnlock()
-    appEntry, found := p.monitoredApps[appInstanceID]
+    appEntry, found := p.monitoredEntries[fragmentId]
     if !found {
         return false
     }
@@ -193,35 +212,35 @@ func (p *MemoryMonitoredInstances) IsMonitoredResource(appInstanceID string, ser
 
 
 
-func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, serviceInstanceId, uid string,
+func (p *MemoryMonitoredInstances) SetResourceStatus(fragmentId string, serviceInstanceId, uid string,
     status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) {
     p.mu.Lock()
     defer p.mu.Unlock()
 
-    log.Debug().Str("appInstanceID", appInstanceID).Str("serviceInstanceID", serviceInstanceId).Str("uid",uid).
+    log.Debug().Str("fragmentId", fragmentId).Str("serviceInstanceID", serviceInstanceId).Str("uid",uid).
         Interface("status",status).Str("info",info).Msg("set resource status")
 
-    app, found := p.monitoredApps[appInstanceID]
+    app, found := p.monitoredEntries[fragmentId]
     if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Msg("impossible to set resource status. App not monitored.")
+        log.Error().Str("fragmentId", fragmentId).Msg("impossible to set resource status. App not monitored.")
         return
     }
 
     // Get the service
     service, found := app.Services[serviceInstanceId]
     if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Str("serviceInstanceID", serviceInstanceId).
-            Interface("monitored",p.monitoredApps).Msg("impossible to set resource. Service not monitored.")
+        log.Error().Str("fragmentId", fragmentId).Str("serviceInstanceID", serviceInstanceId).
+            Interface("monitored",p.monitoredEntries).Msg("impossible to set resource. Service not monitored.")
         return
     }
 
     // -> resource
     resource, found := service.Resources[uid]
     if !found {
-        log.Warn().Str("appInstanceID", appInstanceID).Str("seviceInstanceId", serviceInstanceId).Str("resource uid", uid).
+        log.Warn().Str("fragmentId", fragmentId).Str("serviceInstanceId", serviceInstanceId).Str("resource uid", uid).
             Msg("resource was not added before setting a new status. We add it now")
 
-        newResource := entities.NewMonitoredPlatformResource(uid, service.AppDescriptorId, service.AppInstanceId,
+        newResource := entities.NewMonitoredPlatformResource(fragmentId, uid, service.AppDescriptorId, service.AppInstanceId,
             service.ServiceGroupId, service.ServiceGroupInstanceId, service.ServiceID, service.ServiceInstanceID, info)
         service.AddPendingResource(&newResource)
         resource = service.Resources[uid]
@@ -229,7 +248,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 
     // If we are going to set the same status, exit.
     if resource.Status == status {
-        log.Debug().Str("appInstanceID", appInstanceID).Str("serviceInstanceId", serviceInstanceId).Str("uid",uid).
+        log.Debug().Str("fragmentId", fragmentId).Str("serviceInstanceId", serviceInstanceId).Str("uid",uid).
             Interface("status",status).Str("info",info).Msg("no resource status changed")
         return
     }
@@ -255,7 +274,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(appInstanceID string, servi
 
     // If this is running remove one check
     if resource.Status == entities.NALEJ_SERVICE_RUNNING {
-        log.Debug().Str("appInstanceID", appInstanceID).Str("serviceInstanceId", serviceInstanceId).Str("uid",uid).
+        log.Debug().Str("fragmentId", fragmentId).Str("serviceInstanceId", serviceInstanceId).Str("uid",uid).
             Interface("status",status).Str("info",info).Msg("resource is running, stop monitoring it")
         service.RemovePendingResource(resource.UID)
     }
@@ -316,37 +335,37 @@ func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.Monit
     toReturn := make([]*entities.MonitoredAppEntry,0)
     // list of apps to be removed
     toRemove := make([]string, 0)
-    for _, app := range p.monitoredApps {
-        if app.Status == entities.FRAGMENT_TERMINATING {
-            toRemove = append(toRemove, app.AppInstanceId)
+    for _, entry := range p.monitoredEntries {
+        if entry.Status == entities.FRAGMENT_TERMINATING {
+            toRemove = append(toRemove, entry.FragmentId)
         }
         pendingServices := make(map[string]*entities.MonitoredServiceEntry,0)
-        // for every monitored app
-        for _, x := range app.Services {
+        // for every monitored entry
+        for _, x := range entry.Services {
             // for every monitored service
-            if app.NewStatus || x.NewStatus {
+            if entry.NewStatus || x.NewStatus {
                 pendingServices[x.ServiceInstanceID] = x
             }
         }
         if len(pendingServices) > 0 {
             newApp := entities.MonitoredAppEntry{
-                FragmentId:       app.FragmentId,
-                NumPendingChecks: app.NumPendingChecks,
-                OrganizationId:   app.OrganizationId,
-                AppInstanceId:    app.AppInstanceId,
+                FragmentId:       entry.FragmentId,
+                NumPendingChecks: entry.NumPendingChecks,
+                OrganizationId:   entry.OrganizationId,
+                AppInstanceId:    entry.AppInstanceId,
                 Services:         pendingServices,
-                Info:             app.Info,
-                DeploymentId:     app.DeploymentId,
-                Status:           app.Status,
-                AppDescriptorId:  app.AppDescriptorId,
+                Info:             entry.Info,
+                DeploymentId:     entry.DeploymentId,
+                Status:           entry.Status,
+                AppDescriptorId:  entry.AppDescriptorId,
             }
             toReturn = append(toReturn, &newApp)
         }
     }
     // remove entries in terminating status
-    for _, appId := range toRemove {
-        log.Debug().Str("appInstanceId", appId).Msg("remove terminating app from the list of monitored")
-        defer p.RemoveApp(appId)
+    for _, fragmentId := range toRemove {
+        log.Debug().Str("fragmentId", fragmentId).Msg("remove terminating entry from the list of monitored")
+        defer p.RemoveEntry(fragmentId)
     }
     // This is the latest unlock to be deferred to respect the order and avoid race conditions
     defer p.mu.RUnlock()
@@ -360,7 +379,7 @@ func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] *entities.Mo
     p.mu.RLock()
     defer p.mu.RUnlock()
     toNotify := make([]*entities.MonitoredServiceEntry,0)
-    for _, app := range p.monitoredApps {
+    for _, app := range p.monitoredEntries {
         // for every monitored app
         for _, x := range app.Services {
             // for every monitored service
@@ -376,7 +395,7 @@ func (p *MemoryMonitoredInstances) GetServicesUnnotifiedStatus() [] *entities.Mo
 func (p *MemoryMonitoredInstances) ResetServicesUnnotifiedStatus() {
     p.mu.Lock()
     defer p.mu.Unlock()
-    for _, stage := range p.monitoredApps {
+    for _, stage := range p.monitoredEntries {
         stage.NewStatus = false
         // for every monitored stage
         for _, x := range stage.Services {
@@ -389,10 +408,10 @@ func (p *MemoryMonitoredInstances) ResetServicesUnnotifiedStatus() {
     // log.Debug().Interface("monitored stages",p.monitoredStages).Msg("monitored after reset")
 }
 
-func (p *MemoryMonitoredInstances) UpdateAppStatus(appInstanceID string) {
-    app, found := p.monitoredApps[appInstanceID]
+func (p *MemoryMonitoredInstances) UpdateAppStatus(fragmentId string) {
+    app, found := p.monitoredEntries[fragmentId]
     if !found {
-        log.Error().Str("appInstanceID", appInstanceID).Msg("impossible to update app status. App not monitored.")
+        log.Error().Str("fragmentId", fragmentId).Msg("impossible to update app status. App not monitored.")
         return
     }
     pendingServices := 0
@@ -403,30 +422,42 @@ func (p *MemoryMonitoredInstances) UpdateAppStatus(appInstanceID string) {
     }
     if app.NumPendingChecks != pendingServices {
         app.NumPendingChecks = pendingServices
-        log.Info().Str("appInstanceID", appInstanceID).Int("pendingServices",app.NumPendingChecks).
+        log.Info().Str("fragmentId", fragmentId).Int("pendingServices",app.NumPendingChecks).
             Msg("updated number of pending services for app")
     }
 }
 
 
-func (p *MemoryMonitoredInstances)  RemoveApp(appInstanceId string) bool {
+func (p *MemoryMonitoredInstances) RemoveEntry(fragmentId string) bool {
     p.mu.Lock()
     defer p.mu.Unlock()
-    log.Debug().Str("appInstanceId", appInstanceId).Msg("remove app from the list of monitored")
+    log.Debug().Str("fragmentId", fragmentId).Msg("remove app from the list of monitored")
 
-    _, found := p.monitoredApps[appInstanceId]
+    _, found := p.monitoredEntries[fragmentId]
     if !found {
-        log.Error().Str("appInstanceId", appInstanceId).Msg("impossible to delete monitored entry. App not found")
+        log.Error().Str("fragmentId", fragmentId).Msg("impossible to delete monitored entry. App not found")
         return false
     }
 
-    delete(p.monitoredApps, appInstanceId)
+    delete(p.monitoredEntries, fragmentId)
     return true
 }
 
 
+func (p *MemoryMonitoredInstances) GetNumFragments() int {
+    return len(p.monitoredEntries)
+}
+
 func (p *MemoryMonitoredInstances) GetNumApps() int {
-    return len(p.monitoredApps)
+    p.mu.RLock()
+    defer p.mu.RUnlock()
+    list := make(map[string]bool,0)
+    for _, entry := range p.monitoredEntries {
+        if _, found := list[entry.FragmentId]; !found {
+            list[entry.FragmentId] = true
+        }
+    }
+    return len(list)
 }
 
 
@@ -434,7 +465,7 @@ func (p *MemoryMonitoredInstances) GetNumServices() int {
     p.mu.RLock()
     defer p.mu.RUnlock()
     accum := 0
-    for _, entry := range p.monitoredApps {
+    for _, entry := range p.monitoredEntries {
         accum = accum + len(entry.Services)
     }
     return accum
@@ -444,7 +475,7 @@ func (p *MemoryMonitoredInstances) GetNumResources() int {
     p.mu.RLock()
     defer p.mu.RUnlock()
     accum := 0
-    for _, entry := range p.monitoredApps {
+    for _, entry := range p.monitoredEntries {
         for _, serv := range entry.Services {
             accum = accum + len(serv.Resources)
         }

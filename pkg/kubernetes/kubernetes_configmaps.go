@@ -110,6 +110,7 @@ func (dc* DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_appli
 			Name:      fmt.Sprintf("config-map-%s-%s", service.ServiceId, service.ServiceInstanceId),
 			Namespace: dc.data.Namespace,
 			Labels:    map[string]string{
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT: dc.data.FragmentId,
 				utils.NALEJ_ANNOTATION_ORGANIZATION : dc.data.OrganizationId,
 				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : dc.data.AppDescriptorId,
 				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.data.AppInstanceId,

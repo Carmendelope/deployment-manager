@@ -101,9 +101,9 @@ func (c *KubernetesController) AddMonitoredResource(resource *entities.Monitored
 }
 
 // Set the status of a native resource
-func (c *KubernetesController) SetResourceStatus(appInstanceID string, serviceID string, uid string,
+func (c *KubernetesController) SetResourceStatus(fragmentId string, serviceID string, uid string,
     status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) {
-    c.monitoredInstances.SetResourceStatus(appInstanceID, serviceID, uid, status, info, endpoints)
+    c.monitoredInstances.SetResourceStatus(fragmentId, serviceID, uid, status, info, endpoints)
 }
 
 // Run this controller with its corresponding observers
@@ -223,7 +223,7 @@ func (c *KubernetesObserver) updatePendingChecks(key string) error {
 
     if !exists {
         // Below we will warm up our cache with a Pod, so that we will see a delete for one pod
-        log.Debug().Msgf("deployment %s does not exist anymore", key)
+        log.Debug().Msgf("deployment %s does not exist any longer", key)
     } else {
         // Note that you also have to check the uid if you have a local controlled resource, which
         // is dependent on the actual instance, to detect that a Pod was recreated with the same name
@@ -299,7 +299,7 @@ func checkDeployments(stored interface{}, pending monitor.MonitoredInstances){
 
     // if there are enough replicas, we assume this is working
     if (dep.Status.UnavailableReplicas == 0 && dep.Status.AvailableReplicas > 0){
-        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()),
             entities.NALEJ_SERVICE_RUNNING,"", []entities.EndpointInstance{})
     } else {
@@ -311,11 +311,11 @@ func checkDeployments(stored interface{}, pending monitor.MonitoredInstances){
                 info = fmt.Sprintf("%s %s",info,condition)
             }
         }
-        log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
+        log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
             Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
             Msgf("set deployment new status to %s",string(foundStatus))
-        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] ,string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
     }
 
@@ -398,11 +398,11 @@ func checkServicesDeployed(stored interface{}, pending monitor.MonitoredInstance
         }
     }
 
-    log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
+    log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
         Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
         Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
         Msg("set service new status to ready")
-    pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+    pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
         dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"",
         endpoints)
 
@@ -419,16 +419,16 @@ func checkNamespacesDeployed(stored interface{}, pending monitor.MonitoredInstan
 
     // This namespace will only be correct if it is active
     if dep.Status.Phase == v1.NamespaceActive {
-        log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
+        log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
             Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
             Msg("set namespace new status to ready")
-        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
             "", []entities.EndpointInstance{})
     } else if dep.Status.Phase == v1.NamespaceTerminating {
-        // if the namespace is being terminated set the deployment fragment as terminating
-        pending.SetAppStatus(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, entities.FRAGMENT_TERMINATING, nil)
+        // if the namespace is being terminated set the app to be terminating
+        pending.SetAppStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID], entities.FRAGMENT_TERMINATING, nil)
     }
 
 }
@@ -460,12 +460,12 @@ func checkIngressDeployed(stored interface{}, pending monitor.MonitoredInstances
         // Take the local cluster hostname.
         hostname := dep.Spec.Rules[0].Host
 
-        log.Debug().Str(utils.NALEJ_ANNOTATION_APP_INSTANCE_ID,dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]).
+        log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
             Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
             Str("uid", string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
             Msg("set ingress new status to ready")
 
-        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
+        pending.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
             dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
             "", []entities.EndpointInstance{entities.EndpointInstance{
                 FQDN: hostname,
