@@ -1,0 +1,55 @@
+# Requires Makefile.common and a Makefile that exposes image target
+
+DOCKERCMD=docker
+DOCKERFILE=Dockerfile
+
+
+# Docker
+define docker-build-recipe
+@for app in $(1); do \
+	if [ -f components/$$app/$(DOCKERFILE) ]; then \
+		if [ -d components/$$app/dockerenv ]; then \
+			cp -rv components/$$app/dockerenv $(TARGET)/$(BUILDOS)_$(BUILDARCH)/. ; \
+		fi ; \
+		$(DOCKERCMD) build --no-cache -t $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$app:$(VERSION) -f components/$$app/$(DOCKERFILE) $(CONTEXTPATH) && \
+		echo " - Built $$app Docker image using components/$$app/$(DOCKERFILE) and $(TARGET)/$(BUILDOS)_$(BUILDARCH) contents" ; \
+	else  \
+		echo " - $$app has no $(DOCKERFILE) file" ; \
+	fi ; \
+done
+endef
+
+define docker-push-recipe
+@for app in $(1); do \
+	if [ -f components/$$app/$(DOCKERFILE) ]; then \
+		$(DOCKERCMD) push $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$app:$(VERSION) && \
+		echo " - Pushed $$app Docker image to $(AZURE_CR) Docker registry" ; \
+	else  \
+		echo " - $$app has no $(DOCKERFILE) file" ; \
+	fi ; \
+done
+endef
+
+.PHONY: docker-build docker-push image publish
+
+docker-build:
+	@echo ">>> Building Docker images"
+	$(call docker-build-recipe,$(APPS))
+	@echo ">>> Finished building Docker images"
+
+docker-push:
+	@echo ">>> Pushing Docker images to $(AZURE_CR) registry"
+	$(call docker-push-recipe,$(APPS))
+	@echo ">>> Finished pushing Docker images"
+
+publish: image az-login docker-push
+
+
+# DEPRECATED TARGETS
+.PHONY: create-image publish-image
+create-image:
+	@echo "'make create-image' is DEPRECATED and will be removed soon. Use 'make docker-build' instead"
+	@$(MAKE) docker-build
+publish-image:
+	@echo "'make publish-image' is DEPRECATED and will be removed soon. Use 'make docker-push' instead"
+	@$(MAKE) docker-push

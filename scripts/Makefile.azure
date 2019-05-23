@@ -1,0 +1,12 @@
+# Requires Makefile.common
+
+AZURECLICMD=az
+
+# Azure
+.PHONY: az-login
+
+az-login: ACR_NAME=${AZURE_CR}
+az-login:
+	@echo ">>> Logging in Azure and Azure Container Registry ..."
+	@${AZURECLICMD} login
+	@${AZURECLICMD} acr login --name ${ACR_NAME}
