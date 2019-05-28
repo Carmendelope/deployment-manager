@@ -9,10 +9,10 @@ define docker-build-recipe
 @for app in $(1); do \
 	if [ -f components/$$app/$(DOCKERFILE) ]; then \
 		if [ -d components/$$app/dockerenv ]; then \
-			cp -rv components/$$app/dockerenv $(TARGET)/$(BUILDOS)_$(BUILDARCH)/. ; \
+			cp -rv components/$$app/dockerenv $(CONTEXTPATH)/. ; \
 		fi ; \
 		$(DOCKERCMD) build --no-cache -t $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$app:$(VERSION) -f components/$$app/$(DOCKERFILE) $(CONTEXTPATH) && \
-		echo " - Built $$app Docker image using components/$$app/$(DOCKERFILE) and $(TARGET)/$(BUILDOS)_$(BUILDARCH) contents" ; \
+		echo " - Built $$app Docker image using components/$$app/$(DOCKERFILE) and $(CONTEXTPATH) contents" ; \
 	else  \
 		echo " - $$app has no $(DOCKERFILE) file" ; \
 	fi ; \
