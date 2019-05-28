@@ -103,6 +103,20 @@ test-coverage:
 
 test-all: test test-race test-coverage
 
+# Other
+.PHONY: checkstyle format clean
+checkstyle:
+	@${GOMETALINTER} --disable-all --enable=golint --enable=vet --enable=errcheck --enable=goconst --vendor ./...
+
+format:
+	@echo ">>> Formatting..."
+	@${GOFMT} -s -w .
+
+clean:
+	@echo ">>> Cleaning project..."
+	@$(GOCLEAN)
+	@rm -Rf $(TARGET)
+
 # DEPRECATED TARGETS
 .PHONY: local linux
 local: 
