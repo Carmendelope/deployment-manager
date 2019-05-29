@@ -32,11 +32,16 @@ func NewManager(connection *grpc.ClientConn, helper *login_helper.LoginHelper) *
         }
 }
 
-func (m *Manager) AuthorizeNetworkMembership(organizationId string, networkId string, memberId string) derrors.Error {
+func (m *Manager) AuthorizeNetworkMembership(organizationId string, appInstanceId string, serviceGroupInstanceId string,
+    serviceInstanceId string, networkId string, memberId string, isProxy bool) derrors.Error {
     req := pbNetwork.AuthorizeMemberRequest{
         OrganizationId: organizationId,
         NetworkId: networkId,
         MemberId: memberId,
+        ServiceGroupInstanceId: serviceGroupInstanceId,
+        ServiceApplicationInstanceId: serviceInstanceId,
+        AppInstanceId: appInstanceId,
+        IsProxy: isProxy,
     }
 
     ctx, cancel := m.ClusterAPILoginHelper.GetContext()
