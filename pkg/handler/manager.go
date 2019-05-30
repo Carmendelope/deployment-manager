@@ -167,7 +167,7 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
         // Add deployment stage to monitor entries
         // Platform resources will be filled by the corresponding deployables
         log.Info().Str("fragmentId",request.Fragment.FragmentId).Msg("add monitoring data")
-        monitoringData := m.getMonitoringData(stage, request.Fragment)
+        monitoringData := m.getMonitoringData(namespace, stage, request.Fragment)
         m.monitored.AddEntry(monitoringData)
 
         switch request.RollbackPolicy {
@@ -233,7 +233,8 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 
 
 func (m *Manager) UndeployFragment (request *pbDeploymentMgr.UndeployFragmentRequest) error {
-    return errors.New("non implemented operation")
+    entry := m.monitored.GetEntry(request.DeploymentFragmentId)
+    return m.executor.UndeployFragment(entry.Namespace, request.DeploymentFragmentId)
 }
 
 
@@ -303,10 +304,12 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
 
 // Internal function that builds all the data structures to monitor a stage
 //  params:
+//   namespace
 //   stage to be deployed
+//   fragment
 //  returns:
 //   monitoring entry
-func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment *pbConductor.DeploymentFragment) *entities.MonitoredAppEntry{
+func (m *Manager) getMonitoringData(namespace string, stage *pbConductor.DeploymentStage, fragment *pbConductor.DeploymentFragment) *entities.MonitoredAppEntry{
     services := make(map[string]*entities.MonitoredServiceEntry,0)
     for  _,s := range stage.Services {
         services[s.ServiceInstanceId] = &entities.MonitoredServiceEntry{
@@ -344,6 +347,7 @@ func (m *Manager) getMonitoringData(stage *pbConductor.DeploymentStage, fragment
         Info:             "",
         TotalServices:    totalNumberServices,
         NewStatus:        true,
+        Namespace:        namespace,
     }
     return toReturn
 }

@@ -50,6 +50,16 @@ func (p *MemoryMonitoredInstances) AddEntry(toAdd *entities.MonitoredAppEntry) {
     }
 }
 
+func(p *MemoryMonitoredInstances) GetEntry(fragmentId string) *entities.MonitoredAppEntry {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    current, found := p.monitoredEntries[fragmentId]
+    if !found {
+        return nil
+    }
+    return current
+}
+
 func(p *MemoryMonitoredInstances) SetEntryStatus(fragmentId string, status entities.FragmentStatus, err error) {
     p.mu.Lock()
     defer p.mu.Unlock()

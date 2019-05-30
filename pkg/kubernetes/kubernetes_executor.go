@@ -9,11 +9,13 @@ package kubernetes
 import (
     "errors"
     "flag"
+    "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/executor"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "github.com/rs/zerolog/log"
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/rest"
@@ -56,7 +58,8 @@ func NewKubernetesExecutor(internal bool, planetPath string) (executor.Executor,
     toReturn := KubernetesExecutor{
         Client: c,
         Controllers: make(map[string]*KubernetesController,0),
-        PlanetPath:planetPath}
+        PlanetPath:planetPath,
+    }
     return &toReturn, err
 }
 
@@ -162,6 +165,8 @@ func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment 
 }
 
 
+
+
 func (k *KubernetesExecutor) AddEventsController(fragmentId string, monitored monitor.MonitoredInstances,
     namespace string) executor.DeploymentController {
     // Instantiate a new controller
@@ -226,14 +231,61 @@ func (k *KubernetesExecutor) UndeployStage(stage *pbConductor.DeploymentStage, t
     return err
 }
 
+// TODO reorganize this function to use balance the code among the different deployable entities
+func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId string) error {
+    log.Info().Msgf("undeploy fragment %s in namespace %s", fragmentId, namespace)
 
-func (k *KubernetesExecutor) UndeployFragment(fragment *pbConductor.DeploymentStage, toUndeploy executor.Deployable) error {
-    log.Info().Msgf("undeploy fragment %s", fragment.FragmentId)
-    err := toUndeploy.Undeploy()
+    deleteOptions := metav1.DeleteOptions{}
+    queryOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("nalej-deployment-fragment=%s", fragmentId)}
+
+    // deployments
+    err := k.Client.AppsV1().Deployments(namespace).DeleteCollection(&deleteOptions, queryOptions)
     if err != nil {
-        log.Error().Msgf("error undeploying fragment %s", fragment.FragmentId)
+        log.Error().Err(err).Msg("error undeploying fragments")
     }
-    return err
+    // replica sets
+    err = k.Client.AppsV1().ReplicaSets(namespace).DeleteCollection(&deleteOptions, queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    // config maps
+    err = k.Client.CoreV1().ConfigMaps(namespace).DeleteCollection(&deleteOptions, queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    // ingress
+    err = k.Client.CoreV1().Endpoints(namespace).DeleteCollection(&deleteOptions, queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    // load balancers
+    err = k.Client.CoreV1().PersistentVolumeClaims(namespace).DeleteCollection(&deleteOptions, queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    // secrets
+    err = k.Client.CoreV1().Secrets(namespace).DeleteCollection(&deleteOptions, queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    // jobs
+    err = k.Client.BatchV1().Jobs(namespace).DeleteCollection(&deleteOptions, queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    // services
+    list, err := k.Client.CoreV1().Services(namespace).List(queryOptions)
+    if err != nil {
+        log.Error().Err(err).Msg("error undeploying fragments")
+    }
+    for _, x := range list.Items {
+        err = k.Client.CoreV1().Services(namespace).Delete(x.Name, &deleteOptions)
+        if err != nil {
+            log.Error().Err(err).Msg("error undeploying fragments")
+        }
+    }
+    
+    return nil
 }
 
 func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {

@@ -35,6 +35,8 @@ type MonitoredAppEntry struct {
     TotalServices int `json: "total_services, omitempty"`
     // Flag indicating if a new status has been set without notification
     NewStatus bool `json: "new_status, omitempty"`
+    // Namespace
+    Namespace string `json: "namespace, omitempty"`
 
 }
 

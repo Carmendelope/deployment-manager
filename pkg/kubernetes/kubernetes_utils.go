@@ -36,3 +36,4 @@ func ReformatLabel(input string) string {
     adapted := kubernetesInvalidLabelChar.ReplaceAllString(input,"")
     return adapted
 }
+
