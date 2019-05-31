@@ -49,6 +49,13 @@ type MonitoredInstances interface {
     //  err execution error
     SetAppStatus(appInstanceId string, status entities.FragmentStatus, err error)
 
+    // Get the status of an application
+    // params:
+    //  appInstanceId
+    // return:
+    //   found status or error if any
+    GetAppStatus(appInstanceId string) (*entities.FragmentStatus, error)
+
     // Add a new resource pending to be checked.
     // params:
     //  newResource to be checked

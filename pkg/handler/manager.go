@@ -233,8 +233,31 @@ func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 
 
 func (m *Manager) UndeployFragment (request *pbDeploymentMgr.UndeployFragmentRequest) error {
+    // set this fragment as terminating
     entry := m.monitored.GetEntry(request.DeploymentFragmentId)
-    return m.executor.UndeployFragment(entry.Namespace, request.DeploymentFragmentId)
+    if entry == nil {
+        return errors.New(fmt.Sprintf("deployment fragment %s was not found to be undeployed",request.DeploymentFragmentId))
+    }
+    undeployErr := m.executor.UndeployFragment(entry.Namespace, request.DeploymentFragmentId)
+    // remove the monitored entry
+    m.monitored.SetEntryStatus(request.DeploymentFragmentId, entities.FRAGMENT_TERMINATING,nil)
+    // if the application moves into terminating status remove the namespace
+    appStatus, _ := m.monitored.GetAppStatus(request.AppInstanceId)
+
+    log.Debug().Interface("appStatus", appStatus).Msg("checking the status of the app after undeploying fragment")
+
+    undeployRequest := &pbDeploymentMgr.UndeployRequest{
+        OrganizationId: request.OrganizationId,
+        AppInstanceId: request.AppInstanceId,
+    }
+    if appStatus == nil {
+        m.executor.UndeployNamespace(undeployRequest)
+    } else if *appStatus == entities.FRAGMENT_TERMINATING{
+        m.executor.UndeployNamespace(undeployRequest)
+    }
+
+
+    return undeployErr
 }
 
 

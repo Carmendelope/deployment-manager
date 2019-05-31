@@ -284,12 +284,13 @@ func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId strin
             log.Error().Err(err).Msg("error undeploying fragments")
         }
     }
-    
+
     return nil
 }
 
-func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
 
+func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
+    // TODO check if this operation can remove iterative namespaces 0-XXXXX, 1-XXXXX, etc
     // A partially filled namespace object should be enough to find the target namespace
     metadata := entities.DeploymentMetadata{OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId}
 

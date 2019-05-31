@@ -100,6 +100,20 @@ func (p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status ent
     }
 }
 
+func (p *MemoryMonitoredInstances) GetAppStatus(appInstanceId string) (*entities.FragmentStatus, error){
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    for _, current := range p.monitoredEntries {
+        // all deployment fragments belong to the same appInstance, the first found value must be the same for all
+        if current.AppInstanceId == appInstanceId {
+            return &current.Status, nil
+        }
+    }
+
+    return nil, errors.New(fmt.Sprintf("cannot get status of app %s because it does not exist", appInstanceId))
+
+}
+
 
 // Check iteratively if the stage has any pending resource to be deployed. This is done using the kubernetes controller.
 // If after the maximum expiration time the check is not successful, the execution is considered to be failed.
