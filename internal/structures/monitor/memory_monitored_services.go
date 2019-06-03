@@ -50,6 +50,16 @@ func (p *MemoryMonitoredInstances) AddEntry(toAdd *entities.MonitoredAppEntry) {
     }
 }
 
+func(p *MemoryMonitoredInstances) GetEntry(fragmentId string) *entities.MonitoredAppEntry {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    current, found := p.monitoredEntries[fragmentId]
+    if !found {
+        return nil
+    }
+    return current
+}
+
 func(p *MemoryMonitoredInstances) SetEntryStatus(fragmentId string, status entities.FragmentStatus, err error) {
     p.mu.Lock()
     defer p.mu.Unlock()
@@ -88,6 +98,20 @@ func (p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status ent
             }
         }
     }
+}
+
+func (p *MemoryMonitoredInstances) GetAppStatus(appInstanceId string) (*entities.FragmentStatus, error){
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    for _, current := range p.monitoredEntries {
+        // all deployment fragments belong to the same appInstance, the first found value must be the same for all
+        if current.AppInstanceId == appInstanceId {
+            return &current.Status, nil
+        }
+    }
+
+    return nil, errors.New(fmt.Sprintf("cannot get status of app %s because it does not exist", appInstanceId))
+
 }
 
 

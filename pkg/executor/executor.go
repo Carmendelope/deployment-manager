@@ -55,14 +55,13 @@ type Executor interface {
     //   error if any
     UndeployStage(stage *pbConductor.DeploymentStage, toUndeploy Deployable) error
 
-    // This operation should be executed after the failed deployment of a fragment. After running this operation,
-    // any deployable associated with this fragment must be removed.
+    // This operation undeploys a fragment from the system.
     //  params:
-    //   fragment to be deployed
-    //   toUndeploy deployable entities associated with the fragment that have to be undeployed
+    //   namespace of the fragment
+    //   fragmentId to be undeployed
     //  return:
     //   error if any
-    UndeployFragment(fragment *pbConductor.DeploymentStage, toUndeploy Deployable) error
+    UndeployFragment(namespace string, fragmentId string) error
 
     // This operation undeploys the namespace of an application
     //  params:

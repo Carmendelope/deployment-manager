@@ -28,6 +28,13 @@ type MonitoredInstances interface {
     //  toAdd application to be added.
     AddEntry(toAdd *entities.MonitoredAppEntry)
 
+    // Get a monitored entry by the fragmentId
+    // params:
+    //  fragmentId identifying an existing entry
+    // return:
+    //  the monitored app entry if any or error
+    GetEntry(fragmentId string) *entities.MonitoredAppEntry
+
     // Set the status of a fragment
     // params:
     //  fragmentId
@@ -41,6 +48,13 @@ type MonitoredInstances interface {
     //  status
     //  err execution error
     SetAppStatus(appInstanceId string, status entities.FragmentStatus, err error)
+
+    // Get the status of an application
+    // params:
+    //  appInstanceId
+    // return:
+    //   found status or error if any
+    GetAppStatus(appInstanceId string) (*entities.FragmentStatus, error)
 
     // Add a new resource pending to be checked.
     // params:
