@@ -46,7 +46,7 @@ func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeplo
         request.OrganizationId, request.ServiceIp)
 
     //err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.OrganizationName,request.AppInstanceId, request.NetworkId, request.ServiceName, request.ServiceIp)
-    err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.OrganizationName,request.AppInstanceId,
+    err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.AppInstanceId,
         request.NetworkId, request.ServiceName, request.ServiceIp, request.ServiceGroupInstanceId, request.ServiceAppInstanceId)
 
 

@@ -14,6 +14,8 @@ const (
     // Port of the remote manager cluster
     MANAGER_CLUSTER_PORT = "MANAGER_CLUSTER_PORT"
 
+    // Environment variable declared in the cluster with the cluster id
+    NALEJ_CLUSTER_ID = "CLUSTER_ID"
 
     // Annotation for the deployment fragment
     NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT = "nalej-deployment-fragment"
