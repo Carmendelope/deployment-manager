@@ -6,7 +6,9 @@
 package network
 
 import (
+    "fmt"
     "github.com/nalej/deployment-manager/pkg/login-helper"
+    "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/derrors"
     "github.com/nalej/grpc-cluster-api-go"
     pbNetwork "github.com/nalej/grpc-network-go"
@@ -14,6 +16,7 @@ import (
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc/codes"
     grpc_status "google.golang.org/grpc/status"
+    "os"
 )
 
 type Manager struct{
@@ -71,22 +74,27 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, appInstanceI
 
 }
 
-func (m *Manager) RegisterNetworkEntry(organizationId string, organizationName string, appInstanceId string,
+func (m *Manager) RegisterNetworkEntry(organizationId string, appInstanceId string,
     networkId string, serviceName string, ip string, serviceGroupInstanceId string, serviceAppInstanceId string) derrors.Error {
 
     // Create the FQDN for this service
-    fqdn := GetNetworkingName(serviceName, organizationId, serviceGroupInstanceId, serviceAppInstanceId)
-
+    fqdn := GetNetworkingName(serviceName, organizationId, appInstanceId)
 
     req := pbNetwork.AddDNSEntryRequest{
-        NetworkId: networkId,
         OrganizationId: organizationId,
-        OrganizationName: organizationName,
+        ServiceName: serviceName,
         Ip: ip,
         Fqdn: fqdn,
-        AppInstanceId: appInstanceId,
-        ServiceName: serviceName,
+        Tags: []string{
+            fmt.Sprintf("organizationId:%s", organizationId),
+            fmt.Sprintf("appInstanceId:%s", appInstanceId),
+            fmt.Sprintf("serviceGroupInstanceId:%s", serviceGroupInstanceId),
+            fmt.Sprintf("serviceAppInstanceId:%s", serviceAppInstanceId),
+            fmt.Sprintf("clusterId:%s", os.Getenv(utils.NALEJ_CLUSTER_ID)),
+            fmt.Sprintf("networkId:%s", networkId),
+        },
     }
+
     ctx, cancel := m.ClusterAPILoginHelper.GetContext()
     defer cancel()
 
