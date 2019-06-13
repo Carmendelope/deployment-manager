@@ -45,7 +45,6 @@ func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeplo
     log.Debug().Msgf("reqister network entry for app %s in organization %s with ip %s ",request.ServiceName,
         request.OrganizationId, request.ServiceIp)
 
-    //err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.OrganizationName,request.AppInstanceId, request.NetworkId, request.ServiceName, request.ServiceIp)
     err := h.mng.RegisterNetworkEntry(request.OrganizationId, request.AppInstanceId,
         request.NetworkId, request.ServiceName, request.ServiceIp, request.ServiceGroupInstanceId, request.ServiceAppInstanceId)
 
@@ -59,5 +58,9 @@ func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeplo
     return &pbCommon.Success{}, nil
 }
 
+// SetServiceRoute setups an iptables DNAT for a given service
+func (h *Handler) SetServiceRoute(context context.Context, request *pbDeploymentMgr.ServiceRoute) (*pbCommon.Success, error) {
+    return nil, derrors.NewUnimplementedError("set service route is not implemented")
+}
 
 

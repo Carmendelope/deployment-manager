@@ -15,6 +15,8 @@ const EnvClusterId = "CLUSTER_ID"
 
 // Configuration structure
 type Config struct {
+	// Debug is enabled
+	Debug bool
 	// listening port
 	Port uint32
 	// ClusterAPIAddress address
@@ -125,6 +127,7 @@ func (conf *Config) Validate() derrors.Error {
 }
 
 func (conf *Config) Print() {
+	log.Info().Bool("debug", conf.Debug).Msg("Debug")
 	log.Info().Str("app", version.AppVersion).Str("commit", version.Commit).Msg("Version")
 	log.Info().Uint32("port", conf.Port).Msg("gRPC port")
 	log.Info().Str("Id", conf.ClusterId).Msg("Cluster info")

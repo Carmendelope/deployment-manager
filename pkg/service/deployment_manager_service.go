@@ -17,6 +17,7 @@ import (
     "github.com/nalej/deployment-manager/pkg/login-helper"
     monitor2 "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/network"
+    "github.com/nalej/deployment-manager/pkg/proxy"
     "github.com/nalej/derrors"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/nalej/grpc-utils/pkg/tools"
@@ -33,6 +34,8 @@ type DeploymentManagerService struct {
     mgr *handler.Manager
     // Manager for networking services
     net *network.Manager
+    // Proxy manager for proxy forwarding
+    netProxy *proxy.Manager
     // Server for incoming requests
     server *tools.GenericGRPCServer
     // configuration
@@ -122,10 +125,13 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     // Instantiate network manager service
     net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
+    // Instantiate app network manager service
+    netProxy := proxy.NewManager(clusterAPIConn, clusterAPILoginHelper)
+
     // Instantiate target server
     server := tools.NewGenericGRPCServer(cfg.Port)
 
-    instance := DeploymentManagerService{mgr: mgr, net: net, server: server, configuration: *cfg}
+    instance := DeploymentManagerService{mgr: mgr, net: net, netProxy: netProxy, server: server, configuration: *cfg}
 
     return &instance, nil
 }
@@ -141,13 +147,18 @@ func (d *DeploymentManagerService) Run() {
 
     deployment := handler.NewHandler(d.mgr)
     network := network.NewHandler(d.net)
+    netProxy := proxy.NewHandler(d.netProxy)
 
     // register
     grpcServer := grpc.NewServer()
     pbDeploymentMgr.RegisterDeploymentManagerServer(grpcServer, deployment)
     pbDeploymentMgr.RegisterDeploymentManagerNetworkServer(grpcServer, network)
+    pbDeploymentMgr.RegisterApplicationProxyServer(grpcServer, netProxy)
 
-    reflection.Register(grpcServer)
+    if d.configuration.Debug{
+        reflection.Register(grpcServer)
+    }
+
     // Run
     log.Info().Uint32("port", d.configuration.Port).Msg("Launching gRPC server")
     if err := grpcServer.Serve(lis); err != nil {
