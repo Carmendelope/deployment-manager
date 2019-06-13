@@ -60,7 +60,7 @@ func(s *DeployableServices) Build() error {
 
         extendedLabels := make(map[string]string,0)
         extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = s.data.FragmentId
-        extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = s.data.OrganizationId
+        extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = s.data.OrganizationId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = s.data.AppDescriptorId
         extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = s.data.AppInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = s.data.Stage.StageId
@@ -94,13 +94,13 @@ func(s *DeployableServices) Build() error {
             ztAgentLabels := map[string]string {
                 "agent": "zt-agent",
                 utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : s.data.FragmentId,
-                utils.NALEJ_ANNOTATION_ORGANIZATION : s.data.OrganizationId,
-                utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : s.data.AppDescriptorId,
-                utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : s.data.AppInstanceId,
-                utils.NALEJ_ANNOTATION_STAGE_ID : s.data.Stage.StageId,
-                utils.NALEJ_ANNOTATION_SERVICE_ID : service.ServiceId,
+                utils.NALEJ_ANNOTATION_ORGANIZATION_ID:      s.data.OrganizationId,
+                utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :      s.data.AppDescriptorId,
+                utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :     s.data.AppInstanceId,
+                utils.NALEJ_ANNOTATION_STAGE_ID :            s.data.Stage.StageId,
+                utils.NALEJ_ANNOTATION_SERVICE_ID :          service.ServiceId,
                 utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : service.ServiceGroupId,
+                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID :    service.ServiceGroupId,
                 utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
             }
 

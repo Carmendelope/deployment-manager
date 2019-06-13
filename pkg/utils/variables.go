@@ -16,17 +16,26 @@ const (
 
     // Environment variable declared in the cluster with the cluster id
     NALEJ_CLUSTER_ID = "CLUSTER_ID"
-
+    // Annotation for the deployment id
+    NALEJ_ANNOTATION_DEPLOYMENT_ID = "nalej-deployment-id"
     // Annotation for the deployment fragment
     NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT = "nalej-deployment-fragment"
     // Annotation for the organization
-    NALEJ_ANNOTATION_ORGANIZATION = "nalej-organization"
+    NALEJ_ANNOTATION_ORGANIZATION_ID = "nalej-organization"
+    // Annotation for the organization name
+    NALEJ_ANNOTATION_ORGANIZATION_NAME = "nalej-organization-name"
     // Annotation application descriptor
     NALEJ_ANNOTATION_APP_DESCRIPTOR = "nalej-app-descriptor"
+    // Annotation for the application name
+    NALEJ_ANNOTATION_APP_NAME = "nalej-app-name"
     // Annotation application instance
     NALEJ_ANNOTATION_APP_INSTANCE_ID = "nalej-app-instance-id"
     // Annotation for metadata to identify the stage for these deployments
     NALEJ_ANNOTATION_STAGE_ID = "nalej-stage-id"
+    // Service name
+    NALEJ_ANNOTATION_SERVICE_NAME = "nalej-service-name"
+    // FQDN for a service
+    NALEJ_SERVICE_FQDN = "nalej-service-fqdn"
     // Annotation for metadata to identify the service for these deployments
     NALEJ_ANNOTATION_SERVICE_ID = "nalej-service-id"
     // Annotation for metadata to identify the service instance for these deployments
