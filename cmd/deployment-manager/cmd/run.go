@@ -33,7 +33,6 @@ func init() {
 	zerolog.TimeFieldFormat = ""
 
 	RootCmd.AddCommand(runCmd)
-
 	runCmd.Flags().Uint32P("port", "p", 5200, "port where deployment manager listens to")
 	runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
 	//runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
@@ -63,6 +62,7 @@ func init() {
 func Run() {
 
 	config := config.Config{
+		Debug: 				  debugLevel,
 		Port:                 uint32(viper.GetInt32("port")),
 		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
 		ManagementHostname: viper.GetString("managementHostname"),

@@ -44,7 +44,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 
 	extendedLabels := make(map[string]string,0)
 	extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] =  dl.data.FragmentId
-	extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION] = dl.data.OrganizationId
+	extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = dl.data.OrganizationId
 	extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = dl.data.AppDescriptorId
 	extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = dl.data.AppInstanceId
 	extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = dl.data.Stage.StageId
@@ -55,14 +55,14 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE] = utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE
 
 	extendedSelectors := map[string]string{
-		utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : dl.data.FragmentId,
-		utils.NALEJ_ANNOTATION_ORGANIZATION: dl.data.OrganizationId,
-		utils.NALEJ_ANNOTATION_APP_DESCRIPTOR: dl.data.AppDescriptorId,
-		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: dl.data.AppInstanceId,
-		utils.NALEJ_ANNOTATION_STAGE_ID: dl.data.Stage.StageId,
-		utils.NALEJ_ANNOTATION_SERVICE_ID: service.ServiceId,
-		utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID: service.ServiceInstanceId,
-		utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID: service.ServiceGroupId,
+		utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT :      dl.data.FragmentId,
+		utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           dl.data.OrganizationId,
+		utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            dl.data.AppDescriptorId,
+		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           dl.data.AppInstanceId,
+		utils.NALEJ_ANNOTATION_STAGE_ID:                  dl.data.Stage.StageId,
+		utils.NALEJ_ANNOTATION_SERVICE_ID:                service.ServiceId,
+		utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
+		utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
 		utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
 	}
 

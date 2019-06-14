@@ -52,10 +52,10 @@ func(n *DeployableNamespace) Build() error {
             Name: n.data.Namespace,
             Labels: map[string]string{
                 utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : n.data.FragmentId,
-                utils.NALEJ_ANNOTATION_ORGANIZATION : n.data.OrganizationId,
-                utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : n.data.AppDescriptorId,
-                utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : n.data.AppInstanceId,
-                utils.NALEJ_ANNOTATION_STAGE_ID : n.data.Stage.StageId,
+                utils.NALEJ_ANNOTATION_ORGANIZATION_ID:      n.data.OrganizationId,
+                utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :      n.data.AppDescriptorId,
+                utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :     n.data.AppInstanceId,
+                utils.NALEJ_ANNOTATION_STAGE_ID :            n.data.Stage.StageId,
             },
         },
     }
@@ -91,7 +91,7 @@ func(n *DeployableNamespace) Undeploy() error {
 
     // query existing namespaces
     queryString := fmt.Sprintf("%s=%s,%s=%s",
-        utils.NALEJ_ANNOTATION_ORGANIZATION, n.data.OrganizationId,
+        utils.NALEJ_ANNOTATION_ORGANIZATION_ID, n.data.OrganizationId,
         utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, n.data.AppInstanceId,
         )
     options := metav1.ListOptions {
