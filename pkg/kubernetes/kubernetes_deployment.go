@@ -234,6 +234,7 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
+                                    /*
                                     "--appInstanceId", d.data.AppInstanceId,
                                     "--appName", d.data.AppName,
                                     "--serviceName", service.Name,
@@ -245,14 +246,9 @@ func(d *DeployableDeployments) Build() error {
                                     "--networkId", d.data.ZtNetworkId,
                                     "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
                                     "--serviceAppInstanceId", service.ServiceInstanceId,
+                                    */
                                 },
-                                Env: []apiv1.EnvVar{
-                                    // Indicate this is not a ZT proxy
-                                    {
-                                        Name:  "ZT_PROXY",
-                                        Value: "false",
-                                    },
-                                },
+                                Env: d.getContainerEnvVariables(service, false),
                                 LivenessProbe: &apiv1.Probe{
                                     InitialDelaySeconds: 20,
                                     PeriodSeconds:       60,
@@ -440,6 +436,7 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
+                                    /*
                                     "--appInstanceId", d.data.AppInstanceId,
                                     "--appName", d.data.AppName,
                                     "--serviceName", common.FormatName(service.Name),
@@ -452,19 +449,9 @@ func(d *DeployableDeployments) Build() error {
                                     "--isProxy",
                                     "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
                                     "--serviceAppInstanceId", service.ServiceInstanceId,
+                                    */
                                 },
-                                Env: []apiv1.EnvVar{
-                                    // Indicate this is a ZT proxy
-                                    {
-                                        Name:  "ZT_PROXY",
-                                        Value: "true",
-                                    },
-                                    // Indicate the name of the k8s service
-                                    {
-                                        Name: "K8S_SERVICE_NAME",
-                                        Value: common.FormatName(service.Name),
-                                    },
-                                },
+                                Env: d.getContainerEnvVariables(service, true),
                                 LivenessProbe: &apiv1.Probe{
                                     InitialDelaySeconds: 20,
                                     PeriodSeconds:       60,
@@ -665,4 +652,70 @@ func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) [
         obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})
     }
     return obtained
+}
+
+// Generate a set of environment variables for a container. This private function is particularly designed to
+// support the building of proxies.
+// params:
+//  service specification to be deployed
+//  isProxy boolean value indicating whether the environment variables to be created correspond to a proxy
+// return:
+//  slice of api environment variables
+func (d *DeployableDeployments) getContainerEnvVariables(service *pbApplication.ServiceInstance, isProxy bool) []apiv1.EnvVar{
+    return []apiv1.EnvVar{
+        {
+            Name: utils.NALEJ_CLUSTER_ID, Value: config.GetConfig().ClusterId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_ZT_NETWORK_ID, Value: d.data.ZtNetworkId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_IS_PROXY, Value: fmt.Sprintf("%t",isProxy),
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_MANAGER_ADDR, Value: config.GetConfig().DeploymentMgrAddress,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_DEPLOYMENT_ID, Value: d.data.DeploymentId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT, Value: d.data.Stage.FragmentId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_ORGANIZATION_ID, Value: d.data.OrganizationId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_ORGANIZATION_NAME, Value: d.data.OrganizationName,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_APP_DESCRIPTOR, Value: d.data.AppDescriptorId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_APP_NAME, Value: d.data.AppName,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, Value: d.data.AppInstanceId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_STAGE_ID, Value: d.data.Stage.StageId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_SERVICE_NAME, Value: service.Name,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_SERVICE_ID, Value: service.ServiceId,
+        },
+        {
+            Name: utils.NALEJ_SERVICE_FQDN, Value: common.GetServiceFQDN(service.Name, service.OrganizationId, service.AppInstanceId),
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, Value: service.ServiceInstanceId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID, Value: service.ServiceGroupId,
+        },
+        {
+            Name: utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID, Value: service.ServiceGroupInstanceId,
+        },
+    }
 }

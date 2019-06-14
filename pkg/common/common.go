@@ -86,3 +86,15 @@ func GetNamePVC(name string, id string, index string) string {
     }
     return fmt.Sprintf("%s-%s",id,index)
 }
+
+
+// Get the corresponding FQDN for a service
+// params:
+//  serviceName
+//  organizationId
+//  appInstanceId
+// return:
+//  corresponding FQDN for the service
+func GetServiceFQDN(serviceName string, organizationId string, appInstanceId string) string {
+	return fmt.Sprintf("%s-%s-%s",FormatName(serviceName), organizationId[0:10], appInstanceId[0:10])
+}
