@@ -123,7 +123,11 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     log.Info().Msg("done")
 
     // Instantiate network manager service
-    net := network.NewManager(clusterAPIConn, clusterAPILoginHelper)
+    k8sClient, err := kubernetes.GetKubernetesClient(cfg.Local)
+    if err != nil{
+        return nil, err
+    }
+    net := network.NewManager(clusterAPIConn, clusterAPILoginHelper, k8sClient)
 
     // Instantiate app network manager service
     netProxy := proxy.NewManager(clusterAPIConn, clusterAPILoginHelper)

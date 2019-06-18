@@ -225,7 +225,7 @@ func(d *DeployableDeployments) Build() error {
                                 Name:  common.FormatName(service.Name),
                                 Image: service.Image,
                                 Env:   environmentVariables,
-                                Ports: d.getContainerPorts(service.ExposedPorts),
+                                Ports: d.getContainerPorts(service.ExposedPorts, false),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                             },
                             // ZT sidecar container
@@ -274,7 +274,7 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
-                                Ports: d.getContainerPorts(service.ExposedPorts),
+                                Ports: d.getContainerPorts(service.ExposedPorts, true),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                                 SecurityContext:
                                 &apiv1.SecurityContext{
@@ -477,7 +477,7 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
-                                Ports: d.getContainerPorts(service.ExposedPorts),
+                                Ports: d.getContainerPorts(service.ExposedPorts, true),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                                 SecurityContext:
                                 &apiv1.SecurityContext{
@@ -646,10 +646,13 @@ func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string
 //   ports list of exposed ports
 //  return:
 //   list of ports into k8s api format
-func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) []apiv1.ContainerPort {
+func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port, isSidecar bool) []apiv1.ContainerPort {
     obtained := make([]apiv1.ContainerPort, 0, len(ports))
     for _, p := range ports {
         obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})
+    }
+    if isSidecar{
+        obtained = append(obtained, apiv1.ContainerPort{ContainerPort:int32(config.GetConfig().ZTSidecarPort), Name: "ztrouteport"})
     }
     return obtained
 }

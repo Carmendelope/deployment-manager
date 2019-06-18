@@ -58,6 +58,9 @@ type Config struct {
 	PlanetPath string
 	// nalej-public credentials
 	PublicCredentials grpc_application_go.ImageCredentials
+	// ZTSidecarPort with the ZT sidecar port listening for route updates
+	// TODO change this to 1576
+	ZTSidecarPort uint32
 }
 
 func (conf *Config) envOrElse(envName string, paramValue string) string{
@@ -144,6 +147,7 @@ func (conf *Config) Print() {
 	log.Info().Str("DNS", conf.DNS).Msg("List of DNS ips")
 	log.Info().Str("type", conf.TargetPlatform.String()).Msg("Target platform")
 	log.Info().Str("PlanetPath", conf.PlanetPath).Msg("Planet path")
+	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
 
 }
 
