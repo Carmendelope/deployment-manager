@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"github.com/nalej/deployment-manager/pkg/utils"
 	"time"
 
 	"github.com/nalej/derrors"
@@ -94,7 +95,7 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 		if existsOrgID && existsAppInstID && orgID == organizationID && appInstID == appInstanceID {
 			for _, container := range pod.Spec.Containers {
 				// log.Debug().Str("name", container.Name).Interface("container", container).Msg("Container info")
-				if hasEnvVar(container, "ZT_PROXY") {
+				if hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY) {
 					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).Msg("ZT sidecar container detected")
 					toAdd := NewTargetPod(pod.Name, container.Name, false, pod.Status.PodIP)
 					targetPods = append(targetPods, *toAdd)
@@ -102,6 +103,7 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 			}
 		}
 
+		/*
 		// Check if we are dealing with a proxy
 		value, existAgent := pod.Labels["agent"]
 		if existAgent && value == "zt-agent" {
@@ -109,13 +111,14 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 			toAdd := NewTargetPod(pod.Name, pod.Name, false, pod.Status.PodIP)
 			targetPods = append(targetPods, *toAdd)
 		}
+		*/
 	}
 	return targetPods, nil
 }
 
 func hasEnvVar(container coreV1.Container, name string) bool {
 	for _, containerVar := range container.Env {
-		log.Debug().Str("container", container.Name).Str("name", containerVar.Name).Str("value", containerVar.Value).Msg("checking variables")
+		//log.Debug().Str("container", container.Name).Str("name", containerVar.Name).Str("value", containerVar.Value).Msg("checking variables")
 		if containerVar.Name == name {
 			return true
 		}

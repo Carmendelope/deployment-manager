@@ -98,7 +98,7 @@ func (m *Manager) RegisterNetworkEntry(organizationId string, appInstanceId stri
 			fmt.Sprintf("appInstanceId:%s", appInstanceId),
 			fmt.Sprintf("serviceGroupInstanceId:%s", serviceGroupInstanceId),
 			fmt.Sprintf("serviceAppInstanceId:%s", serviceAppInstanceId),
-			fmt.Sprintf("clusterId:%s", os.Getenv(utils.NALEJ_CLUSTER_ID)),
+			fmt.Sprintf("clusterId:%s", os.Getenv(utils.NALEJ_ANNOTATION_CLUSTER_ID)),
 			fmt.Sprintf("networkId:%s", networkId),
 		},
 	}
