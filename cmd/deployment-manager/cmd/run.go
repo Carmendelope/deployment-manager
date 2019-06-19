@@ -55,6 +55,7 @@ func init() {
 	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
 	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
+	runCmd.Flags().Uint32("ztSidecarPort", 1000, "Port where the ZT sidecar expects route updates")
 
 	viper.BindPFlags(runCmd.Flags())
 }
@@ -86,6 +87,7 @@ func Run() {
 			Email:    			"devops@nalej.com",
 			DockerRepository: 	viper.GetString("publicRegistryURL"),
 		},
+		ZTSidecarPort: uint32(viper.GetInt32("ztSidecarPort")),
 	}
 
 	log.Info().Msg("launching deployment manager...")

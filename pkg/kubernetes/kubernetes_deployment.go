@@ -225,7 +225,7 @@ func(d *DeployableDeployments) Build() error {
                                 Name:  common.FormatName(service.Name),
                                 Image: service.Image,
                                 Env:   environmentVariables,
-                                Ports: d.getContainerPorts(service.ExposedPorts),
+                                Ports: d.getContainerPorts(service.ExposedPorts, false),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                             },
                             // ZT sidecar container
@@ -274,7 +274,7 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
-                                Ports: d.getContainerPorts(service.ExposedPorts),
+                                Ports: d.getContainerPorts(service.ExposedPorts, true),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                                 SecurityContext:
                                 &apiv1.SecurityContext{
@@ -477,7 +477,7 @@ func(d *DeployableDeployments) Build() error {
                                     },
                                 },
                                 // The proxy exposes the same ports of the deployment
-                                Ports: d.getContainerPorts(service.ExposedPorts),
+                                Ports: d.getContainerPorts(service.ExposedPorts, true),
                                 ImagePullPolicy: DefaultImagePullPolicy,
                                 SecurityContext:
                                 &apiv1.SecurityContext{
@@ -598,7 +598,7 @@ func(d * DeployableDeployments) addDeviceGroupEnvVariables(previous []apiv1.EnvV
     for _, sr := range d.data.Stage.DeviceGroupRules{
         if sr.TargetServiceGroupInstanceId == serviceGroupInstanceId && sr.TargetServiceInstanceId == serviceInstanceId{
             toAdd := &apiv1.EnvVar{
-                Name:      utils.EnvNalejAnnotationDGSecrets,
+                Name:      utils.NALEJ_ANNOTATION_DG_SECRETS,
                 Value:     strings.Join(sr.DeviceGroupJwtSecrets,","),
             }
             log.Debug().Interface("envVar", toAdd).Interface("sr", sr).Msg("Adding a new environment variable for security groups")
@@ -646,10 +646,13 @@ func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string
 //   ports list of exposed ports
 //  return:
 //   list of ports into k8s api format
-func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) []apiv1.ContainerPort {
+func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port, isSidecar bool) []apiv1.ContainerPort {
     obtained := make([]apiv1.ContainerPort, 0, len(ports))
     for _, p := range ports {
         obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})
+    }
+    if isSidecar{
+        obtained = append(obtained, apiv1.ContainerPort{ContainerPort:int32(config.GetConfig().ZTSidecarPort), Name: "ztrouteport"})
     }
     return obtained
 }
@@ -664,58 +667,58 @@ func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) [
 func (d *DeployableDeployments) getContainerEnvVariables(service *pbApplication.ServiceInstance, isProxy bool) []apiv1.EnvVar{
     return []apiv1.EnvVar{
         {
-            Name: utils.NALEJ_CLUSTER_ID, Value: config.GetConfig().ClusterId,
+            Name: utils.NALEJ_ENV_CLUSTER_ID, Value: config.GetConfig().ClusterId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_ZT_NETWORK_ID, Value: d.data.ZtNetworkId,
+            Name: utils.NALEJ_ENV_ZT_NETWORK_ID, Value: d.data.ZtNetworkId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_IS_PROXY, Value: fmt.Sprintf("%t",isProxy),
+            Name: utils.NALEJ_ENV_IS_PROXY, Value: fmt.Sprintf("%t",isProxy),
         },
         {
-            Name: utils.NALEJ_ANNOTATION_MANAGER_ADDR, Value: config.GetConfig().DeploymentMgrAddress,
+            Name: utils.NALEJ_ENV_MANAGER_ADDR, Value: config.GetConfig().DeploymentMgrAddress,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_DEPLOYMENT_ID, Value: d.data.DeploymentId,
+            Name: utils.NALEJ_ENV_DEPLOYMENT_ID, Value: d.data.DeploymentId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT, Value: d.data.Stage.FragmentId,
+            Name: utils.NALEJ_ENV_DEPLOYMENT_FRAGMENT, Value: d.data.Stage.FragmentId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_ORGANIZATION_ID, Value: d.data.OrganizationId,
+            Name: utils.NALEJ_ENV_ORGANIZATION_ID, Value: d.data.OrganizationId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_ORGANIZATION_NAME, Value: d.data.OrganizationName,
+            Name: utils.NALEJ_ENV_ORGANIZATION_NAME, Value: d.data.OrganizationName,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_APP_DESCRIPTOR, Value: d.data.AppDescriptorId,
+            Name: utils.NALEJ_ENV_APP_DESCRIPTOR, Value: d.data.AppDescriptorId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_APP_NAME, Value: d.data.AppName,
+            Name: utils.NALEJ_ENV_APP_NAME, Value: d.data.AppName,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, Value: d.data.AppInstanceId,
+            Name: utils.NALEJ_ENV_APP_INSTANCE_ID, Value: d.data.AppInstanceId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_STAGE_ID, Value: d.data.Stage.StageId,
+            Name: utils.NALEJ_ENV_STAGE_ID, Value: d.data.Stage.StageId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_SERVICE_NAME, Value: service.Name,
+            Name: utils.NALEJ_ENV_SERVICE_NAME, Value: service.Name,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_SERVICE_ID, Value: service.ServiceId,
+            Name: utils.NALEJ_ENV_SERVICE_ID, Value: service.ServiceId,
         },
         {
-            Name: utils.NALEJ_SERVICE_FQDN, Value: common.GetServiceFQDN(service.Name, service.OrganizationId, service.AppInstanceId),
+            Name: utils.NALEJ_ENV_SERVICE_FQDN, Value: common.GetServiceFQDN(service.Name, service.OrganizationId, service.AppInstanceId),
         },
         {
-            Name: utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, Value: service.ServiceInstanceId,
+            Name: utils.NALEJ_ENV_SERVICE_INSTANCE_ID, Value: service.ServiceInstanceId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID, Value: service.ServiceGroupId,
+            Name: utils.NALEJ_ENV_SERVICE_GROUP_ID, Value: service.ServiceGroupId,
         },
         {
-            Name: utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID, Value: service.ServiceGroupInstanceId,
+            Name: utils.NALEJ_ENV_SERVICE_GROUP_INSTANCE_ID, Value: service.ServiceGroupInstanceId,
         },
     }
 }

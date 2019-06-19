@@ -8,20 +8,15 @@ package kubernetes
 
 import (
     "errors"
-    "flag"
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/executor"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "github.com/rs/zerolog/log"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/kubernetes"
-    "k8s.io/client-go/rest"
-    "k8s.io/client-go/tools/clientcmd"
-    "os"
-    "path/filepath"
     "sync"
 )
 
@@ -319,67 +314,6 @@ func (k *KubernetesExecutor) StageRollback(stage *pbConductor.DeploymentStage, d
 
     return nil
 }
-
-
-// Create a new kubernetes Client using deployment inside the cluster.
-//  params:
-//   internal true if the Client is deployed inside the cluster.
-//  return:
-//   instance for the k8s Client or error if any
-func getInternalKubernetesClient() (*kubernetes.Clientset,error) {
-    config, err := rest.InClusterConfig()
-    if err != nil {
-        log.Panic().Err(err).Msg("impossible to get local configuration for internal k8s Client")
-        return nil, err
-    }
-    // creates the clientset
-    clientset, err := kubernetes.NewForConfig(config)
-    if err != nil {
-        log.Panic().Err(err).Msg("impossible to instantiate k8s Client")
-        return nil, err
-    }
-    return clientset,nil
-}
-
-
-// Create a new kubernetes Client using deployment outside the cluster.
-//  params:
-//   internal true if the Client is deployed inside the cluster.
-//  return:
-//   instance for the k8s Client or error if any
-func getExternalKubernetesClient() (*kubernetes.Clientset,error) {
-    var kubeconfig *string
-    if home := homeDir(); home != "" {
-        kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-    } else {
-        kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-    }
-    flag.Parse()
-
-    // use the current context in kubeconfig
-    config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-    if err != nil {
-        log.Panic().Err(err).Msg("error building configuration from kubeconfig")
-        return nil, err
-    }
-
-    // create the clientset
-    clientset, err := kubernetes.NewForConfig(config)
-    if err != nil {
-        log.Panic().Err(err).Msg("error using configuration to build k8s clientset")
-        return nil, err
-    }
-
-    return clientset, nil
-}
-
-func homeDir() string {
-    if h := os.Getenv("HOME"); h != "" {
-        return h
-    }
-    return os.Getenv("USERPROFILE") // windows
-}
-
 
 // Helping function for pointer conversion.
 func int32Ptr(i int32) *int32 { return &i }

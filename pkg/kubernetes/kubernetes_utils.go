@@ -6,6 +6,14 @@
 package kubernetes
 
 import (
+    "flag"
+    "github.com/nalej/derrors"
+    "github.com/rs/zerolog/log"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/rest"
+    "k8s.io/client-go/tools/clientcmd"
+    "os"
+    "path/filepath"
     "regexp"
 )
 
@@ -37,3 +45,83 @@ func ReformatLabel(input string) string {
     return adapted
 }
 
+
+// Create a Kubernetes client to interact as kubectl
+func GetKubernetesClient(internal bool) (*kubernetes.Clientset, derrors.Error){
+    var c *kubernetes.Clientset
+    var err error
+
+    if internal {
+        c, err = getInternalKubernetesClient()
+    } else {
+        c, err = getExternalKubernetesClient()
+    }
+    if err!=nil{
+        log.Error().Err(err).Msg("impossible to create kubernetes clientset")
+        return nil, derrors.AsError(err, "impossible to create kubernetes client")
+    }
+    if c==nil{
+        log.Error().Msg("kubernetes client set is nil")
+        return nil, derrors.NewInternalError("kubernetes client set was nil")
+    }
+    return c, nil
+}
+
+// Create a new kubernetes Client using deployment inside the cluster.
+//  params:
+//   internal true if the Client is deployed inside the cluster.
+//  return:
+//   instance for the k8s Client or error if any
+func getInternalKubernetesClient() (*kubernetes.Clientset,error) {
+    config, err := rest.InClusterConfig()
+    if err != nil {
+        log.Panic().Err(err).Msg("impossible to get local configuration for internal k8s Client")
+        return nil, err
+    }
+    // creates the clientset
+    clientset, err := kubernetes.NewForConfig(config)
+    if err != nil {
+        log.Panic().Err(err).Msg("impossible to instantiate k8s Client")
+        return nil, err
+    }
+    return clientset,nil
+}
+
+
+// Create a new kubernetes Client using deployment outside the cluster.
+//  params:
+//   internal true if the Client is deployed inside the cluster.
+//  return:
+//   instance for the k8s Client or error if any
+func getExternalKubernetesClient() (*kubernetes.Clientset,error) {
+    var kubeconfig *string
+    if home := homeDir(); home != "" {
+        kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+    } else {
+        kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+    }
+    flag.Parse()
+
+    // use the current context in kubeconfig
+    config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+    if err != nil {
+        log.Panic().Err(err).Msg("error building configuration from kubeconfig")
+        return nil, err
+    }
+
+    // create the clientset
+    clientset, err := kubernetes.NewForConfig(config)
+    if err != nil {
+        log.Panic().Err(err).Msg("error using configuration to build k8s clientset")
+        return nil, err
+    }
+
+    return clientset, nil
+}
+
+func homeDir() string {
+    if h := os.Getenv("HOME"); h != "" {
+        return h
+    }
+    return os.Getenv("USERPROFILE") // windows
+}
