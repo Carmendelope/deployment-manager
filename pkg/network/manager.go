@@ -141,7 +141,7 @@ func (m *Manager) SetServiceRoute(request *grpc_deployment_manager_go.ServiceRou
 		return derrors.NewNotFoundError("no namespace found for given organization ID and app instance ID")
 	}
 	// Get the list of pods/k8s services to be updated
-	pods, err := m.NetUpdater.GetPodsForApp(targetNS, request.OrganizationId, request.AppInstanceId)
+	pods, err := m.NetUpdater.GetPodsForApp(targetNS, request.OrganizationId, request.AppInstanceId, request.ServiceGroupId, request.ServiceId)
 	if err != nil {
 		return err
 	}

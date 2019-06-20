@@ -23,7 +23,7 @@ type NetworkUpdater interface {
 	// GetTargetNamespace obtains the namespace where the application runs.
 	GetTargetNamespace(organizationID string, appInstanceID string) (string, bool, derrors.Error)
 	// GetPodsForApp returns the list of pods to be updated for a given app
-	GetPodsForApp(namespace string, organizationID string, appInstanceID string) ([]TargetPod, derrors.Error)
+	GetPodsForApp(namespace string, organizationID string, appInstanceID string, serviceGroupID string, serviceID string) ([]TargetPod, derrors.Error)
 	// UpdatePodsRoute updates a set of pods with a given route.
 	UpdatePodsRoute(targetPods []TargetPod, route *grpc_zt_nalej_go.Route) derrors.Error
 }
@@ -79,7 +79,7 @@ func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, a
 }
 
 // GetPodsForApp returns the list of pods to be updated for a given app
-func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizationID string, appInstanceID string) ([]TargetPod, derrors.Error) {
+func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizationID string, appInstanceID string, serviceGroupID string, serviceID string) ([]TargetPod, derrors.Error) {
 	podClient := knu.client.CoreV1().Pods(namespace)
 	opts := v1.ListOptions{}
 	list, err := podClient.List(opts)
@@ -92,7 +92,9 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 		// created pods, or we may run other pods in the future.
 		orgID, existsOrgID := pod.Labels["nalej-organization"]
 		appInstID, existsAppInstID := pod.Labels["nalej-app-instance-id"]
-		if existsOrgID && existsAppInstID && orgID == organizationID && appInstID == appInstanceID {
+		servGroupID, existsServGroupID := pod.Labels["nalej-service-group-id"]
+		servID, existServID := pod.Labels["nalej-service-id"]
+		if existsOrgID && existsAppInstID && existsServGroupID && existServID && orgID == organizationID && appInstID == appInstanceID && servGroupID == serviceGroupID && servID == serviceID{
 			for _, container := range pod.Spec.Containers {
 				// log.Debug().Str("name", container.Name).Interface("container", container).Msg("Container info")
 				if hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY) {
@@ -104,6 +106,7 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 		}
 
 		/*
+		// TODO Check if we are going to send rules to the proxy. For now, only outbound rules are configured.
 		// Check if we are dealing with a proxy
 		value, existAgent := pod.Labels["agent"]
 		if existAgent && value == "zt-agent" {
