@@ -89,15 +89,16 @@ func (m *MonitorHelper) sendFragmentStatus(req pbConductor.DeploymentFragmentUpd
 }
 
 func (m *MonitorHelper) UpdateStatus() {
-    if m.Monitored.GetNumFragments() > 0 {
-        log.Debug().Msgf("monitored %d fragments with %d services and %d resources", m.Monitored.GetNumFragments(),
-            m.Monitored.GetNumServices(),m.Monitored.GetNumResources())
-    }
+
     notificationPending := m.Monitored.GetPendingNotifications()
     if len(notificationPending) == 0 {
         // nothing to do
         return
     }
+
+    log.Info().Msgf("monitored %d fragments with %d services and %d resources", m.Monitored.GetNumFragments(),
+            m.Monitored.GetNumServices(),m.Monitored.GetNumResources())
+
 
     log.Debug().Int("pendingNotifications",len(notificationPending)).Msg("there are pending notifications")
     clusterId := config.GetConfig().ClusterId
