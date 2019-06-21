@@ -56,7 +56,7 @@ func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, a
 	//labelSelector := v1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID:organizationID, utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:appInstanceID}}
 	// At this point, using the labels that we used to create the namespace does not retrieve the namespace. It may happen that K8s is doing
 	// some translation that does not happen at label selector time.
-	labelSelector := v1.LabelSelector{MatchLabels: map[string]string{"nalej-organization": organizationID, "nalej-app-instance-id": appInstanceID}}
+	labelSelector := v1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID: organizationID, utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: appInstanceID}}
 	opts := v1.ListOptions{
 		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
 	}
@@ -90,10 +90,10 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 	for _, pod := range list.Items {
 		// Check if we are inspecting a pod of the application. While we expect only for those pods to be present, we may be also running tests with manually
 		// created pods, or we may run other pods in the future.
-		orgID, existsOrgID := pod.Labels["nalej-organization"]
-		appInstID, existsAppInstID := pod.Labels["nalej-app-instance-id"]
-		servGroupID, existsServGroupID := pod.Labels["nalej-service-group-id"]
-		servID, existServID := pod.Labels["nalej-service-id"]
+		orgID, existsOrgID := pod.Labels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID]
+		appInstID, existsAppInstID := pod.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]
+		servGroupID, existsServGroupID := pod.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID]
+		servID, existServID := pod.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]
 		if existsOrgID && existsAppInstID && existsServGroupID && existServID && orgID == organizationID && appInstID == appInstanceID && servGroupID == serviceGroupID && servID == serviceID{
 			for _, container := range pod.Spec.Containers {
 				// log.Debug().Str("name", container.Name).Interface("container", container).Msg("Container info")
