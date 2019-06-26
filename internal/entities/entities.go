@@ -44,6 +44,16 @@ var ServicesToFragmentStatus = map[NalejServiceStatus] FragmentStatus {
     NALEJ_SERVICE_TERMINATING: FRAGMENT_TERMINATING,
 }
 
+var FragmentStatusToNalejServiceStatus = map[FragmentStatus]NalejServiceStatus {
+    FRAGMENT_WAITING: NALEJ_SERVICE_WAITING,
+    FRAGMENT_TERMINATING: NALEJ_SERVICE_TERMINATING,
+    // We assume that retrying is equivalent to deploying
+    FRAGMENT_RETRYING: NALEJ_SERVICE_DEPLOYING,
+    FRAGMENT_DEPLOYING: NALEJ_SERVICE_DEPLOYING,
+    FRAGMENT_ERROR: NALEJ_SERVICE_ERROR,
+    FRAGMENT_DONE: NALEJ_SERVICE_RUNNING,
+}
+
 
 // Translate a kubenetes deployment status into a Nalej service status
 // Kubernetes defines a set of deployment condition statuses to describe the current status of a deployment
