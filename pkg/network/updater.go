@@ -51,6 +51,13 @@ func NewKubernetesNetworkUpdater(client *kubernetes.Clientset) NetworkUpdater {
 }
 
 // GetTargetNamespace obtains the namespace where the application runs.
+// params:
+//  organizationID
+//  appInstanceID
+// return:
+//  the target namespace if found
+//  a boolean whether we found it or not
+//  any found error
 func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, appInstanceID string) (string, bool, derrors.Error) {
 	ns := knu.client.CoreV1().Namespaces()
 	//labelSelector := v1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID:organizationID, utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:appInstanceID}}
@@ -69,11 +76,21 @@ func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, a
 		log.Debug().Msg("no namespaces found")
 		return "", false, nil
 	}
-	// TODO Check if we are affected by redeploys with namespaces that are being terminated.
-	if len(list.Items) != 1 {
-		return "", false, derrors.NewInternalError("multiple namespaces found for the same application instance").WithParams(list.Items)
+
+	// Check that it exists at least one single namespace running
+	var targetNamespace *coreV1.Namespace = nil
+	for _, namespace := range list.Items {
+		if namespace.Status.Phase != coreV1.NamespaceTerminating{
+			// if this is not terminating we assume it is correct
+			targetNamespace = &namespace
+		}
 	}
-	name := list.Items[0].Name
+
+	if targetNamespace == nil  {
+		return "", false, derrors.NewInternalError("running namespaces not found").WithParams(list.Items)
+	}
+
+	name := targetNamespace.Name
 	log.Debug().Str("name", name).Msg("Target namespace has been identified")
 	return name, true, nil
 }
@@ -94,8 +111,17 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 		appInstID, existsAppInstID := pod.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID]
 		servGroupID, existsServGroupID := pod.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID]
 		servID, existServID := pod.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]
-		if existsOrgID && existsAppInstID && existsServGroupID && existServID && orgID == organizationID && appInstID == appInstanceID && servGroupID == serviceGroupID && servID == serviceID{
+
+		if existsOrgID && existsAppInstID && existsServGroupID && existServID && orgID == organizationID &&
+			appInstID == appInstanceID && servGroupID == serviceGroupID && servID == serviceID{
 			for _, container := range pod.Spec.Containers {
+
+				if pod.Status.Phase == coreV1.PodFailed {
+					// failed pods are ignored
+					log.Debug().Str("namespace",namespace).Str("podName", pod.Name).Msg("ignore pod in failed status")
+					continue
+				}
+
 				// log.Debug().Str("name", container.Name).Interface("container", container).Msg("Container info")
 				if hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY) {
 					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).Msg("ZT sidecar container detected")
@@ -104,24 +130,12 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 				}
 			}
 		}
-
-		/*
-		// TODO Check if we are going to send rules to the proxy. For now, only outbound rules are configured.
-		// Check if we are dealing with a proxy
-		value, existAgent := pod.Labels["agent"]
-		if existAgent && value == "zt-agent" {
-			log.Debug().Str("name", pod.Name).Str("podIP", pod.Status.PodIP).Msg("ZT service proxy detected")
-			toAdd := NewTargetPod(pod.Name, pod.Name, false, pod.Status.PodIP)
-			targetPods = append(targetPods, *toAdd)
-		}
-		*/
 	}
 	return targetPods, nil
 }
 
 func hasEnvVar(container coreV1.Container, name string) bool {
 	for _, containerVar := range container.Env {
-		//log.Debug().Str("container", container.Name).Str("name", containerVar.Name).Str("value", containerVar.Value).Msg("checking variables")
 		if containerVar.Name == name {
 			return true
 		}
