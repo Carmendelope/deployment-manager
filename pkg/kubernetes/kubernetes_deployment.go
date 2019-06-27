@@ -420,6 +420,8 @@ func(d *DeployableDeployments) Build() error {
                     // and a helping sidecar with a containerized zerotier that joins the network
                     // after running
                     Spec: apiv1.PodSpec{
+                        // Do not mount any service account token
+                        AutomountServiceAccountToken: getBool(false),
                         Containers: []apiv1.Container{
                             // zero-tier sidecar
                             {
