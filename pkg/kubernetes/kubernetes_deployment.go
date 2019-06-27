@@ -209,6 +209,10 @@ func(d *DeployableDeployments) Build() error {
                         Labels: extendedLabels,
                     },
                     Spec: apiv1.PodSpec{
+                        // Do not inject K8S service names
+                        EnableServiceLinks: getBool(false),
+                        // Do not mount any service account token
+                        AutomountServiceAccountToken: getBool(false),
                         // Set POD DNS policies
                         DNSPolicy: apiv1.DNSNone,
                         DNSConfig: &apiv1.PodDNSConfig{
@@ -234,19 +238,6 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
-                                    /*
-                                    "--appInstanceId", d.data.AppInstanceId,
-                                    "--appName", d.data.AppName,
-                                    "--serviceName", service.Name,
-                                    "--deploymentId", d.data.DeploymentId,
-                                    "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
-                                    "--organizationId", d.data.OrganizationId,
-                                    "--organizationName", d.data.OrganizationName,
-                                    "--networkId", d.data.ZtNetworkId,
-                                    "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-                                    "--serviceAppInstanceId", service.ServiceInstanceId,
-                                    */
                                 },
                                 Env: d.getContainerEnvVariables(service, false),
                                 LivenessProbe: &apiv1.Probe{
@@ -436,20 +427,6 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
-                                    /*
-                                    "--appInstanceId", d.data.AppInstanceId,
-                                    "--appName", d.data.AppName,
-                                    "--serviceName", common.FormatName(service.Name),
-                                    "--deploymentId", d.data.DeploymentId,
-                                    "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
-                                    "--organizationId", d.data.OrganizationId,
-                                    "--organizationName", d.data.OrganizationName,
-                                    "--networkId", d.data.ZtNetworkId,
-                                    "--isProxy",
-                                    "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-                                    "--serviceAppInstanceId", service.ServiceInstanceId,
-                                    */
                                 },
                                 Env: d.getContainerEnvVariables(service, true),
                                 LivenessProbe: &apiv1.Probe{
