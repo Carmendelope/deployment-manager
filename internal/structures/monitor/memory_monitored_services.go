@@ -90,6 +90,15 @@ func (p *MemoryMonitoredInstances) SetAppStatus(appInstanceId string, status ent
             if status != current.Status {
                 current.NewStatus = true
                 current.Status = status
+                // all services are in the same status
+                for i, _ := range current.Services {
+                    newStatus := entities.FragmentStatusToNalejServiceStatus[status]
+                    if current.Services[i].Status != newStatus {
+                        current.Services[i].Status = newStatus
+                        current.Services[i].NewStatus = true
+                    }
+                }
+
             }
             if err != nil {
                 current.Info = err.Error()
