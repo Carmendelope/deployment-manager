@@ -5,6 +5,7 @@
 package kubernetes
 
 import (
+    "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
@@ -64,7 +65,7 @@ func(s *DeployableServices) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
-        extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
+
         ports := getServicePorts(service.ExposedPorts)
         if ports!=nil{
             k8sService := apiv1.Service{
@@ -84,21 +85,11 @@ func(s *DeployableServices) Build() error {
                 Interface("apiv1.Service",k8sService).Msg("generated k8s service")
             s.services = append(s.services, ServiceInfo{service.ServiceId, service.ServiceInstanceId, k8sService})
 
-            /*
+
             // Create the zt-agent service
             // Set a different set of labels to identify this agent
-            ztAgentLabels := map[string]string {
-                "agent": "zt-agent",
-                utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : s.data.FragmentId,
-                utils.NALEJ_ANNOTATION_ORGANIZATION_ID:      s.data.OrganizationId,
-                utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :      s.data.AppDescriptorId,
-                utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :     s.data.AppInstanceId,
-                utils.NALEJ_ANNOTATION_STAGE_ID :            s.data.Stage.StageId,
-                utils.NALEJ_ANNOTATION_SERVICE_ID :          service.ServiceId,
-                utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID :    service.ServiceGroupId,
-                utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
-            }
+            ztAgentLabels := extendedLabels
+            ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
 
             ztServiceName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
             ztService := apiv1.Service{
@@ -110,15 +101,15 @@ func(s *DeployableServices) Build() error {
                 Spec: apiv1.ServiceSpec{
                     ExternalName: ztServiceName,
                     Ports: getServicePorts(service.ExposedPorts),
-                    // TODO remove by default we use clusterip.
-                    Type: apiv1.ServiceTypeNodePort,
+                    // only accessible from the cluster
+                    Type: apiv1.ServiceTypeClusterIP,
                     Selector: ztAgentLabels,
                 },
             }
             log.Debug().Str("serviceId",service.ServiceId).Str("serviceInstanceId",service.ServiceInstanceId).
                 Interface("apiv1.Service",k8sService).Msg("generated zt-agent service")
             s.ztAgents = append(s.ztAgents, ServiceInfo{service.ServiceId, service.ServiceInstanceId, ztService})
-            */
+
             log.Debug().Interface("deployment", k8sService).Msg("generated deployment")
 
 
@@ -127,9 +118,7 @@ func(s *DeployableServices) Build() error {
         }
     }
 
-    // add the created Services
-    //s.services = services
-    //s.ztAgents = ztServices
+
     return nil
 }
 
@@ -152,6 +141,7 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
     }
 
     // Create Services for agents
+
     for _, servInfo := range s.ztAgents {
         created, err := s.client.Create(&servInfo.Service)
         if err != nil {
@@ -160,7 +150,6 @@ func(s *DeployableServices) Deploy(controller executor.DeploymentController) err
         }
         log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",s.data.AppInstanceId).
             Str("serviceID", servInfo.ServiceId).Msg("add zt-agent service resource to be monitored")
-        //res := entities.NewMonitoredPlatformResource(string(created.GetUID()), s.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
         res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],string(created.GetUID()),
             created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
             created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],

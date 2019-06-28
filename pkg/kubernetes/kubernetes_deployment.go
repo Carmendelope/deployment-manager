@@ -387,25 +387,14 @@ func(d *DeployableDeployments) Build() error {
 
 
         ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
-        ztAgentLabels := map[string]string{
-            "agent": "zt-agent",
-        }
+        ztAgentLabels := extendedLabels
+        ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
+
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: ztAgentName,
                 Namespace: d.data.Namespace,
-                Labels: map[string] string {
-                    utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:  d.data.FragmentId,
-                    utils.NALEJ_ANNOTATION_ORGANIZATION_ID:      d.data.OrganizationId,
-                    utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :      d.data.AppDescriptorId,
-                    utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :     d.data.AppInstanceId,
-                    utils.NALEJ_ANNOTATION_STAGE_ID :            d.data.Stage.StageId,
-                    utils.NALEJ_ANNOTATION_SERVICE_ID :          service.ServiceId,
-                    utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
-                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID :    service.ServiceGroupId,
-                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
-                    "agent": "zt-agent",
-                },
+                Labels: ztAgentLabels,
             },
             Spec: appsv1.DeploymentSpec{
                 Replicas: int32Ptr(1),
