@@ -189,6 +189,7 @@ func(d *DeployableDeployments) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
 
         environmentVariables := d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables)
         environmentVariables = d.addDeviceGroupEnvVariables(environmentVariables, service.ServiceGroupInstanceId, service.ServiceInstanceId)
@@ -387,7 +388,12 @@ func(d *DeployableDeployments) Build() error {
 
 
         ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
-        ztAgentLabels := extendedLabels
+        // The proxy has the same labels with the proxy flag activated
+        // copy the map and modify the proxy flag
+        ztAgentLabels := make(map[string]string,0)
+        for k,v := range extendedLabels {
+            ztAgentLabels[k] = v
+        }
         ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
 
         agent := appsv1.Deployment{
