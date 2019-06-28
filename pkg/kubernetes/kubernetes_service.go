@@ -6,15 +6,14 @@ package kubernetes
 
 import (
     "github.com/nalej/deployment-manager/internal/entities"
-    "github.com/nalej/deployment-manager/pkg/utils"
-    apiv1 "k8s.io/api/core/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    v12 "k8s.io/client-go/kubernetes/typed/core/v1"
-    "k8s.io/client-go/kubernetes"
-    "github.com/rs/zerolog/log"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
-    "fmt"
+    "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/rs/zerolog/log"
+    apiv1 "k8s.io/api/core/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/kubernetes"
+    v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // Deployable Services
@@ -52,9 +51,6 @@ func(d *DeployableServices) GetId() string {
 }
 
 func(s *DeployableServices) Build() error {
-    // TODO check potential errors
-    //services := make(map[string]apiv1.Service,0)
-    //ztServices := make(map[string]apiv1.Service,0)
     for serviceIndex, service := range s.data.Stage.Services {
         log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.data.Stage.Services))
 
@@ -68,6 +64,7 @@ func(s *DeployableServices) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
         ports := getServicePorts(service.ExposedPorts)
         if ports!=nil{
             k8sService := apiv1.Service{
@@ -79,16 +76,15 @@ func(s *DeployableServices) Build() error {
                 Spec: apiv1.ServiceSpec{
                     ExternalName: common.FormatName(service.Name),
                     Ports: ports,
-                    // TODO remove by default we use clusterip.
                     Type: apiv1.ServiceTypeNodePort,
                     Selector: extendedLabels,
                 },
             }
-            //services[service.ServiceId] = k8sService
             log.Debug().Str("serviceId",service.ServiceId).Str("serviceInstanceId",service.ServiceInstanceId).
                 Interface("apiv1.Service",k8sService).Msg("generated k8s service")
             s.services = append(s.services, ServiceInfo{service.ServiceId, service.ServiceInstanceId, k8sService})
 
+            /*
             // Create the zt-agent service
             // Set a different set of labels to identify this agent
             ztAgentLabels := map[string]string {
@@ -122,8 +118,9 @@ func(s *DeployableServices) Build() error {
             log.Debug().Str("serviceId",service.ServiceId).Str("serviceInstanceId",service.ServiceInstanceId).
                 Interface("apiv1.Service",k8sService).Msg("generated zt-agent service")
             s.ztAgents = append(s.ztAgents, ServiceInfo{service.ServiceId, service.ServiceInstanceId, ztService})
-
+            */
             log.Debug().Interface("deployment", k8sService).Msg("generated deployment")
+
 
         } else {
             log.Debug().Msgf("No k8s service is generated for %s",service.ServiceId)
