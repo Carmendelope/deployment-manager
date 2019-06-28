@@ -189,6 +189,7 @@ func(d *DeployableDeployments) Build() error {
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
         extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+        extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
 
         environmentVariables := d.getEnvVariables(d.data.NalejVariables,service.EnvironmentVariables)
         environmentVariables = d.addDeviceGroupEnvVariables(environmentVariables, service.ServiceGroupInstanceId, service.ServiceInstanceId)
@@ -209,6 +210,10 @@ func(d *DeployableDeployments) Build() error {
                         Labels: extendedLabels,
                     },
                     Spec: apiv1.PodSpec{
+                        // Do not inject K8S service names
+                        EnableServiceLinks: getBool(false),
+                        // Do not mount any service account token
+                        AutomountServiceAccountToken: getBool(false),
                         // Set POD DNS policies
                         DNSPolicy: apiv1.DNSNone,
                         DNSConfig: &apiv1.PodDNSConfig{
@@ -234,19 +239,6 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
-                                    /*
-                                    "--appInstanceId", d.data.AppInstanceId,
-                                    "--appName", d.data.AppName,
-                                    "--serviceName", service.Name,
-                                    "--deploymentId", d.data.DeploymentId,
-                                    "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
-                                    "--organizationId", d.data.OrganizationId,
-                                    "--organizationName", d.data.OrganizationName,
-                                    "--networkId", d.data.ZtNetworkId,
-                                    "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-                                    "--serviceAppInstanceId", service.ServiceInstanceId,
-                                    */
                                 },
                                 Env: d.getContainerEnvVariables(service, false),
                                 LivenessProbe: &apiv1.Probe{
@@ -396,25 +388,19 @@ func(d *DeployableDeployments) Build() error {
 
 
         ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
-        ztAgentLabels := map[string]string{
-            "agent": "zt-agent",
+        // The proxy has the same labels with the proxy flag activated
+        // copy the map and modify the proxy flag
+        ztAgentLabels := make(map[string]string,0)
+        for k,v := range extendedLabels {
+            ztAgentLabels[k] = v
         }
+        ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
+
         agent := appsv1.Deployment{
             ObjectMeta: metav1.ObjectMeta{
                 Name: ztAgentName,
                 Namespace: d.data.Namespace,
-                Labels: map[string] string {
-                    utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:  d.data.FragmentId,
-                    utils.NALEJ_ANNOTATION_ORGANIZATION_ID:      d.data.OrganizationId,
-                    utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :      d.data.AppDescriptorId,
-                    utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :     d.data.AppInstanceId,
-                    utils.NALEJ_ANNOTATION_STAGE_ID :            d.data.Stage.StageId,
-                    utils.NALEJ_ANNOTATION_SERVICE_ID :          service.ServiceId,
-                    utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : service.ServiceInstanceId,
-                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID :    service.ServiceGroupId,
-                    utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
-                    "agent": "zt-agent",
-                },
+                Labels: ztAgentLabels,
             },
             Spec: appsv1.DeploymentSpec{
                 Replicas: int32Ptr(1),
@@ -429,6 +415,8 @@ func(d *DeployableDeployments) Build() error {
                     // and a helping sidecar with a containerized zerotier that joins the network
                     // after running
                     Spec: apiv1.PodSpec{
+                        // Do not mount any service account token
+                        AutomountServiceAccountToken: getBool(false),
                         Containers: []apiv1.Container{
                             // zero-tier sidecar
                             {
@@ -436,20 +424,6 @@ func(d *DeployableDeployments) Build() error {
                                 Image: ZTAgentImageName,
                                 Args: []string{
                                     "run",
-                                    /*
-                                    "--appInstanceId", d.data.AppInstanceId,
-                                    "--appName", d.data.AppName,
-                                    "--serviceName", common.FormatName(service.Name),
-                                    "--deploymentId", d.data.DeploymentId,
-                                    "--fragmentId", d.data.Stage.FragmentId,
-                                    "--managerAddr", config.GetConfig().DeploymentMgrAddress,
-                                    "--organizationId", d.data.OrganizationId,
-                                    "--organizationName", d.data.OrganizationName,
-                                    "--networkId", d.data.ZtNetworkId,
-                                    "--isProxy",
-                                    "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-                                    "--serviceAppInstanceId", service.ServiceInstanceId,
-                                    */
                                 },
                                 Env: d.getContainerEnvVariables(service, true),
                                 LivenessProbe: &apiv1.Probe{

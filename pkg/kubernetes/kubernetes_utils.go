@@ -125,3 +125,10 @@ func homeDir() string {
     }
     return os.Getenv("USERPROFILE") // windows
 }
+
+
+// Kubernetes API requires pointers to simple types. These are some functions to help with this.
+func getBool(value bool) *bool {
+    aux := value
+    return &aux
+}
