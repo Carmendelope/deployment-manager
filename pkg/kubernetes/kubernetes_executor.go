@@ -11,11 +11,15 @@ import (
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
+    "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
+    "github.com/nalej/deployment-manager/pkg/utils"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/rs/zerolog/log"
+    "k8s.io/api/core/v1"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/apimachinery/pkg/labels"
     "k8s.io/client-go/kubernetes"
     "sync"
 )
@@ -78,6 +82,35 @@ func(k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMe
     log.Debug().Interface("metadata",metadata).Interface("k8sDeployable",resources).Msg("built k8s deployable")
 
     return resources, nil
+}
+
+
+func (k *KubernetesExecutor) GetApplicationNamespace(organizationId string, appInstanceId string, numRetry int) (string, error) {
+    // Find the namespace
+    ns := k.Client.CoreV1().Namespaces()
+    labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID: organizationId,
+        utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: appInstanceId}}
+    opts := metav1.ListOptions{
+        LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
+    }
+    list, err := ns.List(opts)
+    if err != nil {
+        log.Error().Err(err).Str("organizationId", organizationId).Str("appInstanceId", appInstanceId).
+            Msg("error when querying the application namespace")
+        return "", err
+    }
+
+    // we iterate until we find a ready namespace ignoring any terminating namespace
+    for _, potentialTarget := range list.Items {
+        log.Info().Interface("namespace",potentialTarget).Msg("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        if potentialTarget.Status.Phase == v1.NamespaceActive {
+            // this namespace is ok
+            return potentialTarget.Name, nil
+        }
+    }
+
+    // There is no namespace available return a new name
+    return common.GetNamespace(organizationId, appInstanceId, numRetry), nil
 }
 
 // Prepare the namespace for the deployment. This is a special case because all the Deployments will share a common

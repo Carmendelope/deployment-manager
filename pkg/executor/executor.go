@@ -20,6 +20,16 @@ import (
 // created/deployed in order to follow the deployment plan.
 type Executor interface {
 
+    // Get the namespace for this application. If any namespace is already available for the application
+    // the name of this namespace must be returned. If not, a new valid namespace is returned.
+    // params:
+    //  organizationId
+    //  appInstanceId
+    //  numRetry
+    // return:
+    //  name for the namespace or error if any
+    GetApplicationNamespace(organizationId string, appInstanceId string, numRetry int) (string, error)
+
     // Execute any initial preparation to deploy a fragment.
     //  params:
     //   data information for deployment
