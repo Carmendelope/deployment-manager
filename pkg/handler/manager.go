@@ -11,7 +11,6 @@ import (
     "github.com/nalej/deployment-manager/internal/entities"
     "github.com/nalej/deployment-manager/internal/structures"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
-    "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/derrors"
     "github.com/nalej/grpc-application-go"
@@ -91,10 +90,20 @@ func(m *Manager) Run() {
 
 func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequest) error {
     log.Debug().Msgf("execute plan with id %s",request.RequestId)
-    // Compute the namespace for this deployment
-    namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId, int(request.NumRetry))
 
     var executionError error
+
+
+    // Check the existence of a namespace for this app
+    namespace, executionError := m.executor.GetApplicationNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId, int(request.NumRetry))
+    if executionError != nil {
+        log.Error().Err(executionError).Msg("impossible to find a valid namespace name")
+        return executionError
+    }
+
+    // Compute the namespace for this deployment
+    // namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId, int(request.NumRetry))
+
 
     // Add a new events controller for this application
     log.Info().Str("appInstanceId", request.Fragment.AppInstanceId).Msg("add monitoring controller for app")
