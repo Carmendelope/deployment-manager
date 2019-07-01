@@ -102,7 +102,6 @@ func (k *KubernetesExecutor) GetApplicationNamespace(organizationId string, appI
 
     // we iterate until we find a ready namespace ignoring any terminating namespace
     for _, potentialTarget := range list.Items {
-        log.Info().Interface("namespace",potentialTarget).Msg("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         if potentialTarget.Status.Phase == v1.NamespaceActive {
             // this namespace is ok
             return potentialTarget.Name, nil
