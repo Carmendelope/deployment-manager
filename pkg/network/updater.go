@@ -60,7 +60,7 @@ func NewKubernetesNetworkUpdater(client *kubernetes.Clientset) NetworkUpdater {
 //  any found error
 func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, appInstanceID string) (string, bool, derrors.Error) {
 	ns := knu.client.CoreV1().Namespaces()
-	//labelSelector := v1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID:organizationID, utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:appInstanceID}}
+
 	// At this point, using the labels that we used to create the namespace does not retrieve the namespace. It may happen that K8s is doing
 	// some translation that does not happen at label selector time.
 	labelSelector := v1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID: organizationID, utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: appInstanceID}}
@@ -122,10 +122,14 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 					continue
 				}
 
-				// log.Debug().Str("name", container.Name).Interface("container", container).Msg("Container info")
-				if hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY) {
-					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).Msg("ZT sidecar container detected")
-					toAdd := NewTargetPod(pod.Name, container.Name, false, pod.Status.PodIP)
+				// Any outbound pod must have the NALEJ_ENV_IS_PROXY flag with false value. Otherwise, they indicate a
+				// zt-proxy.
+				if hasVar, valueVar := hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY); hasVar {
+					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
+						Str("is a proxy?", valueVar).Msg("ZT sidecar container detected")
+					// the value must be a boolean
+					isProxy := bool(hasVar)
+					toAdd := NewTargetPod(pod.Name, container.Name, isProxy, pod.Status.PodIP)
 					targetPods = append(targetPods, *toAdd)
 				}
 			}
@@ -134,13 +138,13 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 	return targetPods, nil
 }
 
-func hasEnvVar(container coreV1.Container, name string) bool {
+func hasEnvVar(container coreV1.Container, name string) (bool,string) {
 	for _, containerVar := range container.Env {
 		if containerVar.Name == name {
-			return true
+			return true, containerVar.Value
 		}
 	}
-	return false
+	return false,""
 }
 
 // UpdatePodsRoute updates a set of pods with a given route.
@@ -158,7 +162,6 @@ func (knu *KubernetesNetworkUpdater) UpdatePodsRoute(targetPods []TargetPod, rou
 			return derrors.AsError(rerr, "cannot update route on pod")
 		}
 	}
-	log.Debug().Msg("all pods have been updated with the new route")
 	return nil
 }
 
