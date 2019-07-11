@@ -20,7 +20,6 @@ import (
     "github.com/nalej/deployment-manager/pkg/proxy"
     "github.com/nalej/derrors"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
-    "github.com/nalej/grpc-utils/pkg/tools"
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
     "google.golang.org/grpc/credentials"
@@ -37,7 +36,7 @@ type DeploymentManagerService struct {
     // Proxy manager for proxy forwarding
     netProxy *proxy.Manager
     // Server for incoming requests
-    server *tools.GenericGRPCServer
+    server *grpc.Server
     // configuration
     configuration config.Config
 }
@@ -133,7 +132,7 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     netProxy := proxy.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
     // Instantiate target server
-    server := tools.NewGenericGRPCServer(cfg.Port)
+    server := grpc.NewServer()
 
     instance := DeploymentManagerService{mgr: mgr, net: net, netProxy: netProxy, server: server, configuration: *cfg}
 
