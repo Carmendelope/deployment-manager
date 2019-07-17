@@ -386,135 +386,149 @@ func(d *DeployableDeployments) Build() error {
                 append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
         }
 
-
-        ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
-        // The proxy has the same labels with the proxy flag activated
-        // copy the map and modify the proxy flag
-        ztAgentLabels := make(map[string]string,0)
-        for k,v := range extendedLabels {
-            ztAgentLabels[k] = v
-        }
-        ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
-
-        agent := appsv1.Deployment{
-            ObjectMeta: metav1.ObjectMeta{
-                Name: ztAgentName,
-                Namespace: d.data.Namespace,
-                Labels: ztAgentLabels,
-            },
-            Spec: appsv1.DeploymentSpec{
-                Replicas: int32Ptr(1),
-                Selector: &metav1.LabelSelector{
-                    MatchLabels:ztAgentLabels,
-                },
-                Template: apiv1.PodTemplateSpec{
-                    ObjectMeta: metav1.ObjectMeta{
-                        Labels: ztAgentLabels,
-                    },
-                    // Every pod template is designed to use a container with the requested image
-                    // and a helping sidecar with a containerized zerotier that joins the network
-                    // after running
-                    Spec: apiv1.PodSpec{
-                        // Do not mount any service account token
-                        AutomountServiceAccountToken: getBool(false),
-                        Containers: []apiv1.Container{
-                            // zero-tier sidecar
-                            {
-                                Name: ztAgentName,
-                                Image: ZTAgentImageName,
-                                Args: []string{
-                                    "run",
-                                },
-                                Env: d.getContainerEnvVariables(service, true),
-                                LivenessProbe: &apiv1.Probe{
-                                    InitialDelaySeconds: 20,
-                                    PeriodSeconds:       60,
-                                    TimeoutSeconds:      20,
-                                    Handler: apiv1.Handler{
-                                        Exec: &apiv1.ExecAction{
-                                            Command: []string{
-                                                "./nalej/zt-agent",
-                                                "check",
-                                                "--appInstanceId", d.data.AppInstanceId,
-                                                "--appName", d.data.AppName,
-                                                "--serviceName", common.FormatName(service.Name),
-                                                "--deploymentId", d.data.DeploymentId,
-                                                "--fragmentId", d.data.Stage.FragmentId,
-                                                "--managerAddr", config.GetConfig().DeploymentMgrAddress,
-                                                "--organizationId", d.data.OrganizationId,
-                                                "--organizationName", d.data.OrganizationName,
-                                                "--networkId", d.data.ZtNetworkId,
-                                                "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-                                                "--serviceAppInstanceId", service.ServiceInstanceId,
-                                            },
-                                        },
-                                    },
-                                },
-                                // The proxy exposes the same ports of the deployment
-                                Ports: d.getContainerPorts(service.ExposedPorts, true),
-                                ImagePullPolicy: DefaultImagePullPolicy,
-                                SecurityContext:
-                                &apiv1.SecurityContext{
-                                    RunAsUser: privilegedUser,
-                                    Privileged: boolPtr(true),
-                                    Capabilities: &apiv1.Capabilities{
-                                        Add: [] apiv1.Capability{
-                                            "NET_ADMIN",
-                                            "SYS_ADMIN",
-                                        },
-                                    },
-                                },
-
-                                VolumeMounts: []apiv1.VolumeMount{
-                                    {
-                                        Name: "dev-net-tun",
-                                        ReadOnly: true,
-                                        MountPath: "/dev/net/tun",
-                                    },
-                                    // volume mount for the zt-planet secret
-                                    {
-                                        Name: ZTPlanetSecretName,
-                                        MountPath: "/zt/planet",
-                                        ReadOnly: true,
-                                    },
-                                },
-                            },
-                        },
-						ImagePullSecrets: []apiv1.LocalObjectReference{
-							{
-								Name: DefaultNalejPublicRegistry,
-							},
-						},
-                        Volumes: []apiv1.Volume{
-                            // zerotier sidecar volume
-                            {
-                                Name: "dev-net-tun",
-                                VolumeSource: apiv1.VolumeSource{
-                                    HostPath: &apiv1.HostPathVolumeSource{
-                                        Path: "/dev/net/tun",
-                                    },
-                                },
-                            },
-                            // zt-planet secret
-                            {
-                                Name: ZTPlanetSecretName,
-                                VolumeSource: apiv1.VolumeSource{
-                                    Secret: &apiv1.SecretVolumeSource{
-                                        SecretName: ZTPlanetSecretName,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        }
-
         d.deployments = append(d.deployments, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, deployment})
-        d.ztAgents = append(d.ztAgents, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, agent})
+
+        // If we have at least one single port defined there will be a K8s service. Create the corresponding proxy agent
+        if len(service.ExposedPorts) != 0 {
+            agent := d.createZtAgent(service,extendedLabels)
+            d.ztAgents = append(d.ztAgents, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, agent})
+        }
+
     }
 
     return nil
+}
+
+
+// Private helper function to generate zt agents
+func (d *DeployableDeployments) createZtAgent(service *grpc_application_go.ServiceInstance, extendedLabels map[string]string)  appsv1.Deployment {
+    // value for privileged user
+    user0 := int64(0)
+    privilegedUser := &user0
+
+    ztAgentName := fmt.Sprintf("zt-%s",common.FormatName(service.Name))
+    // The proxy has the same labels with the proxy flag activated
+    // copy the map and modify the proxy flag
+    ztAgentLabels := make(map[string]string,0)
+    for k,v := range extendedLabels {
+        ztAgentLabels[k] = v
+    }
+    ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
+
+    agent := appsv1.Deployment{
+        ObjectMeta: metav1.ObjectMeta{
+            Name: ztAgentName,
+            Namespace: d.data.Namespace,
+            Labels: ztAgentLabels,
+        },
+        Spec: appsv1.DeploymentSpec{
+            Replicas: int32Ptr(1),
+            Selector: &metav1.LabelSelector{
+                MatchLabels:ztAgentLabels,
+            },
+            Template: apiv1.PodTemplateSpec{
+                ObjectMeta: metav1.ObjectMeta{
+                    Labels: ztAgentLabels,
+                },
+                // Every pod template is designed to use a container with the requested image
+                // and a helping sidecar with a containerized zerotier that joins the network
+                // after running
+                Spec: apiv1.PodSpec{
+                    // Do not mount any service account token
+                    AutomountServiceAccountToken: getBool(false),
+                    Containers: []apiv1.Container{
+                        // zero-tier sidecar
+                        {
+                            Name: ztAgentName,
+                            Image: ZTAgentImageName,
+                            Args: []string{
+                                "run",
+                            },
+                            Env: d.getContainerEnvVariables(service, true),
+                            LivenessProbe: &apiv1.Probe{
+                                InitialDelaySeconds: 20,
+                                PeriodSeconds:       60,
+                                TimeoutSeconds:      20,
+                                Handler: apiv1.Handler{
+                                    Exec: &apiv1.ExecAction{
+                                        Command: []string{
+                                            "./nalej/zt-agent",
+                                            "check",
+                                            "--appInstanceId", d.data.AppInstanceId,
+                                            "--appName", d.data.AppName,
+                                            "--serviceName", common.FormatName(service.Name),
+                                            "--deploymentId", d.data.DeploymentId,
+                                            "--fragmentId", d.data.Stage.FragmentId,
+                                            "--managerAddr", config.GetConfig().DeploymentMgrAddress,
+                                            "--organizationId", d.data.OrganizationId,
+                                            "--organizationName", d.data.OrganizationName,
+                                            "--networkId", d.data.ZtNetworkId,
+                                            "--serviceGroupInstanceId", service.ServiceGroupInstanceId,
+                                            "--serviceAppInstanceId", service.ServiceInstanceId,
+                                        },
+                                    },
+                                },
+                            },
+                            // The proxy exposes the same ports of the deployment
+                            Ports: d.getContainerPorts(service.ExposedPorts, true),
+                            ImagePullPolicy: DefaultImagePullPolicy,
+                            SecurityContext:
+                            &apiv1.SecurityContext{
+                                RunAsUser: privilegedUser,
+                                Privileged: boolPtr(true),
+                                Capabilities: &apiv1.Capabilities{
+                                    Add: [] apiv1.Capability{
+                                        "NET_ADMIN",
+                                        "SYS_ADMIN",
+                                    },
+                                },
+                            },
+
+                            VolumeMounts: []apiv1.VolumeMount{
+                                {
+                                    Name: "dev-net-tun",
+                                    ReadOnly: true,
+                                    MountPath: "/dev/net/tun",
+                                },
+                                // volume mount for the zt-planet secret
+                                {
+                                    Name: ZTPlanetSecretName,
+                                    MountPath: "/zt/planet",
+                                    ReadOnly: true,
+                                },
+                            },
+                        },
+                    },
+                    ImagePullSecrets: []apiv1.LocalObjectReference{
+                        {
+                            Name: DefaultNalejPublicRegistry,
+                        },
+                    },
+                    Volumes: []apiv1.Volume{
+                        // zerotier sidecar volume
+                        {
+                            Name: "dev-net-tun",
+                            VolumeSource: apiv1.VolumeSource{
+                                HostPath: &apiv1.HostPathVolumeSource{
+                                    Path: "/dev/net/tun",
+                                },
+                            },
+                        },
+                        // zt-planet secret
+                        {
+                            Name: ZTPlanetSecretName,
+                            VolumeSource: apiv1.VolumeSource{
+                                Secret: &apiv1.SecretVolumeSource{
+                                    SecretName: ZTPlanetSecretName,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+    return agent
 }
 
 func(d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
