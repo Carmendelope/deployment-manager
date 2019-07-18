@@ -605,6 +605,9 @@ func(d * DeployableDeployments) addDeviceGroupEnvVariables(previous []apiv1.EnvV
 //   list of k8s environment variables
 func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string, variables map[string]string) []apiv1.EnvVar {
     result := make([]apiv1.EnvVar, 0)
+    // The cluster id is enabled by default
+    result = append(result, apiv1.EnvVar{Name: utils.NALEJ_ENV_CLUSTER_ID, Value: config.GetConfig().ClusterId})
+
     for k, v := range variables {
         if strings.HasPrefix(k,NalejServicePrefix) {
             // The key cannot have the NalejServicePrefix, that is a reserved word
