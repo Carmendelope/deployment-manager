@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/nalej/deployment-manager/pkg/utils"
+	"strconv"
 	"time"
 
 	"github.com/nalej/derrors"
@@ -16,7 +17,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const DefaultSidecarTimeout = time.Second * 10
+const (
+	DefaultSidecarTimeout = time.Second * 10
+	ZtRedirectorPort = 1576
+	UpdateRetries = 3
+	RetrySleep = 2 * time.Second
+	)
 
 // NetworkUpdater interface with the operations to manage the update of network information on application pods.
 type NetworkUpdater interface {
@@ -95,7 +101,7 @@ func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, a
 	return name, true, nil
 }
 
-// GetPodsForApp returns the list of pods to be updated for a given app
+// GetPodsForApp returns the list of pods to be updated for a given app. No proxies are included.
 func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizationID string, appInstanceID string, serviceGroupID string, serviceID string) ([]TargetPod, derrors.Error) {
 	podClient := knu.client.CoreV1().Pods(namespace)
 	opts := v1.ListOptions{}
@@ -128,9 +134,19 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
 						Str("is a proxy?", valueVar).Msg("ZT sidecar container detected")
 					// the value must be a boolean
-					isProxy := bool(hasVar)
-					toAdd := NewTargetPod(pod.Name, container.Name, isProxy, pod.Status.PodIP)
-					targetPods = append(targetPods, *toAdd)
+					isProxy, err := strconv.ParseBool(valueVar)
+					if err != nil {
+						log.Error().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
+							Str(utils.NALEJ_ANNOTATION_IS_PROXY, valueVar).
+							Msg("the env variable should be boolean")
+						continue
+					}
+					if !isProxy {
+						log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
+							Str("is a proxy?", valueVar).Msg("ZT sidecar added to the candidate list")
+						toAdd := NewTargetPod(pod.Name, container.Name, isProxy, pod.Status.PodIP)
+						targetPods = append(targetPods, *toAdd)
+					}
 				}
 			}
 		}
@@ -151,22 +167,42 @@ func hasEnvVar(container coreV1.Container, name string) (bool,string) {
 func (knu *KubernetesNetworkUpdater) UpdatePodsRoute(targetPods []TargetPod, route *grpc_zt_nalej_go.Route) derrors.Error {
 	log.Debug().Interface("route", route).Int("num pods", len(targetPods)).Msg("updating pod routes")
 	for _, target := range targetPods {
-		log.Debug().Str("pod", target.PodName).Str("container", target.ContainerName).Msg("Updating pod")
+		log.Debug().Str("pod", target.PodName).Str("podIp",target.PodIP).
+			Str("container", target.ContainerName).Msg("Updating pod")
 		client, ctx, cancel, err := knu.getSidecarClient(target.PodIP)
+		if cancel != nil {
+			defer cancel()
+		}
 		if err != nil {
+			log.Error().Str("pod", target.PodName).Str("container", target.ContainerName).
+				Msg("error when recovering a client to interact with sidecar pod")
 			return err
 		}
-		defer cancel()
-		_, rerr := client.SetRoute(ctx, route)
-		if rerr != nil {
+		done := false
+		var rerr error = nil
+		for attempts := 0;attempts < UpdateRetries; attempts++ {
+			_, rerr = client.SetRoute(ctx, route)
+			if rerr != nil {
+				log.Error().Str("pod", target.PodName).Str("container", target.ContainerName).
+					Msgf("cannot update route on pod on attempt %d out of %d", attempts+1, UpdateRetries)
+				time.Sleep(RetrySleep)
+			} else {
+				log.Debug().Str("pod", target.PodName).Str("container", target.ContainerName).
+					Msg("pod route update was done")
+				done = true
+				break
+			}
+		}
+		if !done {
 			return derrors.AsError(rerr, "cannot update route on pod")
 		}
+
 	}
 	return nil
 }
 
 func (knu *KubernetesNetworkUpdater) getSidecarClient(targetIP string) (grpc_zt_nalej_go.SidecarClient, context.Context, context.CancelFunc, derrors.Error) {
-	address := fmt.Sprintf("%s:1000", targetIP)
+	address := fmt.Sprintf("%s:%d", targetIP, ZtRedirectorPort)
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		return nil, nil, nil, derrors.AsError(err, "cannot create connection with unified logging coordinator")
