@@ -339,10 +339,7 @@
 [[projects]]
   digest = "1:220e1579404d4114ffffa8f7ca924798523acae03326d1544c6cf166d1693bae"
   name = "github.com/nalej/grpc-utils"
-  packages = [
-    "pkg/conversions",
-    "pkg/tools",
-  ]
+  packages = ["pkg/conversions"]
   pruneopts = ""
   revision = "120443cfc0335f46d85293d471189625d8b70483"
   version = "v1.2.0"
@@ -887,7 +884,6 @@
     "github.com/nalej/grpc-login-api-go",
     "github.com/nalej/grpc-network-go",
     "github.com/nalej/grpc-utils/pkg/conversions",
-    "github.com/nalej/grpc-utils/pkg/tools",
     "github.com/nalej/grpc-zt-nalej-go",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
