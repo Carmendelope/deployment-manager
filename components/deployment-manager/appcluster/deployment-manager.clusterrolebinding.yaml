@@ -2,7 +2,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: deployment-manager
-  namespace: __NPH_NAMESPACE
   labels:
     cluster: application
     component: deployment-manager
@@ -13,4 +12,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: deployment-manager
-  namespace: nalej
+  namespace: __NPH_NAMESPACE
