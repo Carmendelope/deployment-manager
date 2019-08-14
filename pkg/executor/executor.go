@@ -124,5 +124,5 @@ type DeploymentController interface {
    //  info relevant textual information
    //  endpoints for the resource
    SetResourceStatus(appInstanceID string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
-       endpoints []entities.EndpointInstance)
+       endpoints []entities.EndpointInstance) error
 }

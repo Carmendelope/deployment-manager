@@ -70,8 +70,8 @@ func (c *KubernetesController) AddMonitoredResource(resource *entities.Monitored
 
 // Set the status of a native resource
 func (c *KubernetesController) SetResourceStatus(fragmentId string, serviceID string, uid string,
-	status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) {
-	c.monitoredInstances.SetResourceStatus(fragmentId, serviceID, uid, status, info, endpoints)
+	status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) error {
+	return c.monitoredInstances.SetResourceStatus(fragmentId, serviceID, uid, status, info, endpoints)
 }
 
 // Event callback handlers
@@ -87,27 +87,25 @@ func (c *KubernetesController) OnDeployment(oldObj, obj interface{}, action even
 	// This deployment is monitored, and all its replicas are available
 	// if there are enough replicas, we assume this is working
 	if (dep.Status.UnavailableReplicas == 0 && dep.Status.AvailableReplicas > 0){
-		c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
+		return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
 			dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()),
 			entities.NALEJ_SERVICE_RUNNING,"", []entities.EndpointInstance{})
-	} else {
-		foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
-		// Generate an information string if possible
-		info := ""
-		if len(dep.Status.Conditions) != 0 {
-			for _, condition := range dep.Status.Conditions {
-				info = fmt.Sprintf("%s %s", info, condition)
-			}
-		}
-		log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
-			Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
-			Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
-			Msgf("set deployment new status to %s",string(foundStatus))
-		c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
-			dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] ,string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
 	}
 
-	return nil
+	foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
+	// Generate an information string if possible
+	info := ""
+	if len(dep.Status.Conditions) != 0 {
+		for _, condition := range dep.Status.Conditions {
+			info = fmt.Sprintf("%s %s", info, condition)
+		}
+	}
+	log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
+		Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
+		Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
+		Msg("set deployment status")
+	return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
+		dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] ,string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
 }
 
 func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.EventType) error {
@@ -186,11 +184,9 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 		Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
 		Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
 		Msg("set service new status to ready")
-	c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
+	return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
 		dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"",
 		endpoints)
-
-	return nil
 }
 
 func (c *KubernetesController) OnIngress(oldObj, obj interface{}, action events.EventType) error {
@@ -225,7 +221,7 @@ func (c *KubernetesController) OnIngress(oldObj, obj interface{}, action events.
 			Str("uid", string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
 			Msg("set ingress new status to ready")
 
-		c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
+		return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
 			dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
 			"", []entities.EndpointInstance{entities.EndpointInstance{
 				FQDN: hostname,

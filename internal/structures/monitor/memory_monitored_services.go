@@ -246,7 +246,7 @@ func (p *MemoryMonitoredInstances) IsMonitoredResource(fragmentId string, servic
 
 
 func (p *MemoryMonitoredInstances) SetResourceStatus(fragmentId string, serviceInstanceId, uid string,
-    status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) {
+    status entities.NalejServiceStatus, info string, endpoints []entities.EndpointInstance) error {
     p.mu.Lock()
     defer p.mu.Unlock()
 
@@ -256,7 +256,7 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(fragmentId string, serviceI
     app, found := p.monitoredEntries[fragmentId]
     if !found {
         log.Error().Str("fragmentId", fragmentId).Msg("impossible to set resource status. App not monitored.")
-        return
+        return fmt.Errorf("app %s not monitored", fragmentId)
     }
 
     // Get the service
@@ -264,26 +264,22 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(fragmentId string, serviceI
     if !found {
         log.Error().Str("fragmentId", fragmentId).Str("serviceInstanceID", serviceInstanceId).
             Interface("monitored",p.monitoredEntries).Msg("impossible to set resource. Service not monitored.")
-        return
+        return fmt.Errorf("service %s not monitored", serviceInstanceId)
     }
 
     // -> resource
     resource, found := service.Resources[uid]
     if !found {
-        log.Warn().Str("fragmentId", fragmentId).Str("serviceInstanceId", serviceInstanceId).Str("resource uid", uid).
-            Msg("resource was not added before setting a new status. We add it now")
-
-        newResource := entities.NewMonitoredPlatformResource(fragmentId, uid, service.AppDescriptorId, service.AppInstanceId,
-            service.ServiceGroupId, service.ServiceGroupInstanceId, service.ServiceID, service.ServiceInstanceID, info)
-        service.AddPendingResource(&newResource)
-        resource = service.Resources[uid]
+        log.Debug().Str("fragmentId", fragmentId).Str("serviceInstanceId", serviceInstanceId).Str("resource uid", uid).
+            Msg("resource was not added before setting a new status")
+        return fmt.Errorf("resource %s not monitored", uid)
     }
 
     // If we are going to set the same status, exit.
     if resource.Status == status {
         log.Debug().Str("fragmentId", fragmentId).Str("serviceInstanceId", serviceInstanceId).Str("uid",uid).
             Interface("status",status).Str("info",info).Msg("no resource status changed")
-        return
+        return nil
     }
 
     // Modify the status
@@ -361,6 +357,8 @@ func (p *MemoryMonitoredInstances) SetResourceStatus(fragmentId string, serviceI
 
     app.Status = entities.ServicesToFragmentStatus[newAppStatus]
     app.Info = newAppInfo
+
+    return nil
 }
 
 func (p *MemoryMonitoredInstances) GetPendingNotifications() ([] *entities.MonitoredAppEntry) {

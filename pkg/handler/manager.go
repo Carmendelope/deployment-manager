@@ -103,10 +103,6 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
     // Compute the namespace for this deployment
     // namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId, int(request.NumRetry))
 
-
-    // Add a new events controller for this application
-    log.Info().Str("appInstanceId", request.Fragment.AppInstanceId).Msg("add monitoring controller for app")
-
     // Build a metadata object
     metadata := entities.DeploymentMetadata{
         Namespace: namespace,
