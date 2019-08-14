@@ -87,13 +87,8 @@ func getInternalKubernetesClient() (*kubernetes.Clientset,error) {
     return clientset,nil
 }
 
-
-// Create a new kubernetes Client using deployment outside the cluster.
-//  params:
-//   internal true if the Client is deployed inside the cluster.
-//  return:
-//   instance for the k8s Client or error if any
-func getExternalKubernetesClient() (*kubernetes.Clientset,error) {
+// Figure out the filename of the Kubernetes configuration
+func KubeConfigPath() string {
     var kubeconfig *string
     if home := homeDir(); home != "" {
         kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -102,8 +97,19 @@ func getExternalKubernetesClient() (*kubernetes.Clientset,error) {
     }
     flag.Parse()
 
+    return *kubeconfig
+}
+
+// Create a new kubernetes Client using deployment outside the cluster.
+//  params:
+//   internal true if the Client is deployed inside the cluster.
+//  return:
+//   instance for the k8s Client or error if any
+func getExternalKubernetesClient() (*kubernetes.Clientset,error) {
+    kubeconfig := KubeConfigPath()
+
     // use the current context in kubeconfig
-    config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+    config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
     if err != nil {
         log.Panic().Err(err).Msg("error building configuration from kubeconfig")
         return nil, err

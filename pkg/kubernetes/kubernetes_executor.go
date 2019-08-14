@@ -10,7 +10,6 @@ import (
     "errors"
     "fmt"
     "github.com/nalej/deployment-manager/internal/entities"
-    "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/common"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/utils"
@@ -28,15 +27,14 @@ import (
 // The executor is the main structure in charge of running deployment plans on top of K8s.
 type KubernetesExecutor struct {
     Client *kubernetes.Clientset
-    // Map of controllers
-    // Namespace -> controller
-    Controllers map[string]*KubernetesController
+    // Controller that handles Kubernetes events add updates the MonitoredInstance
+    Controller executor.DeploymentController
     PlanetPath string
     // mutex
     mu sync.Mutex
 }
 
-func NewKubernetesExecutor(internal bool, planetPath string) (executor.Executor,error) {
+func NewKubernetesExecutor(internal bool, planetPath string, controller executor.DeploymentController) (executor.Executor,error) {
     var c *kubernetes.Clientset
     var err error
 
@@ -49,15 +47,18 @@ func NewKubernetesExecutor(internal bool, planetPath string) (executor.Executor,
         log.Error().Err(err).Msg("impossible to create kubernetes clientset")
         return nil, err
     }
-    if c==nil{
+    if c == nil{
         foundError := errors.New("kubernetes clientset was nil")
         log.Error().Err(foundError)
         return nil, foundError
     }
+
+    // TBD Create events controller
+
     toReturn := KubernetesExecutor{
         Client: c,
-        Controllers: make(map[string]*KubernetesController,0),
         PlanetPath:planetPath,
+	Controller: controller,
     }
     return &toReturn, err
 }
@@ -125,17 +126,10 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
        return nil, err
     }
 
-    controller, found := k.Controllers[metadata.FragmentId]
-    if !found {
-        log.Error().Str("fragmentId",metadata.FragmentId).
-            Msg("impossible to find the corresponding events controller")
-        return nil, errors.New("impossible to find the corresponding events controller")
-    }
-
     if !namespaceDeployable.exists() {
         log.Debug().Str("namespace", metadata.Namespace).Msg("create namespace...")
         // TODO Check if namespace already exists...
-        err = namespaceDeployable.Deploy(controller)
+        err = namespaceDeployable.Deploy(k.Controller)
         if err != nil {
             log.Error().Err(err).Msgf("impossible to deploy namespace %s",metadata.Namespace)
             return nil,err
@@ -148,7 +142,7 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
         if err != nil {
             log.Error().Err(err).Msg("impossible to build nalej-public-registry secret")
         }
-        err = nalejSecret.Deploy(controller)
+        err = nalejSecret.Deploy(k.Controller)
         if err != nil {
             log.Error().Err(err).Msg("impossible to deploy nalej-public-registry secret")
             return nil,err
@@ -166,88 +160,18 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
 
 // Deploy a stage into kubernetes. This function
 func (k *KubernetesExecutor) DeployStage(toDeploy executor.Deployable, fragment *pbConductor.DeploymentFragment,
-    stage *pbConductor.DeploymentStage, monitoredInstances monitor.MonitoredInstances) error {
+    stage *pbConductor.DeploymentStage) error {
     log.Info().Str("stage",stage.StageId).Msgf("execute stage %s with %d Services", stage.StageId, len(stage.Services))
 
-    var k8sDeploy *DeployableKubernetesStage
-    k8sDeploy = toDeploy.(*DeployableKubernetesStage)
-
-    // get the previously generated controller for this namespace
-    controller, found := k.Controllers[k8sDeploy.data.FragmentId]
-    if !found {
-        log.Error().Str("namespace",k8sDeploy.data.Namespace).Str("stageId",stage.StageId).
-            Msg("impossible to find the corresponding events controller")
-        return errors.New("impossible to find the corresponding events controller")
-    }
-
     // Deploy everything and then start the controller.
-    err := toDeploy.Deploy(controller)
+    err := toDeploy.Deploy(k.Controller)
     if err != nil {
         log.Error().Err(err).Msgf("impossible to deploy resources for stage %s in fragment %s",stage.StageId, stage.FragmentId)
         return err
     }
 
     return err
-
 }
-
-
-
-
-func (k *KubernetesExecutor) AddEventsController(fragmentId string, monitored monitor.MonitoredInstances,
-    namespace string) executor.DeploymentController {
-    // Instantiate a new controller
-    deployController := NewKubernetesController(k, monitored, namespace)
-
-    var k8sController *KubernetesController
-    k8sController = deployController.(*KubernetesController)
-
-    k.mu.Lock()
-    defer k.mu.Unlock()
-    retrievedController, found := k.Controllers[fragmentId]
-    if found {
-        log.Warn().Str("fragmentId", fragmentId).Msg("a kubernetes controller already exists for this namespace")
-        return retrievedController
-    }
-    k.Controllers[fragmentId] = k8sController
-    log.Debug().Interface("controllers", k.Controllers).Msg("added a new events controller")
-    return k8sController
-}
-
-
-// Generate a events controller for a given namespace.
-//  params:
-//   fragmentId to be supervised
-//   monitored data structure to monitor incoming events
-func (k *KubernetesExecutor) StartControlEvents(fragmentId string) executor.DeploymentController {
-    k.mu.Lock()
-    defer k.mu.Unlock()
-    toReturn, found := k.Controllers[fragmentId]
-    if !found {
-        log.Error().Str("fragmentId",fragmentId).Msg("the kubernetes controller was not found")
-        return nil
-    }
-    toReturn.Run()
-    return toReturn
-}
-
-// Stop the control of events for a given namespace.
-//  params:
-//   appInstanceId to stop the control
-func (k *KubernetesExecutor) StopControlEvents(fragmentId string) {
-    k.mu.Lock()
-    defer k.mu.Unlock()
-    log.Info().Str("fragmentId", fragmentId).Interface("controllers",k.Controllers).Msg("stop events controller")
-    // TODO this is not required as K8s stops the channels
-    //controller, found := k.Controllers[appInstanceId]
-    //if !found {
-    //    log.Error().Str("appInstanceId",appInstanceId).Msg("impossible to stop controller, appInstanceId not found")
-    //}
-    //controller.Stop()
-    // delete the instance
-    delete(k.Controllers,fragmentId)
-}
-
 
 func (k *KubernetesExecutor) UndeployStage(stage *pbConductor.DeploymentStage, toUndeploy executor.Deployable) error {
     log.Info().Msgf("undeploy stage %s from fragment %s", stage.StageId, stage.FragmentId)

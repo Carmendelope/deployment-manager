@@ -8,7 +8,6 @@ package executor
 
 import (
     "github.com/nalej/deployment-manager/internal/entities"
-    "github.com/nalej/deployment-manager/internal/structures/monitor"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 )
@@ -52,8 +51,7 @@ type Executor interface {
     //   stage to be executed
     //  return:
     //   deployable object or error if any
-    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage,
-        monitoredInstances monitor.MonitoredInstances) error
+    DeployStage(toDeploy Deployable, fragment *pbConductor.DeploymentFragment,stage *pbConductor.DeploymentStage) error
 
     // This operation should be executed after the failed deployment of a deployment stage. The target platform must
     // be ready to retry again the deployment of this stage. This means, that other deployable entities deployed
@@ -80,27 +78,6 @@ type Executor interface {
     //  return:
     //   error if any
     UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
-
-    // Generate an events controller for a given namespace.
-    //  params:
-    //   fragment to be supervised
-    //   monitored data structure to monitor incoming events
-    //   namespace to be observed
-    //  return:
-    //   deployment controller in charge of this namespace
-    AddEventsController(fragmentId string, monitored monitor.MonitoredInstances, namespace string) DeploymentController
-
-    // Start an event controller for the namespace.
-    //  params:
-    //   fragmentId to be supervised
-    //  return:
-    //   deployment controller in charge of this namespace
-    StartControlEvents(fragmentId string) DeploymentController
-
-    // Stop the control of events for a given namespace.
-    //  params:
-    //   fragmentId to stop supervising
-    StopControlEvents(fragmentId string)
 }
 
 // A monitor system to inform the cluster API about the current status
@@ -148,10 +125,4 @@ type DeploymentController interface {
    //  endpoints for the resource
    SetResourceStatus(appInstanceID string, serviceID string, uid string, status entities.NalejServiceStatus, info string,
        endpoints []entities.EndpointInstance)
-
-   // Start checking events
-   Run()
-
-   // Stop checking events
-   Stop()
 }

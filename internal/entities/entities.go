@@ -8,7 +8,7 @@ package entities
 import (
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
-    "k8s.io/api/extensions/v1beta1"
+    apps_v1 "k8s.io/api/apps/v1"
 )
 
 // Service status definition
@@ -66,16 +66,16 @@ var FragmentStatusToNalejServiceStatus = map[FragmentStatus]NalejServiceStatus {
 //  All into available -> Running
 //  Unknown situation --> Waiting
 //
-func KubernetesDeploymentStatusTranslation (kStatus v1beta1.DeploymentStatus) NalejServiceStatus {
+func KubernetesDeploymentStatusTranslation (kStatus apps_v1.DeploymentStatus) NalejServiceStatus {
     var result NalejServiceStatus
     running := 0
     progressing := 0
     error := 0
     for _, c := range kStatus.Conditions {
         switch c.Type {
-        case v1beta1.DeploymentAvailable:
+        case apps_v1.DeploymentAvailable:
             running = running + 1
-        case v1beta1.DeploymentProgressing:
+        case apps_v1.DeploymentProgressing:
             progressing  = progressing + 1
         default:
             // this is a failure

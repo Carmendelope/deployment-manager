@@ -14,10 +14,12 @@ import (
     "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
+    "github.com/nalej/deployment-manager/pkg/kubernetes/events"
     "github.com/nalej/deployment-manager/pkg/login-helper"
     monitor2 "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/network"
     "github.com/nalej/deployment-manager/pkg/proxy"
+    "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/derrors"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
     "github.com/rs/zerolog/log"
@@ -84,13 +86,6 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
         return nil, err
     }
 
-    exec, kubErr := kubernetes.NewKubernetesExecutor(cfg.Local, cfg.PlanetPath)
-
-    if kubErr != nil {
-        log.Panic().Err(err).Msg("there was an error creating kubernetes client")
-        panic(err.Error())
-        return nil, kubErr
-    }
 
     // Build connection with conductor
     log.Debug().Str("hostname", cfg.ClusterAPIHostname).Msg("connecting with cluster api")
@@ -109,6 +104,41 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     monitorService := monitor2.NewMonitorHelper(clusterAPIConn,clusterAPILoginHelper, instanceMonitor)
     go monitorService.Run()
     log.Info().Msg("done")
+
+    // Create Kubernetes Event provider
+    // Only get events relevant for user applications
+    labelSelector := utils.NALEJ_ANNOTATION_ORGANIZATION_ID
+    kubernetesEvents, derr := events.NewEventsProvider(kubernetes.KubeConfigPath(), cfg.Local, labelSelector)
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Create the Kubernetes event handler
+    controller := kubernetes.NewKubernetesController(instanceMonitor)
+    dispatcher, derr := events.NewDispatcher(controller)
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Add dispatcher to provider
+    derr = kubernetesEvents.AddDispatcher(dispatcher)
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Start collecting events
+    derr = kubernetesEvents.Start()
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Create the Kubernetes executor
+    exec, kubErr := kubernetes.NewKubernetesExecutor(cfg.Local, cfg.PlanetPath, controller)
+    if kubErr != nil {
+        log.Panic().Err(err).Msg("there was an error creating kubernetes client")
+        panic(err.Error())
+        return nil, kubErr
+    }
 
     nalejDNSForPods := strings.Split(cfg.DNS, ",")
     nalejDNSForPods = append(nalejDNSForPods, "8.8.8.8")
