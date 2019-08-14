@@ -200,7 +200,7 @@ func (d *Dispatcher) worker() {
 		if err == nil {
 			d.queue.Forget(event)
 		} else if d.queue.NumRequeues(event) < maxRetries {
-			log.Warn().Err(err).Interface("event", event).Msg("Error processing event. Retrying.")
+			log.Warn().Err(err).Int("retries", d.queue.NumRequeues(event)).Interface("event", event).Msg("Error processing event. Retrying.")
 			d.queue.AddRateLimited(event)
 		} else {
 			log.Error().Err(err).Interface("event", event).Msg("Error processing event. Giving up.")
