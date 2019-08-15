@@ -19,6 +19,8 @@ type Config struct {
 	Debug bool
 	// listening port
 	Port uint32
+	// port for HTTP metrics endpoint
+	MetricsPort uint32
 	// ClusterAPIAddress address
 	// Deprecated: Use clusterAPIHostname and clusterAPIPort instead.
 	ClusterAPIAddress string
@@ -82,7 +84,11 @@ func (conf *Config) Resolve() derrors.Error{
 func (conf *Config) Validate() derrors.Error {
 
 	if conf.Port <= 0 {
-		return derrors.NewInvalidArgumentError("ports must be valid")
+		return derrors.NewInvalidArgumentError("port must be valid")
+	}
+
+	if conf.MetricsPort <= 0 {
+		return derrors.NewInvalidArgumentError("metricsPort must be valid")
 	}
 
 	if conf.ClusterAPIAddress != "" {
@@ -133,6 +139,7 @@ func (conf *Config) Print() {
 	log.Info().Bool("debug", conf.Debug).Msg("Debug")
 	log.Info().Str("app", version.AppVersion).Str("commit", version.Commit).Msg("Version")
 	log.Info().Uint32("port", conf.Port).Msg("gRPC port")
+	log.Info().Uint32("port", conf.MetricsPort).Msg("metrics port")
 	log.Info().Str("Id", conf.ClusterId).Msg("Cluster info")
 	log.Info().Str("URL", conf.DeploymentMgrAddress).Msg("Deployment manager")
 	log.Info().Bool("local", conf.Local).Msg("Kubernetes is local")

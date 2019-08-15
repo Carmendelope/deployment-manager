@@ -34,6 +34,7 @@ func init() {
 
 	RootCmd.AddCommand(runCmd)
 	runCmd.Flags().Uint32P("port", "p", 5200, "port where deployment manager listens to")
+	runCmd.Flags().Uint32("metricsPort", 5201, "port for HTTP metrics endpoint")
 	runCmd.Flags().BoolP("local", "l", false, "indicate local k8s instance")
 	//runCmd.Flags().StringP("clusterAPIAddress", "c", "localhost:5500", "conductor address e.g.: 192.168.1.4:5000")
 	runCmd.Flags().StringP("networkMgrAddress", "n", "localhost:8000", "network address e.g.: 192.168.1.4:8000")
@@ -63,29 +64,30 @@ func init() {
 func Run() {
 
 	config := config.Config{
-		Debug: 				  debugLevel,
+		Debug:                debugLevel,
 		Port:                 uint32(viper.GetInt32("port")),
+		MetricsPort:          uint32(viper.GetInt32("metricsPort")),
 		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
-		ManagementHostname: viper.GetString("managementHostname"),
+		ManagementHostname:   viper.GetString("managementHostname"),
 		ClusterAPIHostname:   viper.GetString("clusterAPIHostname"),
 		ClusterAPIPort:       uint32(viper.GetInt32("clusterAPIPort")),
 		UseTLSForClusterAPI:  viper.GetBool("useTLSForClusterAPI"),
 		LoginHostname:        viper.GetString("loginHostname"),
 		LoginPort:            uint32(viper.GetInt32("loginPort")),
 		UseTLSForLogin:       viper.GetBool("useTLSForLogin"),
-		ClusterPublicHostname: viper.GetString("clusterPublicHostname"),
+		ClusterPublicHostname:viper.GetString("clusterPublicHostname"),
 		DeploymentMgrAddress: viper.GetString("depMgrAddress"),
 		Local:                viper.GetBool("local"),
 		Email:                viper.GetString("email"),
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
-		TargetPlatformName:	  viper.GetString("targetPlatform"),
+		TargetPlatformName:   viper.GetString("targetPlatform"),
 		PlanetPath:           viper.GetString("planetPath"),
 		PublicCredentials:    grpc_application_go.ImageCredentials{
-			Username: 			viper.GetString("publicRegistryUserName"),
-			Password: 			viper.GetString("publicRegistryPassword"),
-			Email:    			"devops@nalej.com",
-			DockerRepository: 	viper.GetString("publicRegistryURL"),
+			Username:             viper.GetString("publicRegistryUserName"),
+			Password:             viper.GetString("publicRegistryPassword"),
+			Email:                "devops@nalej.com",
+			DockerRepository:     viper.GetString("publicRegistryURL"),
 		},
 		ZTSidecarPort: uint32(viper.GetInt32("ztSidecarPort")),
 	}

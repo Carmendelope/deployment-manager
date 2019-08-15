@@ -29,12 +29,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var (
-	DeploymentKind = apps_v1.SchemeGroupVersion.WithKind("Deployment")
-	ServiceKind = core_v1.SchemeGroupVersion.WithKind("Service")
-	IngressKind = extensions_v1beta1.SchemeGroupVersion.WithKind("Ingress")
-)
-
 // The kubernetes controllers has a set of queues monitoring k8s related operations.
 type KubernetesController struct {
 	// Pending checks to run
