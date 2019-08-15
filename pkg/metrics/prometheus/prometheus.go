@@ -50,6 +50,7 @@ func NewMetricsProvider() (*MetricsProvider, derrors.Error) {
 }
 
 func (p *MetricsProvider) Metrics(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("prometheus metrics endpoint request")
 	p.handler.ServeHTTP(w, r)
 }
 

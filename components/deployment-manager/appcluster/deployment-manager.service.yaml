@@ -15,6 +15,7 @@ spec:
   - protocol: TCP
     port: 5200
     targetPort: 5200
+    name: api
   - protocol: TCP
     port: 5201
     targetPort: 5201
