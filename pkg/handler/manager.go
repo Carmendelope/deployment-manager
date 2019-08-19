@@ -12,7 +12,6 @@ import (
     "github.com/nalej/deployment-manager/internal/structures"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
     "github.com/nalej/deployment-manager/pkg/executor"
-    "github.com/nalej/derrors"
     "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
@@ -103,19 +102,6 @@ func(m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentReque
 
     // Compute the namespace for this deployment
     // namespace := common.GetNamespace(request.Fragment.OrganizationId, request.Fragment.AppInstanceId, int(request.NumRetry))
-
-
-    // Add a new events controller for this application
-    log.Info().Str("appInstanceId", request.Fragment.AppInstanceId).Msg("add monitoring controller for app")
-    controller := m.executor.AddEventsController(request.Fragment.FragmentId, m.monitored, namespace)
-    if controller == nil{
-        err := errors.New(fmt.Sprintf("impossible to create deployment controller for namespace %s",namespace))
-        log.Error().Err(err).Str("fragmentId", request.Fragment.FragmentId).Msg("failed creating controller")
-        //return err
-        executionError = err
-        m.monitored.SetEntryStatus(request.Fragment.FragmentId,entities.FRAGMENT_ERROR,executionError)
-        return executionError
-    }
 
     // Build a metadata object
     metadata := entities.DeploymentMetadata{
@@ -223,10 +209,6 @@ func(m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) err
 func (m *Manager) Undeploy (request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Str("appInstanceID", request.AppInstanceId).Msg("undeploy app instance with id")
 
-    // Stop monitoring events
-	// TODO check if this operation is really required
-    //m.executor.StopControlEvents(request.AppInstanceId)
-
 	// Undeploy the namespace
 	err := m.executor.UndeployNamespace(request)
 	// set the requested application as terminating
@@ -265,7 +247,6 @@ func (m *Manager) UndeployFragment (request *pbDeploymentMgr.UndeployFragmentReq
         m.executor.UndeployNamespace(undeployRequest)
     }
 
-
     return undeployErr
 }
 
@@ -288,14 +269,7 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
     for retries := 0; retries < maxRetries; retries++ {
         m.monitored.SetEntryStatus(fragment.FragmentId,entities.FRAGMENT_DEPLOYING,nil)
 
-        // execute
-        // Start controller here so we can consume already occurred events
-        controller := m.executor.StartControlEvents(fragment.FragmentId)
-        if controller == nil {
-            return derrors.NewNotFoundError(fmt.Sprintf("no controller was found for appInstanceId %s",fragment.AppInstanceId))
-        }
-
-        err := m.executor.DeployStage(toDeploy, fragment, stage, m.monitored)
+        err := m.executor.DeployStage(toDeploy, fragment, stage)
 
         if err != nil {
             log.Error().Err(err).Msgf("there was a problem when retrying stage %s from fragment %s",
@@ -313,9 +287,6 @@ func (m *Manager) deploymentLoopStage(fragment *pbConductor.DeploymentFragment, 
             // Everything was OK, stage deployed
             return nil
         }
-
-        // Stop events control
-        m.executor.StopControlEvents(fragment.AppInstanceId)
 
         // undeploy
         err = toDeploy.Undeploy()
