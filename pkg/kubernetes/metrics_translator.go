@@ -13,11 +13,11 @@ import (
 	"github.com/nalej/deployment-manager/pkg/metrics"
 	"github.com/nalej/deployment-manager/pkg/utils"
 
-	apps_v1 "k8s.io/api/apps/v1"
-	core_v1 "k8s.io/api/core/v1"
-	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
         "k8s.io/client-go/tools/cache"
 
@@ -33,7 +33,7 @@ type MetricsTranslator struct {
 	// Collect metrics based on events
 	collector metrics.Collector
 	// Server startup
-	startupTime meta_v1.Time
+	startupTime metav1.Time
 
 	// We have a reference back to the data stores of the informers for
 	// each kind of resource we support. We use this to look up and
@@ -47,7 +47,7 @@ type MetricsTranslator struct {
 func NewMetricsTranslator(collector metrics.Collector) *MetricsTranslator{
 	return &MetricsTranslator{
 		collector: collector,
-		startupTime: meta_v1.Now(),
+		startupTime: metav1.Now(),
 		stores: map[string]cache.Store{},
 	}
 }
@@ -77,7 +77,7 @@ func (t *MetricsTranslator) SupportedKinds() events.KindList {
 
 // Translating functions
 func (t *MetricsTranslator) OnDeployment(oldObj, obj interface{}, action events.EventType) error {
-	d := obj.(*apps_v1.Deployment)
+	d := obj.(*appsv1.Deployment)
 
 	// filter out zt-agent deployment
 	if !isAppInstance(d) {
@@ -88,13 +88,13 @@ func (t *MetricsTranslator) OnDeployment(oldObj, obj interface{}, action events.
 }
 
 func (t *MetricsTranslator) OnNamespace(oldObj, obj interface{}, action events.EventType) error {
-	n := obj.(*core_v1.Namespace)
+	n := obj.(*corev1.Namespace)
 
 	return t.translate(action, metrics.MetricFragments, &n.CreationTimestamp)
 }
 
 func (t *MetricsTranslator) OnPersistentVolumeClaim(oldObj, obj interface{}, action events.EventType) error {
-	pvc := obj.(*core_v1.PersistentVolumeClaim)
+	pvc := obj.(*corev1.PersistentVolumeClaim)
 	return t.translate(action, metrics.MetricVolumes, &pvc.CreationTimestamp)
 }
 
@@ -104,14 +104,14 @@ func (t *MetricsTranslator) OnPod(oldObj, obj interface{}, action events.EventTy
 }
 
 func (t *MetricsTranslator) OnIngress(oldObj, obj interface{}, action events.EventType) error {
-	i := obj.(*extensions_v1beta1.Ingress)
+	i := obj.(*extensionsv1beta1.Ingress)
 	return t.translate(action, metrics.MetricEndpoints, &i.CreationTimestamp)
 }
 
 func (t *MetricsTranslator) OnService(oldObj, obj interface{}, action events.EventType) error {
-	s := obj.(*core_v1.Service)
+	s := obj.(*corev1.Service)
 
-	if s.Spec.Type != core_v1.ServiceTypeLoadBalancer {
+	if s.Spec.Type != corev1.ServiceTypeLoadBalancer {
 		return nil
 	}
 
@@ -125,7 +125,7 @@ func (t *MetricsTranslator) OnService(oldObj, obj interface{}, action events.Eve
 // and other resources to figure out what we're dealing with. So, for now, we
 // just count warnings.
 func (t *MetricsTranslator) OnEvent(oldObj, obj interface{}, action events.EventType) error {
-	e := obj.(*core_v1.Event)
+	e := obj.(*corev1.Event)
 
 	if action == events.EventDelete {
 		return nil
@@ -139,7 +139,7 @@ func (t *MetricsTranslator) OnEvent(oldObj, obj interface{}, action events.Event
 	}
 
 	if action == events.EventUpdate {
-		oldE := oldObj.(*core_v1.Event)
+		oldE := oldObj.(*corev1.Event)
 		// If count increased, we log another warning
 		if oldE.Count == e.Count {
 			return nil
@@ -172,8 +172,8 @@ func (t *MetricsTranslator) OnEvent(oldObj, obj interface{}, action events.Event
 		t.collector.Error(metrics.MetricServices)
 
 	case ServiceKind.Kind:
-		s := ref.(*core_v1.Service)
-		if s.Spec.Type != core_v1.ServiceTypeLoadBalancer {
+		s := ref.(*corev1.Service)
+		if s.Spec.Type != corev1.ServiceTypeLoadBalancer {
 			return nil
 		}
 		fallthrough
@@ -190,7 +190,7 @@ func (t *MetricsTranslator) OnEvent(oldObj, obj interface{}, action events.Event
 	return nil
 }
 
-func (t *MetricsTranslator) getReferencedObject(ref *core_v1.ObjectReference) (interface{}, bool) {
+func (t *MetricsTranslator) getReferencedObject(ref *corev1.ObjectReference) (interface{}, bool) {
 	// If we don't have a store for this kind, we are not intereseted in
 	// the object - we also cannot easily retrieve it.
 	store, found := t.stores[ref.Kind]
@@ -218,7 +218,7 @@ func (t *MetricsTranslator) getReferencedObject(ref *core_v1.ObjectReference) (i
 }
 
 // Calls create function if after server startup, existing otherwise
-func (t *MetricsTranslator) translate(action events.EventType, metric metrics.MetricType, ts *meta_v1.Time) error {
+func (t *MetricsTranslator) translate(action events.EventType, metric metrics.MetricType, ts *metav1.Time) error {
 	switch action {
 	case events.EventAdd:
 		if t.startupTime.Before(ts) {

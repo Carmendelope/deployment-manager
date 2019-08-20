@@ -22,9 +22,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	apps_v1 "k8s.io/api/apps/v1"
-	core_v1 "k8s.io/api/core/v1"
-	extensions_v1beta1 "k8s.io/api/extensions/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 )
@@ -70,7 +70,7 @@ func (c *KubernetesController) SetResourceStatus(fragmentId string, serviceID st
 
 // Event callback handlers
 func (c *KubernetesController) OnDeployment(oldObj, obj interface{}, action events.EventType) error {
-	dep := obj.(*apps_v1.Deployment)
+	dep := obj.(*appsv1.Deployment)
 	log.Debug().Str("name", dep.GetName()).Str("status", dep.Status.String()).Msg("deployment")
 
 	if action == events.EventDelete {
@@ -104,7 +104,7 @@ func (c *KubernetesController) OnDeployment(oldObj, obj interface{}, action even
 
 func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.EventType) error {
 	// TODO determine what do we expect from a service to be deployed
-	dep := obj.(*core_v1.Service)
+	dep := obj.(*corev1.Service)
 	log.Debug().Str("name", dep.GetName()).Str("status", dep.Status.String()).Msg("service")
 
 	if action == events.EventDelete {
@@ -118,7 +118,7 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 	if found && purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE {
 		log.Debug().Interface("analyzing", dep).Msg("Checking service for device group ingestion")
 
-		if dep.Spec.Type == core_v1.ServiceTypeLoadBalancer{
+		if dep.Spec.Type == corev1.ServiceTypeLoadBalancer{
 			log.Debug().Msg("Load balancer detected")
 			if dep.Status.LoadBalancer.Ingress == nil || len(dep.Status.LoadBalancer.Ingress) == 0 {
 				log.Debug().Interface("loadbalancer", dep.Status).Msg("Load balancer is not ready, skip")
@@ -137,7 +137,7 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 					endpoints = append(endpoints, ep)
 				}
 			}
-		} else if dep.Spec.Type == core_v1.ServiceTypeNodePort{
+		} else if dep.Spec.Type == corev1.ServiceTypeNodePort{
 			log.Debug().Msg("Node port detected")
 			for _, port := range dep.Spec.Ports{
 				ep := entities.EndpointInstance{
@@ -152,7 +152,7 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 		}
 	} else if found && purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE{
 		log.Debug().Interface("analyzing", dep).Msg("Checking service for load balancer")
-		if dep.Spec.Type == core_v1.ServiceTypeLoadBalancer {
+		if dep.Spec.Type == corev1.ServiceTypeLoadBalancer {
 			log.Debug().Msg("Load balancer detected")
 			if dep.Status.LoadBalancer.Ingress == nil || len(dep.Status.LoadBalancer.Ingress) == 0 {
 				log.Debug().Interface("loadbalancer", dep.Status).Msg("Load balancer is not ready, skip")
@@ -184,7 +184,7 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 }
 
 func (c *KubernetesController) OnIngress(oldObj, obj interface{}, action events.EventType) error {
-	dep := obj.(*extensions_v1beta1.Ingress)
+	dep := obj.(*extensionsv1beta1.Ingress)
 	log.Debug().Str("name", dep.GetName()).Str("status", dep.Status.String()).Msg("ingress")
 
 	if action == events.EventDelete {

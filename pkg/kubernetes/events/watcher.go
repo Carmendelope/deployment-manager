@@ -13,7 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,12 +55,12 @@ func NewWatcher(client rest.Interface, gvk *schema.GroupVersionKind, resource st
 	}
 
 	// Create a lister-watcher
-	optionsModifier := func(options *meta_v1.ListOptions) {
+	optionsModifier := func(options *metav1.ListOptions) {
 		options.FieldSelector = fields.Everything().String()
 		options.LabelSelector = parsedLabelSelector.String()
 	}
 
-	watchlist := cache.NewFilteredListWatchFromClient(client, resource, meta_v1.NamespaceAll, optionsModifier)
+	watchlist := cache.NewFilteredListWatchFromClient(client, resource, metav1.NamespaceAll, optionsModifier)
 
 	// Create an informer
 	informer := cache.NewSharedIndexInformer(watchlist, objType, 0 /* No resync */, cache.Indexers{})
