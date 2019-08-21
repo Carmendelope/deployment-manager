@@ -7,27 +7,39 @@
 package service
 
 import (
+    "context"
     "crypto/tls"
     "fmt"
+    "net"
+    "net/http"
+    "os"
+    "os/signal"
+    "strings"
+    "syscall"
+
+    "github.com/nalej/deployment-manager/internal/collect"
     "github.com/nalej/deployment-manager/internal/structures"
     "github.com/nalej/deployment-manager/internal/structures/monitor"
+
     "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/handler"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
     "github.com/nalej/deployment-manager/pkg/kubernetes/events"
     "github.com/nalej/deployment-manager/pkg/login-helper"
+    "github.com/nalej/deployment-manager/pkg/metrics/prometheus"
     monitor2 "github.com/nalej/deployment-manager/pkg/monitor"
     "github.com/nalej/deployment-manager/pkg/network"
     "github.com/nalej/deployment-manager/pkg/proxy"
     "github.com/nalej/deployment-manager/pkg/utils"
+
     "github.com/nalej/derrors"
+
     pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+
     "github.com/rs/zerolog/log"
     "google.golang.org/grpc"
     "google.golang.org/grpc/credentials"
     "google.golang.org/grpc/reflection"
-    "net"
-    "strings"
 )
 
 type DeploymentManagerService struct {
@@ -35,10 +47,10 @@ type DeploymentManagerService struct {
     mgr *handler.Manager
     // Manager for networking services
     net *network.Manager
+    // Manager for collecting metrics for metrics endpoint
+    collect *collect.Manager
     // Proxy manager for proxy forwarding
     netProxy *proxy.Manager
-    // Server for incoming requests
-    server *grpc.Server
     // configuration
     configuration config.Config
 }
@@ -115,19 +127,44 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
 
     // Create the Kubernetes event handler
     controller := kubernetes.NewKubernetesController(instanceMonitor)
-    dispatcher, derr := events.NewDispatcher(controller)
+    deploymentDispatcher, derr := events.NewDispatcher(controller)
     if derr != nil {
         return nil, derr
     }
 
     // Add dispatcher to provider
-    derr = kubernetesEvents.AddDispatcher(dispatcher)
+    derr = kubernetesEvents.AddDispatcher(deploymentDispatcher)
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Create metrics endpoint provider
+    promMetrics, derr := prometheus.NewMetricsProvider()
+    if derr != nil {
+        return nil, derr
+    }
+    collector := promMetrics.GetCollector()
+
+    // Create the dispatcher to handle metrics
+    metricsTranslator := kubernetes.NewMetricsTranslator(collector)
+    metricsDispatcher, derr := events.NewDispatcher(metricsTranslator)
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Add dispatcher to provider
+    derr = kubernetesEvents.AddDispatcher(metricsDispatcher)
     if derr != nil {
         return nil, derr
     }
 
     // Start collecting events
     derr = kubernetesEvents.Start()
+    if derr != nil {
+        return nil, derr
+    }
+
+    collectManager, derr := collect.NewManager(promMetrics, collector)
     if derr != nil {
         return nil, derr
     }
@@ -161,28 +198,68 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     // Instantiate app network manager service
     netProxy := proxy.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
-    // Instantiate target server
-    server := grpc.NewServer()
+    instance := &DeploymentManagerService{
+        mgr: mgr,
+	net: net,
+	collect: collectManager,
+	netProxy: netProxy,
+	configuration: *cfg,
+    }
 
-    instance := DeploymentManagerService{mgr: mgr, net: net, netProxy: netProxy, server: server, configuration: *cfg}
-
-    return &instance, nil
+    return instance, nil
 }
 
 
 func (d *DeploymentManagerService) Run() {
-    // register services
+    // Channel to signal errors from starting the servers
+    errChan := make(chan error, 1)
 
-    lis, err := net.Listen("tcp", fmt.Sprintf(":%d", d.configuration.Port))
+    // Listen on metrics port
+    httpListener, err := net.Listen("tcp", fmt.Sprintf(":%d", d.configuration.MetricsPort))
     if err != nil {
-        log.Fatal().Errs("failed to listen: %v", []error{err})
+        log.Fatal().Err(err).Uint32("port", d.configuration.MetricsPort).Msg("failed to listen on port")
     }
 
+    // Start listening on API port
+    grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", d.configuration.Port))
+    if err != nil {
+        log.Fatal().Err(err).Uint32("port", d.configuration.Port).Msg("failed to listen on port")
+    }
+
+    httpServer, derr := d.startMetrics(httpListener, errChan)
+    if derr != nil {
+        log.Fatal().Err(derr).Str("err", derr.DebugReport()).Msg("failed to start metrics server")
+    }
+    defer httpServer.Shutdown(context.TODO()) // Add timeout in context
+
+    grpcServer, derr := d.startGRPC(grpcListener, errChan)
+    if derr != nil {
+        log.Fatal().Err(derr).Str("err", derr.DebugReport()).Msg("failed to start gRPC server")
+    }
+    defer grpcServer.GracefulStop()
+
+    // Wait for termination signal
+    sigterm := make(chan os.Signal, 1)
+    signal.Notify(sigterm, syscall.SIGTERM)
+    signal.Notify(sigterm, syscall.SIGINT)
+
+    select {
+    case sig := <-sigterm:
+        log.Info().Str("signal", sig.String()).Msg("Gracefully shutting down")
+    case err := <-errChan:
+        if err != nil {
+            log.Fatal().Err(err).Msg("error running server")
+	}
+    }
+}
+
+func (d *DeploymentManagerService) startGRPC(grpcListener net.Listener, errChan chan<- error) (*grpc.Server, derrors.Error) {
+    // Create handlers
     deployment := handler.NewHandler(d.mgr)
     network := network.NewHandler(d.net)
     netProxy := proxy.NewHandler(d.netProxy)
 
-    // register
+    // Register handlers with server
     grpcServer := grpc.NewServer()
     pbDeploymentMgr.RegisterDeploymentManagerServer(grpcServer, deployment)
     pbDeploymentMgr.RegisterDeploymentManagerNetworkServer(grpcServer, network)
@@ -194,7 +271,48 @@ func (d *DeploymentManagerService) Run() {
 
     // Run
     log.Info().Uint32("port", d.configuration.Port).Msg("Launching gRPC server")
-    if err := grpcServer.Serve(lis); err != nil {
-        log.Fatal().Errs("failed to serve: %v", []error{err})
+    go func() {
+        err := grpcServer.Serve(grpcListener)
+	if err != nil {
+            log.Error().Err(err).Msg("failed to serve grpc")
+	}
+	errChan <- err
+	log.Info().Msg("closed grpc server")
+    }()
+
+    return grpcServer, nil
+}
+
+
+func (d *DeploymentManagerService) startMetrics(httpListener net.Listener, errChan chan<- error) (*http.Server, derrors.Error) {
+    // Create handler
+    handler, derr := collect.NewHandler(d.collect)
+    if derr != nil {
+        return nil, derr
     }
+
+    // Create server with metrics handler
+    httpServer := &http.Server{
+        Handler: handler,
+    }
+
+    // Start manager
+    derr = d.collect.Start()
+    if derr != nil {
+        return nil, derr
+    }
+
+    // Start HTTP server
+    log.Info().Uint32("port", d.configuration.MetricsPort).Msg("Launching HTTP server")
+    go func() {
+        err := httpServer.Serve(httpListener)
+	if err == http.ErrServerClosed {
+	    log.Info().Err(err).Msg("closed http server")
+	} else if err != nil {
+            log.Error().Err(err).Msg("failed to serve http")
+	}
+	errChan <- err
+    }()
+
+    return httpServer, nil
 }
