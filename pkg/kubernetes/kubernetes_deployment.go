@@ -324,7 +324,7 @@ func(d *DeployableDeployments) Build() error {
             log.Debug().Msg("Adding credentials to the deployment")
             deployment.Spec.Template.Spec.ImagePullSecrets = append(deployment.Spec.Template.Spec.ImagePullSecrets,
                 apiv1.LocalObjectReference{
-                    Name: service.ServiceId,
+                    Name: service.Name,
                 })
         }
 
