@@ -57,6 +57,9 @@ func init() {
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
 	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
 	runCmd.Flags().Uint32("ztSidecarPort", 1000, "Port where the ZT sidecar expects route updates")
+	runCmd.Flags().String("caCertPath", "", "Path for the CA certificate")
+	runCmd.Flags().String("clientCertPath", "", "Path for the client certificate")
+	runCmd.Flags().Bool("skipServerCertValidation", true, "Skip CA authentication validation")
 
 	viper.BindPFlags(runCmd.Flags())
 }
@@ -90,6 +93,9 @@ func Run() {
 			DockerRepository:     viper.GetString("publicRegistryURL"),
 		},
 		ZTSidecarPort: uint32(viper.GetInt32("ztSidecarPort")),
+		CACertPath: viper.GetString("caCertPath"),
+		ClientCertPath: viper.GetString("clientCertPath"),
+		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),
 	}
 
 	log.Info().Msg("launching deployment manager...")
@@ -101,5 +107,4 @@ func Run() {
 	}
 
 	deploymentMgrService.Run()
-
 }

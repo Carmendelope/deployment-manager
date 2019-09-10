@@ -63,6 +63,12 @@ type Config struct {
 	// ZTSidecarPort with the ZT sidecar port listening for route updates
 	// TODO change this to 1576
 	ZTSidecarPort uint32
+	// Path for the certificate of the CA
+	CACertPath string
+	// Client Cert Path
+	ClientCertPath string
+	// Skip Server validation
+	SkipServerCertValidation bool
 }
 
 func (conf *Config) envOrElse(envName string, paramValue string) string{

@@ -16,12 +16,13 @@ type Connection struct {
 	Port int
 	UseTLS bool
 	CACertPath string
+	ClientCertPath string
 	SkipCAValidation bool
 }
 
 // TODO Add caCertPath and skipCAValidation to the configuration.
 func NewConnection(hostname string, port int, useTLS bool) *Connection {
-	return &Connection{hostname, port, useTLS, "", true}
+	return &Connection{hostname, port, useTLS, "", "", true}
 }
 
 func (c *Connection) GetInsecureConnection() (*grpc.ClientConn, derrors.Error) {
@@ -55,6 +56,18 @@ func (c* Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error){
 
 	targetAddress := fmt.Sprintf("%s:%d", c.Hostname, c.Port)
 	log.Debug().Str("address", targetAddress).Msg("creating connection")
+
+	if c.ClientCertPath != "" {
+		log.Debug().Str("clientCertPath", c.ClientCertPath).Msg("loading client certificate")
+		clientCert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/tls.crt", c.ClientCertPath),fmt.Sprintf("%s/tls.key", c.ClientCertPath))
+		if err != nil {
+			log.Error().Str("error", err.Error()).Msg("Error loading client certificate")
+			return nil, derrors.NewInternalError("Error loading client certificate")
+		}
+
+		tlsConfig.Certificates = []tls.Certificate{clientCert}
+		tlsConfig.BuildNameToCertificate()
+	}
 
 	if c.SkipCAValidation {
 		tlsConfig.InsecureSkipVerify = true

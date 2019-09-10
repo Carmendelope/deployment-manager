@@ -29,6 +29,7 @@ spec:
         args:
         - "run"
         - "--local"
+        - "--debug"
         - "--depMgrAddress=$(DEPLOYMENT_MANAGER_SERVICE_HOST):5200"
         - "--managementHostname=$(MANAGEMENT_HOST)"
         - "--clusterAPIHostname=$(CLUSTER_API_HOST)"
@@ -46,7 +47,9 @@ spec:
         - "--publicRegistryPassword=$(PUBLIC_REGISTRY_PASSWORD)"
         - "--publicRegistryURL=$(PUBLIC_REGISTRY_URL)"
         - "--targetPlatform=$(PLATFORM_TYPE)"
-        - "--debug"
+        - "--caCertPath=/nalej/ca-certificate/ca.crt"
+        - "--clientCertPath=/nalej/tls-client-certificate/"
+        - "--skipServerCertValidation=false"
         env:
         - name: MANAGEMENT_HOST
           valueFrom:
@@ -123,9 +126,21 @@ spec:
           - name: zt-planet
             mountPath: /zt/planet
             readOnly: true
+          - name: tls-client-certificate-volume
+            readOnly: true
+            mountPath: /nalej/tls-client-certificate
+          - name: ca-certificate-volume
+            readOnly: true
+            mountPath: /nalej/ca-certificate
       imagePullSecrets:
       - name: nalej-registry
       volumes:
         - name: zt-planet
           secret:
             secretName: zt-planet
+        - name: tls-client-certificate-volume
+          secret:
+            secretName: tls-client-certificate
+        - name: ca-certificate-volume
+          secret:
+            secretName: ca-certificate
