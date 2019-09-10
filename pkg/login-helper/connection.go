@@ -20,9 +20,8 @@ type Connection struct {
 	SkipCAValidation bool
 }
 
-// TODO Add caCertPath and skipCAValidation to the configuration.
-func NewConnection(hostname string, port int, useTLS bool) *Connection {
-	return &Connection{hostname, port, useTLS, "", "", true}
+func NewConnection(hostname string, port int, useTLS bool, caCertPath string, clientCertPath string, skipCAValidation bool) *Connection {
+	return &Connection{hostname, port, useTLS, caCertPath, clientCertPath, skipCAValidation}
 }
 
 func (c *Connection) GetInsecureConnection() (*grpc.ClientConn, derrors.Error) {

@@ -90,7 +90,7 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     config.SetGlobalConfig(cfg)
 
     // login
-    clusterAPILoginHelper := login_helper.NewLogin(cfg.LoginHostname, int(cfg.LoginPort), cfg.UseTLSForLogin, cfg.Email, cfg.Password)
+    clusterAPILoginHelper := login_helper.NewLogin(cfg.LoginHostname, int(cfg.LoginPort), cfg.UseTLSForLogin, cfg.Email, cfg.Password, cfg.CACertPath, cfg.ClientCertPath, cfg.SkipServerCertValidation)
     err := clusterAPILoginHelper.Login()
     if err != nil {
         log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
