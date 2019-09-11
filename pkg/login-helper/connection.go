@@ -16,12 +16,12 @@ type Connection struct {
 	Port int
 	UseTLS bool
 	CACertPath string
+	ClientCertPath string
 	SkipCAValidation bool
 }
 
-// TODO Add caCertPath and skipCAValidation to the configuration.
-func NewConnection(hostname string, port int, useTLS bool) *Connection {
-	return &Connection{hostname, port, useTLS, "", true}
+func NewConnection(hostname string, port int, useTLS bool, caCertPath string, clientCertPath string, skipCAValidation bool) *Connection {
+	return &Connection{hostname, port, useTLS, caCertPath, clientCertPath, skipCAValidation}
 }
 
 func (c *Connection) GetInsecureConnection() (*grpc.ClientConn, derrors.Error) {
@@ -56,7 +56,21 @@ func (c* Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error){
 	targetAddress := fmt.Sprintf("%s:%d", c.Hostname, c.Port)
 	log.Debug().Str("address", targetAddress).Msg("creating connection")
 
+	if c.ClientCertPath != "" {
+		log.Debug().Str("clientCertPath", c.ClientCertPath).Msg("loading client certificate")
+		clientCert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/tls.crt", c.ClientCertPath),fmt.Sprintf("%s/tls.key", c.ClientCertPath))
+		if err != nil {
+			log.Error().Str("error", err.Error()).Msg("Error loading client certificate")
+			return nil, derrors.NewInternalError("Error loading client certificate")
+		}
+
+		tlsConfig.Certificates = []tls.Certificate{clientCert}
+		tlsConfig.BuildNameToCertificate()
+	}
+	log.Debug().Str("address", targetAddress).Bool("useTLS", c.UseTLS).Str("caCertPath", c.CACertPath).Bool("skipServerCertValidation", c.SkipCAValidation).Msg("creating secure connection")
+
 	if c.SkipCAValidation {
+		log.Debug().Msg("skipping server cert validation")
 		tlsConfig.InsecureSkipVerify = true
 	}
 
@@ -75,4 +89,22 @@ func (c *Connection) GetConnection() (*grpc.ClientConn, derrors.Error) {
 		return c.GetSecureConnection()
 	}
 	return c.GetInsecureConnection()
+}
+
+// printRelevantTLSConfig prints some relevant information from a TLS Config structure, namely:
+// ClientAuth, ServerName. RootCAs, Certificates and InsecureSkipVerify
+func printRelevantTLSConfig (c *tls.Config) {
+	if int(c.ClientAuth) != 0 {
+		log.Debug().Int("ClientAuth", int(c.ClientAuth)).Msg("client auth")
+	}
+	if c.ServerName != "" {
+		log.Debug().Str("ServerName", c.ServerName).Msg("server name")
+	}
+	if c.RootCAs != nil {
+		log.Debug().Interface("RootCAs", c.RootCAs).Msg("root cas")
+	}
+	if c.Certificates != nil {
+		log.Debug().Interface("Certificates", c.Certificates).Msg("certificates")
+	}
+	log.Debug().Bool("InsecureSkipVerify", c.InsecureSkipVerify).Msg("insecure skip verify")
 }

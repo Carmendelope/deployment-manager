@@ -9,7 +9,9 @@ package service
 import (
     "context"
     "crypto/tls"
+    "crypto/x509"
     "fmt"
+    "io/ioutil"
     "net"
     "net/http"
     "os"
@@ -55,14 +57,44 @@ type DeploymentManagerService struct {
     configuration config.Config
 }
 
-func getClusterAPIConnection(hostname string, port int) (*grpc.ClientConn, derrors.Error) {
+func getClusterAPIConnection(hostname string, port int, caCertPath string, clientCertPath string, skipCAValidation bool) (*grpc.ClientConn, derrors.Error) {
     // Build connection with cluster API
+    rootCAs := x509.NewCertPool()
     tlsConfig := &tls.Config{
         ServerName:   hostname,
-        InsecureSkipVerify: true,
     }
+
+    if caCertPath != "" {
+        log.Debug().Str("caCertPath", caCertPath).Msg("loading CA cert")
+        caCert, err := ioutil.ReadFile(caCertPath)
+        if err != nil {
+            return nil, derrors.NewInternalError("Error loading CA certificate")
+        }
+        added := rootCAs.AppendCertsFromPEM(caCert)
+        if !added {
+            return nil, derrors.NewInternalError("cannot add CA certificate to the pool")
+        }
+        tlsConfig.RootCAs = rootCAs
+    }
+
     targetAddress := fmt.Sprintf("%s:%d", hostname, port)
     log.Debug().Str("address", targetAddress).Msg("creating cluster API connection")
+
+    if clientCertPath != "" {
+        log.Debug().Str("clientCertPath", clientCertPath).Msg("loading client certificate")
+        clientCert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/tls.crt", clientCertPath),fmt.Sprintf("%s/tls.key", clientCertPath))
+        if err != nil {
+            log.Error().Str("error", err.Error()).Msg("Error loading client certificate")
+            return nil, derrors.NewInternalError("Error loading client certificate")
+        }
+
+        tlsConfig.Certificates = []tls.Certificate{clientCert}
+        tlsConfig.BuildNameToCertificate()
+    }
+
+    if skipCAValidation {
+        tlsConfig.InsecureSkipVerify = true
+    }
 
     creds := credentials.NewTLS(tlsConfig)
 
@@ -90,7 +122,7 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     config.SetGlobalConfig(cfg)
 
     // login
-    clusterAPILoginHelper := login_helper.NewLogin(cfg.LoginHostname, int(cfg.LoginPort), cfg.UseTLSForLogin, cfg.Email, cfg.Password)
+    clusterAPILoginHelper := login_helper.NewLogin(cfg.LoginHostname, int(cfg.LoginPort), cfg.UseTLSForLogin, cfg.Email, cfg.Password, cfg.CACertPath, cfg.ClientCertPath, cfg.SkipServerCertValidation)
     err := clusterAPILoginHelper.Login()
     if err != nil {
         log.Panic().Err(err).Msg("there was an error requesting cluster-api login")
@@ -101,7 +133,7 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
 
     // Build connection with conductor
     log.Debug().Str("hostname", cfg.ClusterAPIHostname).Msg("connecting with cluster api")
-    clusterAPIConn, errCond := getClusterAPIConnection(cfg.ClusterAPIHostname, int(cfg.ClusterAPIPort))
+    clusterAPIConn, errCond := getClusterAPIConnection(cfg.ClusterAPIHostname, int(cfg.ClusterAPIPort), cfg.CACertPath, cfg.ClientCertPath, cfg.SkipServerCertValidation)
     if errCond != nil {
         log.Panic().Err(err).Str("hostname", cfg.ClusterAPIHostname).Msg("impossible to connect with cluster api")
         panic(err.Error())
