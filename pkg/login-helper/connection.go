@@ -67,11 +67,14 @@ func (c* Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error){
 		tlsConfig.Certificates = []tls.Certificate{clientCert}
 		tlsConfig.BuildNameToCertificate()
 	}
+	log.Debug().Str("address", targetAddress).Bool("useTLS", c.UseTLS).Str("caCertPath", c.CACertPath).Bool("skipServerCertValidation", c.SkipCAValidation).Msg("creating secure connection")
 
 	if c.SkipCAValidation {
+		log.Debug().Msg("skipping server cert validation")
 		tlsConfig.InsecureSkipVerify = true
 	}
 
+	//printRelevantTLSConfig(tlsConfig)
 	creds := credentials.NewTLS(tlsConfig)
 
 	log.Debug().Interface("creds", creds.Info()).Msg("Secure credentials")
@@ -87,4 +90,22 @@ func (c *Connection) GetConnection() (*grpc.ClientConn, derrors.Error) {
 		return c.GetSecureConnection()
 	}
 	return c.GetInsecureConnection()
+}
+
+// printRelevantTLSConfig prints some relevant information from a TLS Config structure, namely:
+// ClientAuth, ServerName. RootCAs, Certificates and InsecureSkipVerify
+func printRelevantTLSConfig (c *tls.Config) {
+	if int(c.ClientAuth) != 0 {
+		log.Debug().Int("ClientAuth", int(c.ClientAuth)).Msg("client auth")
+	}
+	if c.ServerName != "" {
+		log.Debug().Str("ServerName", c.ServerName).Msg("server name")
+	}
+	if c.RootCAs != nil {
+		log.Debug().Interface("RootCAs", c.RootCAs).Msg("root cas")
+	}
+	if c.Certificates != nil {
+		log.Debug().Interface("Certificates", c.Certificates).Msg("certificates")
+	}
+	log.Debug().Bool("InsecureSkipVerify", c.InsecureSkipVerify).Msg("insecure skip verify")
 }
