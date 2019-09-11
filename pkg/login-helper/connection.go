@@ -74,7 +74,6 @@ func (c* Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error){
 		tlsConfig.InsecureSkipVerify = true
 	}
 
-	//printRelevantTLSConfig(tlsConfig)
 	creds := credentials.NewTLS(tlsConfig)
 
 	log.Debug().Interface("creds", creds.Info()).Msg("Secure credentials")
