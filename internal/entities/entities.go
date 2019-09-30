@@ -6,8 +6,10 @@
 package entities
 
 import (
+    "github.com/nalej/derrors"
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
+    "github.com/nalej/grpc-network-go"
     apps_v1 "k8s.io/api/apps/v1"
 )
 
@@ -31,7 +33,7 @@ var ServiceStatusToGRPC = map[NalejServiceStatus] pbApplication.ServiceStatus {
     NALEJ_SERVICE_DEPLOYING: pbApplication.ServiceStatus_SERVICE_DEPLOYING,
     NALEJ_SERVICE_RUNNING:   pbApplication.ServiceStatus_SERVICE_RUNNING,
     NALEJ_SERVICE_ERROR:     pbApplication.ServiceStatus_SERVICE_ERROR,
-    NALEJ_SERVICE_TERMINATING: pbApplication.ServiceStatus_SERVICE_TERMINATING,
+    //NALEJ_SERVICE_TERMINATING: pbApplication.ServiceStatus_SERVICE_TERMINATING,
 }
 
 // Equivalence table between status services and their corresponding fragment status.
@@ -179,6 +181,23 @@ func(ei *EndpointInstance) ToGRPC() *pbApplication.EndpointInstance {
         EndpointInstanceId: ei.EndpointInstanceId,
         Type: EndpointTypeToGRPC[ei.EndpointType],
         Fqdn: ei.FQDN,
-        Port: ei.Port,
+        //Port: ei.Port,
     }
+}
+
+
+func ValidateAuthorizeZTConnectionRequest (request *grpc_network_go.AuthorizeZTConnectionRequest) derrors.Error {
+    if request.OrganizationId == "" {
+        return derrors.NewInvalidArgumentError("organization_id cannot be empty")
+    }
+    if request.AppInstanceId == "" {
+        return derrors.NewInvalidArgumentError("app_instance_id cannot be empty")
+    }
+    if request.MemberId == "" {
+        return derrors.NewInvalidArgumentError("member_id cannot be empty")
+    }
+    if request.NetworkId == "" {
+        return derrors.NewInvalidArgumentError("network_id cannot be empty")
+    }
+    return nil
 }

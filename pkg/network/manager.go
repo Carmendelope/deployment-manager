@@ -157,3 +157,30 @@ func (m *Manager) SetServiceRoute(request *grpc_deployment_manager_go.ServiceRou
 	}
 	return nil
 }
+
+
+func (m * Manager) AuthorizeZTConnection(request *pbNetwork.AuthorizeZTConnectionRequest) error {
+	ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+	defer cancel()
+	_, errAuth := m.ClusterAPIClient.AuthorizeZTConnection(ctx, request)
+
+	if errAuth != nil {
+		st := grpc_status.Convert(errAuth).Code()
+		if st == codes.Unauthenticated {
+			errLogin := m.ClusterAPILoginHelper.RerunAuthentication()
+			if errLogin != nil {
+				log.Error().Err(errLogin).Msg("error during re-authentication")
+			}
+			ctx2, cancel2 := m.ClusterAPILoginHelper.GetContext()
+			defer cancel2()
+			_, errAuth = m.ClusterAPIClient.AuthorizeZTConnection(ctx2, request)
+			if errAuth != nil {
+				return errAuth
+			}
+		} else {
+			log.Error().Err(errAuth).Msgf("error authorizing ZT-Connection ")
+		}
+	}
+
+	return nil
+}
