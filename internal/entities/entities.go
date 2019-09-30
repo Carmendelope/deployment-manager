@@ -33,7 +33,7 @@ var ServiceStatusToGRPC = map[NalejServiceStatus] pbApplication.ServiceStatus {
     NALEJ_SERVICE_DEPLOYING: pbApplication.ServiceStatus_SERVICE_DEPLOYING,
     NALEJ_SERVICE_RUNNING:   pbApplication.ServiceStatus_SERVICE_RUNNING,
     NALEJ_SERVICE_ERROR:     pbApplication.ServiceStatus_SERVICE_ERROR,
-    //NALEJ_SERVICE_TERMINATING: pbApplication.ServiceStatus_SERVICE_TERMINATING,
+    NALEJ_SERVICE_TERMINATING: pbApplication.ServiceStatus_SERVICE_TERMINATING,
 }
 
 // Equivalence table between status services and their corresponding fragment status.
@@ -181,7 +181,7 @@ func(ei *EndpointInstance) ToGRPC() *pbApplication.EndpointInstance {
         EndpointInstanceId: ei.EndpointInstanceId,
         Type: EndpointTypeToGRPC[ei.EndpointType],
         Fqdn: ei.FQDN,
-        //Port: ei.Port,
+        Port: ei.Port,
     }
 }
 

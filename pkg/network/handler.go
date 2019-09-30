@@ -43,7 +43,7 @@ func (h *Handler) AuthorizeNetworkMembership(context context.Context, request *p
 }
 
 // Request the creation of a new network entry
-/*
+
 func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeploymentMgr.RegisterNetworkEntryRequest) (*pbCommon.Success, error) {
 	log.Debug().Msgf("reqister network entry for app %s in organization %s with ip %s ", request.ServiceName,
 		request.OrganizationId, request.ServiceIp)
@@ -59,7 +59,7 @@ func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeplo
 
 	return &pbCommon.Success{}, nil
 }
-*/
+
 // SetServiceRoute setups an iptables DNAT for a given service
 func (h *Handler) SetServiceRoute(context context.Context, request *pbDeploymentMgr.ServiceRoute) (*pbCommon.Success, error) {
 	verr := ValidSetRoute(request)
