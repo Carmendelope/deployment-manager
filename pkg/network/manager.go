@@ -175,6 +175,7 @@ func (m * Manager) AuthorizeZTConnection(request *pbNetwork.AuthorizeZTConnectio
 			defer cancel2()
 			_, errAuth = m.ClusterAPIClient.AuthorizeZTConnection(ctx2, request)
 			if errAuth != nil {
+				log.Error().Err(errAuth).Msg("error authorizing ZT-connection")
 				return errAuth
 			}
 		} else {
