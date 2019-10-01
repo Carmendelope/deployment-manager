@@ -8,10 +8,11 @@ package network
 import (
 	"context"
 	"fmt"
-
+	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/derrors"
 	pbCommon "github.com/nalej/grpc-common-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-network-go"
 	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/rs/zerolog/log"
 )
@@ -42,6 +43,7 @@ func (h *Handler) AuthorizeNetworkMembership(context context.Context, request *p
 }
 
 // Request the creation of a new network entry
+
 func (h *Handler) RegisterNetworkEntry(context context.Context, request *pbDeploymentMgr.RegisterNetworkEntryRequest) (*pbCommon.Success, error) {
 	log.Debug().Msgf("reqister network entry for app %s in organization %s with ip %s ", request.ServiceName,
 		request.OrganizationId, request.ServiceIp)
@@ -67,6 +69,21 @@ func (h *Handler) SetServiceRoute(context context.Context, request *pbDeployment
 	err := h.mng.SetServiceRoute(request)
 	if err != nil {
 		return nil, conversions.ToGRPCError(err)
+	}
+	return &pbCommon.Success{}, nil
+}
+
+func (h *Handler) AuthorizeZTConnection(_ context.Context, request *grpc_network_go.AuthorizeZTConnectionRequest) (*pbCommon.Success, error){
+	log.Debug().Interface("request", request).Msg("authorize ZT Connection request")
+
+	vErr := entities.ValidateAuthorizeZTConnectionRequest(request)
+	if vErr != nil {
+		return nil, conversions.ToGRPCError(vErr)
+	}
+
+	err := h.mng.AuthorizeZTConnection(request)
+	if err != nil {
+		return nil, err
 	}
 	return &pbCommon.Success{}, nil
 }

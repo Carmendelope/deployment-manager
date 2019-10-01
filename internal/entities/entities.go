@@ -6,8 +6,10 @@
 package entities
 
 import (
+    "github.com/nalej/derrors"
     pbApplication "github.com/nalej/grpc-application-go"
     pbConductor "github.com/nalej/grpc-conductor-go"
+    "github.com/nalej/grpc-network-go"
     apps_v1 "k8s.io/api/apps/v1"
 )
 
@@ -181,4 +183,21 @@ func(ei *EndpointInstance) ToGRPC() *pbApplication.EndpointInstance {
         Fqdn: ei.FQDN,
         Port: ei.Port,
     }
+}
+
+
+func ValidateAuthorizeZTConnectionRequest (request *grpc_network_go.AuthorizeZTConnectionRequest) derrors.Error {
+    if request.OrganizationId == "" {
+        return derrors.NewInvalidArgumentError("organization_id cannot be empty")
+    }
+    if request.AppInstanceId == "" {
+        return derrors.NewInvalidArgumentError("app_instance_id cannot be empty")
+    }
+    if request.MemberId == "" {
+        return derrors.NewInvalidArgumentError("member_id cannot be empty")
+    }
+    if request.NetworkId == "" {
+        return derrors.NewInvalidArgumentError("network_id cannot be empty")
+    }
+    return nil
 }
