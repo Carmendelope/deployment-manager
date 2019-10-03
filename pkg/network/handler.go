@@ -87,3 +87,19 @@ func (h *Handler) AuthorizeZTConnection(_ context.Context, request *grpc_network
 	}
 	return &pbCommon.Success{}, nil
 }
+
+// JoinZTNetwork message to Request a zt-agent to join into a new Network
+func (h *Handler) JoinZTNetwork(_ context.Context, request *pbDeploymentMgr.JoinZTNetworkRequest) (*pbCommon.Success, error){
+	log.Debug().Interface("request", request).Msg("join ZT Network request")
+
+	vErr := entities.ValidateJoinZTNetworkRequest(request)
+	if vErr != nil {
+		return nil, conversions.ToGRPCError(vErr)
+	}
+	err := h.mng.JoinZTNetwork(request)
+	if err != nil {
+		return nil, err
+	}
+	return &pbCommon.Success{}, nil
+
+}

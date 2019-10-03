@@ -13,9 +13,9 @@ import (
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-cluster-api-go"
-	grpc_deployment_manager_go "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-deployment-manager-go"
 	pbNetwork "github.com/nalej/grpc-network-go"
-	grpc_zt_nalej_go "github.com/nalej/grpc-zt-nalej-go"
+	"github.com/nalej/grpc-zt-nalej-go"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -152,6 +152,32 @@ func (m *Manager) SetServiceRoute(request *grpc_deployment_manager_go.ServiceRou
 		Drop:          request.Drop,
 	}
 	err = m.NetUpdater.UpdatePodsRoute(pods, route)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (m * Manager) JoinZTNetwork(request *grpc_deployment_manager_go.JoinZTNetworkRequest) derrors.Error {
+
+	// Get target namespace
+	targetNS, exist, err := m.NetUpdater.GetTargetNamespace(request.OrganizationId, request.AppInstanceId)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return derrors.NewNotFoundError("no namespace found for given organization ID and app instance ID")
+	}
+
+	// Get the list of pods/k8s services to be updated (including Zt-Proxy)
+	pods, err := m.NetUpdater.GetAllPodsForApp(targetNS, request.OrganizationId, request.AppInstanceId, request.ServiceId)
+	if err != nil {
+		return err
+	}
+
+	// Send join message
+	err = m.NetUpdater.SendJoinZTConnection(pods, request.NetworkId, request.IsInbound)
 	if err != nil {
 		return err
 	}
