@@ -83,3 +83,31 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
 
     return nil
 }
+
+func (m *Manager)  RegisterZTConnection(request *grpc_network_go.RegisterZTConnectionRequest) derrors.Error {
+    ctx, cancel := m.ClusterAPILoginHelper.GetContext()
+    defer cancel()
+
+    _, err := m.Client.RegisterZTConnection(ctx, request)
+
+    if err != nil {
+        st := grpc_status.Convert(err).Code()
+        if st == codes.Unauthenticated {
+            errLogin := m.ClusterAPILoginHelper.RerunAuthentication()
+            if errLogin != nil {
+                log.Error().Err(errLogin).Msg("error during reauthentication")
+            }
+            ctx2, cancel2 := m.ClusterAPILoginHelper.GetContext()
+            defer cancel2()
+            _, err = m.Client.RegisterZTConnection(ctx2, request)
+        } else {
+            log.Error().Err(err).Msgf("error updating service status")
+        }
+    }
+
+    if err != nil {
+        return derrors.NewGenericError(err.Error())
+    }
+
+    return nil
+}

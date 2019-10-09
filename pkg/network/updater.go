@@ -166,6 +166,7 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 	if err != nil {
 		return nil, derrors.AsError(err, "cannot list pods inside a namespace")
 	}
+	log.Debug().Int("listlen", len(list.Items)).Msg("GetAllPodsForApp")
 	targetPods := make([]TargetPod, 0)
 	for _, pod := range list.Items {
 		// Check if we are inspecting a pod of the application. While we expect only for those pods to be present, we may be also running tests with manually
@@ -186,7 +187,8 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 
 				// Any outbound pod must have the NALEJ_ENV_IS_PROXY flag with false value. Otherwise, they indicate a
 				// zt-proxy.
-				if hasVar, valueVar := hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY); hasVar {
+				hasVar, valueVar := hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY)
+				if  hasVar {
 					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
 						Str("is a proxy?", valueVar).Msg("ZT sidecar container detected")
 					// the value must be a boolean
@@ -202,6 +204,8 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 					toAdd := NewTargetPod(pod.Name, container.Name, isProxy, pod.Status.PodIP)
 					targetPods = append(targetPods, *toAdd)
 
+				}else{
+					log.Debug().Interface("container", container).Msg("has no env var")
 				}
 			}
 		}
