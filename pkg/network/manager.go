@@ -158,6 +158,13 @@ func (m *Manager) SetServiceRoute(request *grpc_deployment_manager_go.ServiceRou
 	return nil
 }
 
+func (m * Manager) sendJoin(pods []TargetPod, networkId string, isInbound bool){
+	// Send join message
+	err := m.NetUpdater.SendJoinZTConnection(pods, networkId, isInbound)
+	if err != nil {
+		log.Error().Err(err).Msg("error join zt network")
+	}
+}
 
 func (m * Manager) JoinZTNetwork(request *grpc_deployment_manager_go.JoinZTNetworkRequest) derrors.Error {
 
@@ -176,11 +183,8 @@ func (m * Manager) JoinZTNetwork(request *grpc_deployment_manager_go.JoinZTNetwo
 		return err
 	}
 
-	// Send join message
-	err = m.NetUpdater.SendJoinZTConnection(pods, request.NetworkId, request.IsInbound)
-	if err != nil {
-		return err
-	}
+	go m.sendJoin(pods, request.NetworkId, request.IsInbound)
+
 	return nil
 }
 

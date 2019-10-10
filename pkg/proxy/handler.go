@@ -2,10 +2,9 @@ package proxy
 
 import (
     "context"
-    "github.com/nalej/derrors"
     "github.com/nalej/grpc-common-go"
     "github.com/nalej/grpc-network-go"
-    "github.com/nalej/grpc-utils/pkg/conversions"
+    "github.com/rs/zerolog/log"
 )
 
 /*
@@ -38,6 +37,11 @@ func (h *Handler) RegisterOutboundProxy(ctx context.Context, request *grpc_netwo
     return &grpc_common_go.Success{}, nil
 }
 
-func (h *Handler) RegisterZTConnection(ctx context.Context, in *grpc_network_go.RegisterZTConnectionRequest) (*grpc_common_go.Success, error){
-    return nil, conversions.ToGRPCError(derrors.NewUnimplementedError("not implemented yet"))
+func (h *Handler) RegisterZTConnection(ctx context.Context, request *grpc_network_go.RegisterZTConnectionRequest) (*grpc_common_go.Success, error){
+    log.Debug().Interface("request", request).Msg("RegisterZTConnection")
+    err := h.Manager.RegisterZTConnection(request)
+    if err !=  nil {
+        return nil, err
+    }
+    return &grpc_common_go.Success{}, nil
 }
