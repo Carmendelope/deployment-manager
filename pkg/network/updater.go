@@ -166,7 +166,7 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 	if err != nil {
 		return nil, derrors.AsError(err, "cannot list pods inside a namespace")
 	}
-	log.Debug().Int("listlen", len(list.Items)).Msg("GetAllPodsForApp")
+
 	targetPods := make([]TargetPod, 0)
 	for _, pod := range list.Items {
 		// Check if we are inspecting a pod of the application. While we expect only for those pods to be present, we may be also running tests with manually
