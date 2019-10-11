@@ -303,12 +303,12 @@
   version = "v0.0.2"
 
 [[projects]]
-  digest = "1:3c09c4e810645fe5552f61eb817f8ed88cb03ebb15482acf25e91062fd93ddb6"
+  digest = "1:d4d47e029773280e1c3f542d3f2f6395f34cc2ae227faf9110a0c02a581243ed"
   name = "github.com/nalej/grpc-deployment-manager-go"
   packages = ["."]
   pruneopts = ""
-  revision = "d82c2628641056ce8617adeac135b5993615cf6b"
-  version = "v0.0.61"
+  revision = "a58be13435df24cb1dcb5aac2be34d7a869860f4"
+  version = "v0.0.62"
 
 [[projects]]
   digest = "1:0bad099051ea5df46222752d38f98673d2ccec88ab40e30a9ec3d1473cbcd634"
@@ -399,12 +399,12 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:3e59498fb54bc207533c61e183f1c5357b6e5301ba42068948a5105a19be5364"
+  digest = "1:ea48b1aa262f6b2f37ad900620b62dfb4d05ff6a6362305579ef8046c8b61a41"
   name = "github.com/nalej/grpc-zt-nalej-go"
   packages = ["."]
   pruneopts = ""
-  revision = "d82d25661ff2b3c1815a5e2c0c6892b7b3f05ca4"
-  version = "v0.0.2"
+  revision = "76866b5c3abaa0889969d4cc49acdb680aa813a5"
+  version = "v0.0.3"
 
 [[projects]]
   digest = "1:9e74f6fbb11a09c042218844e2bba95a47cc468c741b80d7c2ffb4067c32b4cc"

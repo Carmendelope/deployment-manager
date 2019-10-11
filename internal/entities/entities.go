@@ -218,3 +218,21 @@ func ValidateJoinZTNetworkRequest (request *grpc_deployment_manager_go.JoinZTNet
     }
     return nil
 }
+
+func ValidateLeaveZTNetworkRequest (request *grpc_deployment_manager_go.LeaveZTNetworkRequest) derrors.Error {
+    if request.OrganizationId == "" {
+        return derrors.NewInvalidArgumentError("organization_id cannot be empty")
+    }
+    if request.AppInstanceId == "" {
+        return derrors.NewInvalidArgumentError("app_instance_id cannot be empty")
+    }
+    if request.ServiceId == "" {
+        return derrors.NewInvalidArgumentError("service_id cannot be empty")
+    }
+    if request.NetworkId == "" {
+        return derrors.NewInvalidArgumentError("network_id cannot be empty")
+    }
+    return nil
+}
+
+

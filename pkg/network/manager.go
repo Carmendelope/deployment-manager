@@ -188,6 +188,31 @@ func (m * Manager) JoinZTNetwork(request *grpc_deployment_manager_go.JoinZTNetwo
 	return nil
 }
 
+func (m * Manager) LeaveZTNetwork(request *grpc_deployment_manager_go.LeaveZTNetworkRequest) derrors.Error {
+
+	// Get target namespace
+	targetNS, exist, err := m.NetUpdater.GetTargetNamespace(request.OrganizationId, request.AppInstanceId)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		return derrors.NewNotFoundError("no namespace found for given organization ID and app instance ID")
+	}
+
+	// Get the list of pods/k8s services to be updated (including Zt-Proxy)
+	pods, err := m.NetUpdater.GetAllPodsForApp(targetNS, request.OrganizationId, request.AppInstanceId, request.ServiceId)
+	if err != nil {
+		return err
+	}
+
+	err = m.NetUpdater.SendLeaveZTConnection(pods, request.NetworkId, request.IsInbound)
+	if err != nil {
+		log.Error().Err(err).Msg("error sending leave zt network")
+	}
+
+	return nil
+}
+
 
 func (m * Manager) AuthorizeZTConnection(request *pbNetwork.AuthorizeZTConnectionRequest) error {
 	ctx, cancel := m.ClusterAPILoginHelper.GetContext()
