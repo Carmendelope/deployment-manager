@@ -7,7 +7,7 @@ variables:
   - name: GOBIN
     value: '$(GOPATH)/bin'
   - name: GOROOT
-    value: '/usr/local/go1.11'
+    value: '/usr/local/go1.12'
   - name: GOPATH
     value: '$(system.defaultWorkingDirectory)/gopath'
   - name: modulePath
