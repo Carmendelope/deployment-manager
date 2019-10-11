@@ -36,6 +36,8 @@ type NetworkUpdater interface {
 	UpdatePodsRoute(targetPods []TargetPod, route *grpc_zt_nalej_go.Route) derrors.Error
 	// SendJoinZTConnection send a join message to the pods
 	SendJoinZTConnection(targetPods []TargetPod, networkId string, isInbound bool) derrors.Error
+	SendLeaveZTConnection(targetPods []TargetPod, networkId string, isInbound bool) derrors.Error
+
 }
 
 // TargetPod representing a pod to be updated.
@@ -318,6 +320,53 @@ func (knu *KubernetesNetworkUpdater) SendJoinZTConnection(targetPods []TargetPod
 	}
 	return nil
 }
+
+func (knu *KubernetesNetworkUpdater) SendLeaveZTConnection(targetPods []TargetPod, networkId string, isInbound bool) derrors.Error {
+	log.Debug().Interface("networkId", networkId).Int("num pods", len(targetPods)).Msg("leave zt-network")
+
+	for _, target := range targetPods {
+		send := knu.JoinMustBeSent(target, isInbound)
+
+		log.Debug().Str("pod", target.PodName).Str("podIp", target.PodIP).Bool("IsInbound", isInbound).Bool("send the leave?", send).
+			Str("container", target.ContainerName).Str("networkId", networkId).Msg("Leave a zt-network")
+
+		if send {
+
+			client, ctx, cancel, err := knu.getApplicationNetworkClient(target.PodIP)
+			if cancel != nil {
+				defer cancel()
+			}
+			if err != nil {
+				log.Error().Str("pod", target.PodName).Str("container", target.ContainerName).
+					Msg("error when recovering a client to interact with sidecar pod")
+				return err
+			}
+			done := false
+			var rerr error = nil
+			for attempts := 0; attempts < JoinRetries; attempts++ {
+				_, rerr = client.LeaveZTNetwork(ctx, &grpc_zt_nalej_go.ZTNetworkId{
+					NetworkId:           networkId,
+				})
+				if rerr != nil {
+					log.Error().Str("pod", target.PodName).Str("container", target.ContainerName).
+						Msgf("cannot send the message to leave zt-network on pod on attempt %d out of %d", attempts+1, UpdateRetries)
+					time.Sleep(RetrySleep)
+				} else {
+					log.Debug().Str("pod", target.PodName).Str("container", target.ContainerName).
+						Msg("leave zt-network Success")
+					done = true
+					break
+				}
+			}
+			if !done {
+				return derrors.AsError(rerr, "cannot leave zt-network on pod")
+			}
+		}
+
+	}
+	return nil
+}
+
 func (knu *KubernetesNetworkUpdater) getSidecarClient(targetIP string) (grpc_zt_nalej_go.SidecarClient, context.Context, context.CancelFunc, derrors.Error) {
 	address := fmt.Sprintf("%s:%d", targetIP, ZtRedirectorPort)
 	conn, err := grpc.Dial(address, grpc.WithInsecure())

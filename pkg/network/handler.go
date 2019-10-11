@@ -103,3 +103,18 @@ func (h *Handler) JoinZTNetwork(_ context.Context, request *pbDeploymentMgr.Join
 	return &pbCommon.Success{}, nil
 
 }
+
+func (h *Handler) LeaveZTNetwork(_ context.Context, request *pbDeploymentMgr.LeaveZTNetworkRequest) (*pbCommon.Success, error){
+	log.Debug().Interface("request", request).Msg("leave ZT Network request")
+
+	vErr := entities.ValidateLeaveZTNetworkRequest(request)
+	if vErr != nil {
+		return nil, conversions.ToGRPCError(vErr)
+	}
+	err := h.mng.LeaveZTNetwork(request)
+	if err != nil {
+		return nil, err
+	}
+	return &pbCommon.Success{}, nil
+
+}
