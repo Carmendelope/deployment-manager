@@ -21,6 +21,7 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
+      tags: v1.0.0
 
 jobs:
 - job: MainWorkflow
