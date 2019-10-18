@@ -1,7 +1,11 @@
 {
   "language": "golang",
+  "version": "v0.4.0",
   "application_list": [
     "deployment-manager deployment-manager-cli"
+  ],
+  "image_list": [
+    "deployment-manager"
   ],
   "tools": [
     "azure",
