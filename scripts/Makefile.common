@@ -7,9 +7,10 @@ endif
 TARGET=bin
 
 # Component variables
-VERSION=$(shell cat .version)
+VERSION=$(shell jq -r '.version' .nalej-component.json)
 COMMIT=$(shell git rev-parse HEAD)
 APPS=$(shell jq -r '.application_list[]' .nalej-component.json)
+IMGS=$(shell jq -r '.image_list[]' .nalej-component.json)
 
 # Docker variables
 ACR_DEVELOPMENT=nalejdev
