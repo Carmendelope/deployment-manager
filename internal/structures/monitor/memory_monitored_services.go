@@ -78,6 +78,13 @@ func(p *MemoryMonitoredInstances) SetEntryStatus(fragmentId string, status entit
         } else {
             current.Info = ""
         }
+        // if this entry is terminating everything below is terminated
+        // TODO revisit this terminating force operation
+        if current.Status == entities.FRAGMENT_TERMINATING {
+            for _, serv := range current.Services {
+                serv.Status = entities.NALEJ_SERVICE_TERMINATING
+            }
+        }
     }
 }
 
