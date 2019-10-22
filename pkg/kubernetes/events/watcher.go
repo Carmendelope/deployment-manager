@@ -23,7 +23,7 @@ import (
 )
 
 // Watcher sets up and manages the lifecycle of an informer; it deals with
-// events and makes sure the appriate event handler is called.
+// events and makes sure the appropriate event handler is called.
 // See NOTE in kubernetes.go
 type Watcher struct {
 	// The GroupVersionKind we're creating a watcher for
