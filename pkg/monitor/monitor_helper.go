@@ -76,7 +76,7 @@ func (m *MonitorHelper) sendFragmentStatus(req pbConductor.DeploymentFragmentUpd
             defer cancel2()
             _, err = m.Client.UpdateDeploymentFragmentStatus(ctx2, &req)
         } else {
-            log.Error().Err(err).Msgf("error updating service status")
+            log.Error().Err(err).Msgf("error updating service status when sending fragment status")
         }
     }
 
@@ -172,7 +172,7 @@ func (m *MonitorHelper) sendUpdateService(req pbConductor.DeploymentServiceUpdat
             defer cancel2()
             _, err = m.Client.UpdateServiceStatus(ctx2, &req)
         } else {
-            log.Error().Err(err).Msgf("error updating service status")
+            log.Error().Err(err).Msgf("error updating service status when sending update service")
         }
     }
     log.Debug().Str("fragmentId", req.FragmentId).
