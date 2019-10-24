@@ -45,7 +45,7 @@ func (m *Manager) RegisterInboundServiceProxy (request *grpc_network_go.InboundS
             defer cancel2()
             _, err = m.Client.RegisterInboundServiceProxy(ctx2, request)
         } else {
-            log.Error().Err(err).Msgf("error updating service status")
+            log.Error().Err(err).Msgf("error updating service status when registering inbound service proxy")
         }
     }
 
@@ -73,7 +73,7 @@ func (m *Manager) RegisterOutboundProxy(request *grpc_network_go.OutboundService
             defer cancel2()
             _, err = m.Client.RegisterOutboundProxy(ctx2, request)
         } else {
-            log.Error().Err(err).Msgf("error updating service status")
+            log.Error().Err(err).Msgf("error updating service status when registering outbound proxy")
         }
     }
 
@@ -101,7 +101,7 @@ func (m *Manager)  RegisterZTConnection(request *grpc_network_go.RegisterZTConne
             defer cancel2()
             _, err = m.Client.RegisterZTConnection(ctx2, request)
         } else {
-            log.Error().Err(err).Msgf("error updating service status")
+            log.Error().Err(err).Msgf("error updating service status when registering zt connection")
         }
     }
 

@@ -70,7 +70,7 @@ func (m *Manager) AuthorizeNetworkMembership(organizationId string, appInstanceI
 			defer cancel2()
 			_, errAuth = m.ClusterAPIClient.AuthorizeMember(ctx2, &req)
 		} else {
-			log.Error().Err(errAuth).Msgf("error updating service status")
+			log.Error().Err(errAuth).Msgf("error updating service status when authorizing network membership")
 		}
 	}
 
@@ -119,7 +119,7 @@ func (m *Manager) RegisterNetworkEntry(organizationId string, appInstanceId stri
 			defer cancel2()
 			_, err = m.ClusterAPIClient.AddDNSEntry(ctx2, &req)
 		} else {
-			log.Error().Err(err).Msgf("error updating service status")
+			log.Error().Err(err).Msgf("error updating service status when registering network entry")
 		}
 	}
 
