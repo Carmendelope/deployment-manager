@@ -2,9 +2,9 @@
 
 # YAML rendering
 define yaml-render-recipe
-@for img in $(1); do \
-	if [ -d components/$$img/$(2) ]; then \
-		cp components/$$img/$(2)/*.yaml $(TARGET)/yaml/$(2)/. ; \
+@for app in $(1); do \
+	if [ -d components/$$app/$(2) ]; then \
+		cp components/$$app/$(2)/*.yaml $(TARGET)/yaml/$(2)/. ; \
 		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(VERSION)/g' && cd - > /dev/null ; \
 		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - > /dev/null ; \
 		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPOSITORY)/g' && cd - > /dev/null ; \
@@ -19,5 +19,5 @@ yaml:
 	@echo ">>> Rendering Kubernetes resource files"
 	@rm -rf ${TARGET}/yaml/{appcluster,mngtcluster}
 	@mkdir -p ${TARGET}/yaml/{appcluster,mngtcluster}
-	$(call yaml-render-recipe,$(IMGS),mngtcluster)
-	$(call yaml-render-recipe,$(IMGS),appcluster)
+	$(call yaml-render-recipe,$(APPS),mngtcluster)
+	$(call yaml-render-recipe,$(APPS),appcluster)
