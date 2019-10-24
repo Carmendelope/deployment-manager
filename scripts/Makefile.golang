@@ -25,7 +25,7 @@ all: dep build test yaml image
 define go-build-recipe
 @for app in $(APPS); do \
 	if [ -d cmd/$$app ]; then \
-		${GOBUILDFLAGS} ${GOBUILD} $(LDFLAGS) -o ${DISTPATH}/$$app${1} ./cmd/$$app && \
+		{ ${GOBUILDFLAGS} ${GOBUILD} $(LDFLAGS) -o ${DISTPATH}/$$app${1} ./cmd/$$app || exit 1; } && \
 		echo " - Built $$app binary"; \
 	fi ; \
 done

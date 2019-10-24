@@ -6,26 +6,26 @@ DOCKERFILE=Dockerfile
 
 # Docker
 define docker-build-recipe
-@for img in $(1); do \
-	if [ -f components/$$img/$(DOCKERFILE) ]; then \
-		if [ -d components/$$img/dockerenv ]; then \
-			cp -rv components/$$img/dockerenv $(CONTEXTPATH)/. ; \
+@for app in $(1); do \
+	if [ -f components/$$app/$(DOCKERFILE) ]; then \
+		if [ -d components/$$app/dockerenv ]; then \
+			cp -rv components/$$app/dockerenv $(CONTEXTPATH)/. ; \
 		fi ; \
-		$(DOCKERCMD) build --no-cache -t $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$img:$(VERSION) -f components/$$img/$(DOCKERFILE) $(CONTEXTPATH) && \
-		echo " - Built $$img Docker image using components/$$img/$(DOCKERFILE) and $(CONTEXTPATH) contents" ; \
+		{ $(DOCKERCMD) build --no-cache -t $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$app:$(VERSION) -f components/$$app/$(DOCKERFILE) $(CONTEXTPATH) || exit 1; } && \
+		echo " - Built $$app Docker image using components/$$app/$(DOCKERFILE) and $(CONTEXTPATH) contents" ; \
 	else  \
-		echo " - $$img has no $(DOCKERFILE) file" ; \
+		echo " - $$app has no $(DOCKERFILE) file" ; \
 	fi ; \
 done
 endef
 
 define docker-push-recipe
-@for img in $(1); do \
-	if [ -f components/$$img/$(DOCKERFILE) ]; then \
-		$(DOCKERCMD) push $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$img:$(VERSION) && \
-		echo " - Pushed $$img Docker image to $(AZURE_CR) Docker registry" ; \
+@for app in $(1); do \
+	if [ -f components/$$app/$(DOCKERFILE) ]; then \
+		{ $(DOCKERCMD) push $(REGISTRY_HOST)/$(DOCKER_REPOSITORY)/$$app:$(VERSION) || exit 1; } && \
+		echo " - Pushed $$app Docker image to $(AZURE_CR) Docker registry" ; \
 	else  \
-		echo " - $$img has no $(DOCKERFILE) file" ; \
+		echo " - $$app has no $(DOCKERFILE) file" ; \
 	fi ; \
 done
 endef
@@ -34,12 +34,12 @@ endef
 
 docker-build:
 	@echo ">>> Building Docker images"
-	$(call docker-build-recipe,$(IMGS))
+	$(call docker-build-recipe,$(APPS))
 	@echo ">>> Finished building Docker images"
 
 docker-push:
 	@echo ">>> Pushing Docker images to $(AZURE_CR) registry"
-	$(call docker-push-recipe,$(IMGS))
+	$(call docker-push-recipe,$(APPS))
 	@echo ">>> Finished pushing Docker images"
 
 publish: image az-login docker-push
