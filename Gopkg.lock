@@ -247,12 +247,12 @@
   version = "v0.0.86"
 
 [[projects]]
-  digest = "1:0765e44d0ba70b061cc719211ac84a6223505c96e467f8a7eec7aeb15151513c"
+  digest = "1:345c4e990857221495cc88b1d8ce32ee81de776f747b9d4404859896d38f091d"
   name = "github.com/nalej/grpc-application-network-go"
   packages = ["."]
   pruneopts = ""
-  revision = "fd2352e1a5a987f345ffcb8c2d10f07ffb0d1a1a"
-  version = "v0.0.14"
+  revision = "23e31ddcb31803af6616c30e02779ccc44607350"
+  version = "v0.0.15"
 
 [[projects]]
   digest = "1:be9824efa8944bc7180a51b2e0c1b62d49902a3e5faa3a1ed57a15358e465096"
@@ -271,12 +271,12 @@
   version = "v0.0.24"
 
 [[projects]]
-  digest = "1:bfd0870c38704b5e43be3fd36c0b2726ffcfc0f232244a18f26db515deac754b"
+  digest = "1:951ccd675cdbd35b4a9b39c539e5a9041507cd5dcea5fc63342540ea8a72c2c6"
   name = "github.com/nalej/grpc-cluster-watcher-go"
   packages = ["."]
   pruneopts = ""
-  revision = "4f84f9d97050aac4b73c5c0fc45031081237b518"
-  version = "v0.0.5"
+  revision = "1540f520a26a7539db497978cfcf1a4283cb881e"
+  version = "v0.0.6"
 
 [[projects]]
   digest = "1:afebe5d9834769b2016dbd9959f423658e53e6691c08090a746d26e2312b6207"
@@ -303,12 +303,12 @@
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:d4d47e029773280e1c3f542d3f2f6395f34cc2ae227faf9110a0c02a581243ed"
+  digest = "1:cc051b0bbc4d6fd877ee9313f4bd333a9c4d856a571f921dca0c2f6c970bbe9a"
   name = "github.com/nalej/grpc-deployment-manager-go"
   packages = ["."]
   pruneopts = ""
-  revision = "a58be13435df24cb1dcb5aac2be34d7a869860f4"
-  version = "v0.0.62"
+  revision = "9426f08632f49a31fdf2e6a44e110c28b6cb5e60"
+  version = "v0.0.63"
 
 [[projects]]
   digest = "1:0bad099051ea5df46222752d38f98673d2ccec88ab40e30a9ec3d1473cbcd634"
@@ -455,12 +455,12 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:67d84c0ff107908e53fb2c9f42f1181a1b8b33f0c230d47281cc20ab21824c0e"
+  digest = "1:5f347ea0b4656f17f0ddffae1419dafaac4bc6ed57c92d58cadc7452f8a9ac3f"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
   pruneopts = ""
-  revision = "8fe62057ea2d46ce44254c98e84e810044dbe197"
-  version = "v1.5.0"
+  revision = "903d9455db9ff1d7ac1ab199062eca7266dd11a3"
+  version = "v1.6.0"
 
 [[projects]]
   branch = "master"
@@ -604,7 +604,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:acd465770451fe2dd4c15565afc8244859dbcf490bde15cc3447741181e10f29"
+  digest = "1:196c20449a0cc94113029193d7ce9e36e46e676c27a2fe06522243f57ced19c5"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -620,7 +620,7 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "ec77196f6094c3492a8b61f2c11cf937f78992ae"
+  revision = "fe3aa8a4527195a6057b3fad46619d7d090e99b5"
 
 [[projects]]
   branch = "master"
@@ -635,14 +635,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f7859b24c4f7a2c384c3d6ef5cdd15641e26a22b3649a52b0ac08d35e518a0de"
+  digest = "1:b242a834d9ec2ad78a2a2894d4696b021290a405643ab45bb52fee86da57ca42"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = ""
-  revision = "3e7259c5e7c2076bb2728047a3df75adb1bad8e5"
+  revision = "f8518d3b3627146e88bd43ca73045e1b8d8eb6c6"
 
 [[projects]]
   digest = "1:740b51a55815493a8d0f2b1e0d0ae48fe48953bf7eaf3fcc4198823bf67768c0"
@@ -683,11 +683,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1290297b5048f051e77948812e93c4f09a914d02c8fb02cf2dfdaf23d73a5805"
+  digest = "1:c43c206d0f8927031df6fc877cf58502af5ff875b76b4ceb6b617b676f7731f7"
   name = "golang.org/x/time"
   packages = ["rate"]
   pruneopts = ""
-  revision = "c4c64cad1fd0a1a8dab2523e04e61d35308e131e"
+  revision = "555d28b269f0569763d25dbe1a237ae74c6bcc82"
 
 [[projects]]
   digest = "1:c4404231035fad619a12f82ae3f0f8f9edc1cc7f34e7edad7a28ccac5336cc96"

@@ -11,6 +11,7 @@ import (
     "crypto/tls"
     "crypto/x509"
     "fmt"
+    offline_policy "github.com/nalej/deployment-manager/pkg/offline-policy"
     "io/ioutil"
     "net"
     "net/http"
@@ -53,6 +54,8 @@ type DeploymentManagerService struct {
     collect *collect.Manager
     // Proxy manager for proxy forwarding
     netProxy *proxy.Manager
+    // Offline Policy Manager
+    offlinePolicy *offline_policy.Manager
     // configuration
     configuration config.Config
 }
@@ -230,11 +233,15 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     // Instantiate app network manager service
     netProxy := proxy.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
+    // Instantiate offline policy service
+    offlinePolicy := offline_policy.NewManager()
+
     instance := &DeploymentManagerService{
         mgr: mgr,
 	net: net,
 	collect: collectManager,
 	netProxy: netProxy,
+	offlinePolicy: offlinePolicy,
 	configuration: *cfg,
     }
 
@@ -281,7 +288,7 @@ func (d *DeploymentManagerService) Run() {
     case err := <-errChan:
         if err != nil {
             log.Fatal().Err(err).Msg("error running server")
-	}
+	    }
     }
 }
 
@@ -290,12 +297,14 @@ func (d *DeploymentManagerService) startGRPC(grpcListener net.Listener, errChan 
     deployment := handler.NewHandler(d.mgr)
     network := network.NewHandler(d.net)
     netProxy := proxy.NewHandler(d.netProxy)
+    offlinePolicy := offline_policy.NewHandler(d.offlinePolicy)
 
     // Register handlers with server
     grpcServer := grpc.NewServer()
     pbDeploymentMgr.RegisterDeploymentManagerServer(grpcServer, deployment)
     pbDeploymentMgr.RegisterDeploymentManagerNetworkServer(grpcServer, network)
     pbDeploymentMgr.RegisterApplicationProxyServer(grpcServer, netProxy)
+    pbDeploymentMgr.RegisterOfflinePolicyServer(grpcServer, offlinePolicy)
 
     if d.configuration.Debug{
         reflection.Register(grpcServer)
