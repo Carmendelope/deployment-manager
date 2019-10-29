@@ -234,7 +234,7 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     netProxy := proxy.NewManager(clusterAPIConn, clusterAPILoginHelper)
 
     // Instantiate offline policy service
-    offlinePolicy := offline_policy.NewManager(clusterAPIConn, clusterAPILoginHelper)
+    offlinePolicy := offline_policy.NewManager()
 
     instance := &DeploymentManagerService{
         mgr: mgr,
