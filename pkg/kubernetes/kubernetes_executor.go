@@ -29,12 +29,11 @@ type KubernetesExecutor struct {
     Client *kubernetes.Clientset
     // Controller that handles Kubernetes events add updates the MonitoredInstance
     Controller executor.DeploymentController
-    PlanetPath string
     // mutex
     mu sync.Mutex
 }
 
-func NewKubernetesExecutor(internal bool, planetPath string, controller executor.DeploymentController) (executor.Executor,error) {
+func NewKubernetesExecutor(internal bool, controller executor.DeploymentController) (executor.Executor,error) {
     var c *kubernetes.Clientset
     var err error
 
@@ -57,7 +56,6 @@ func NewKubernetesExecutor(internal bool, planetPath string, controller executor
 
     toReturn := KubernetesExecutor{
         Client: c,
-        PlanetPath:planetPath,
 	Controller: controller,
     }
     return &toReturn, err
@@ -69,7 +67,7 @@ func(k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMe
         metadata.FragmentId, metadata.Stage.StageId)
 
     var resources executor.Deployable
-    k8sDeploy := NewDeployableKubernetesStage(k.Client, k.PlanetPath, metadata)
+    k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata)
     resources = k8sDeploy
 
     err := k8sDeploy.Build()

@@ -12,7 +12,6 @@ import (
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
 	"k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +21,6 @@ import (
 
 type DeployableSecrets struct {
 	client          coreV1.SecretInterface
-	planetPath      string
 	data            entities.DeploymentMetadata
 	secrets         map[string][]*v1.Secret
 	planetSecret    *v1.Secret
@@ -30,11 +28,9 @@ type DeployableSecrets struct {
 
 func NewDeployableSecrets(
 	client      *kubernetes.Clientset,
-	planetPath  string,
 	data        entities.DeploymentMetadata) *DeployableSecrets {
 	return &DeployableSecrets{
 		client:          client.CoreV1().Secrets(data.Namespace),
-		planetPath:      planetPath,
 		data:            data,
 		secrets:         make(map[string][]*v1.Secret, 0),
 		planetSecret:    &v1.Secret{}}
@@ -84,37 +80,6 @@ func (ds*DeployableSecrets) generateDockerSecret(service *grpc_application_go.Se
 	}
 }
 
-func (ds *DeployableSecrets) generatePlanetSecret (namespace string) *v1.Secret {
-	log.Debug().Interface("Secrets", ds.planetSecret).Msg("Creating ZT Planet secret")
-	planetData, err := ioutil.ReadFile(ds.planetPath)
-	if err != nil {
-		log.Error().Msg("cannot read planet file")
-		return nil
-	}
-	return &v1.Secret{
-		TypeMeta: metaV1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metaV1.ObjectMeta{
-			Name:         ZTPlanetSecretName,
-			GenerateName: "",
-			Namespace:    namespace,
-			Labels: map[string]string {
-				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT : ds.data.FragmentId,
-				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:      ds.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :      ds.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :     ds.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID :            ds.data.Stage.StageId,
-			},
-		},
-		Data: map[string][]byte{
-			"planet": planetData,
-		},
-		Type: v1.SecretTypeOpaque,
-	}
-}
-
 // This function returns an array in case we support other Secrets in the future.
 func (ds*DeployableSecrets) BuildSecretsForService(service *grpc_application_go.ServiceInstance) []*v1.Secret {
 	if service.Credentials == nil{
@@ -134,8 +99,6 @@ func (ds*DeployableSecrets) Build() error {
 			ds.secrets[service.ServiceId] = toAdd
 		}
 	}
-
-	ds.planetSecret = ds.generatePlanetSecret(ds.data.Namespace)
 
 	log.Debug().Interface("Secrets", ds.secrets).Msg("Secrets have been build and are ready to deploy")
 	return nil

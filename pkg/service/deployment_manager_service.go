@@ -205,7 +205,7 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
     }
 
     // Create the Kubernetes executor
-    exec, kubErr := kubernetes.NewKubernetesExecutor(cfg.Local, cfg.PlanetPath, controller)
+    exec, kubErr := kubernetes.NewKubernetesExecutor(cfg.Local, controller)
     if kubErr != nil {
         log.Panic().Err(err).Msg("there was an error creating kubernetes client")
         panic(err.Error())
