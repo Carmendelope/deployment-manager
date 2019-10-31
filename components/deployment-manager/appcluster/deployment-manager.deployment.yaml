@@ -131,9 +131,6 @@ spec:
       imagePullSecrets:
       - name: nalej-registry
       volumes:
-        - name: zt-planet
-          secret:
-            secretName: zt-planet
         - name: tls-client-certificate-volume
           secret:
             secretName: tls-client-certificate
