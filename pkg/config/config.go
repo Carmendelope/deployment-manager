@@ -56,8 +56,6 @@ type Config struct {
 	TargetPlatform grpc_installer_go.Platform
 	// ClusterId with the cluster identifier.
 	ClusterId string
-	// planet file path
-	PlanetPath string
 	// nalej-public credentials
 	PublicCredentials grpc_application_go.ImageCredentials
 	// ZTSidecarPort with the ZT sidecar port listening for route updates
@@ -134,10 +132,6 @@ func (conf *Config) Validate() derrors.Error {
 	}
 	conf.TargetPlatform = grpc_installer_go.Platform(grpc_installer_go.Platform_value[conf.TargetPlatformName])
 
-	if conf.PlanetPath == "" {
-		return derrors.NewInvalidArgumentError("planet path cannot be empty")
-	}
-
 	return nil
 }
 
@@ -159,7 +153,6 @@ func (conf *Config) Print() {
 	log.Info().Str("Email", conf.Email).Str("password", strings.Repeat("*", len(conf.Password))).Msg("Application cluster credentials")
 	log.Info().Str("DNS", conf.DNS).Msg("List of DNS ips")
 	log.Info().Str("type", conf.TargetPlatform.String()).Msg("Target platform")
-	log.Info().Str("PlanetPath", conf.PlanetPath).Msg("Planet path")
 	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
 
 }

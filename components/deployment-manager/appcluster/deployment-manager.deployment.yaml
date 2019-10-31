@@ -122,9 +122,6 @@ spec:
         - name: api-port
           containerPort: 5200
         volumeMounts:
-          - name: zt-planet
-            mountPath: /zt/planet
-            readOnly: true
           - name: tls-client-certificate-volume
             readOnly: true
             mountPath: /nalej/tls-client-certificate

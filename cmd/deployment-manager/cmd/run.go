@@ -51,7 +51,6 @@ func init() {
 	runCmd.Flags().StringP("password", "w", "Passw0rd666", "password")
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
 	runCmd.Flags().String("targetPlatform", "MINIKUBE", "Target platform: MINIKUBE or AZURE")
-	runCmd.Flags().String("planetPath", "/zt/planet/planet", "List of dns ips separated by commas")
 
 	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
@@ -85,7 +84,6 @@ func Run() {
 		Password:             viper.GetString("password"),
 		DNS:                  viper.GetString("dns"),
 		TargetPlatformName:   viper.GetString("targetPlatform"),
-		PlanetPath:           viper.GetString("planetPath"),
 		PublicCredentials:    grpc_application_go.ImageCredentials{
 			Username:             viper.GetString("publicRegistryUserName"),
 			Password:             viper.GetString("publicRegistryPassword"),
