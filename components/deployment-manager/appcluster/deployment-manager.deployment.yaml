@@ -41,7 +41,6 @@ spec:
         - "--email=$(EMAIL)"
         - "--password=$(PASSWORD)"
         - "--dns=$(DNS_HOSTS)"
-        - "--planetPath=/zt/planet/planet"
         - "--publicRegistryUserName=$(PUBLIC_REGISTRY_USERNAME)"
         - "--publicRegistryPassword=$(PUBLIC_REGISTRY_PASSWORD)"
         - "--publicRegistryURL=$(PUBLIC_REGISTRY_URL)"
