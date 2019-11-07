@@ -1,5 +1,17 @@
 /*
- *  Copyright (C) 2018 Nalej Group - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package kubernetes
@@ -20,17 +32,17 @@ import (
 )
 
 type DeployableConfigMaps struct {
-	client          coreV1.ConfigMapInterface
-	data            entities.DeploymentMetadata
-	configmaps      map[string][]*v1.ConfigMap
+	client     coreV1.ConfigMapInterface
+	data       entities.DeploymentMetadata
+	configmaps map[string][]*v1.ConfigMap
 }
 
 // NewDeployableConfigMapsForTest creates an empty DeployableConfigMaps (ONLY FOR TESTS!!)
 func NewDeployableConfigMapsForTest(data entities.DeploymentMetadata) *DeployableConfigMaps {
 	return &DeployableConfigMaps{
-		client:          nil,
-		data:            data,
-		configmaps:      make(map[string][]*v1.ConfigMap, 0),
+		client:     nil,
+		data:       data,
+		configmaps: make(map[string][]*v1.ConfigMap, 0),
 	}
 }
 
@@ -38,9 +50,9 @@ func NewDeployableConfigMaps(
 	client *kubernetes.Clientset,
 	data entities.DeploymentMetadata) *DeployableConfigMaps {
 	return &DeployableConfigMaps{
-		client:          client.CoreV1().ConfigMaps(data.Namespace),
-		data:            data,
-		configmaps:      make(map[string][]*v1.ConfigMap, 0),
+		client:     client.CoreV1().ConfigMaps(data.Namespace),
+		data:       data,
+		configmaps: make(map[string][]*v1.ConfigMap, 0),
 	}
 }
 
@@ -53,7 +65,7 @@ func GetConfigMapPath(mountPath string) (string, string) {
 	if index == -1 {
 		return "/", mountPath
 	}
-	return mountPath [0: index + 1], mountPath [index + 1: ]
+	return mountPath[0 : index+1], mountPath[index+1:]
 }
 
 /*
@@ -88,14 +100,14 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInsta
 }
 */
 
-func (dc* DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_application_go.ServiceInstance, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
+func (dc *DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_application_go.ServiceInstance, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating consolidate config map...")
 
-	if len(cf) == 0{
+	if len(cf) == 0 {
 		return nil
 	}
 
-	binaryData := make (map[string][]byte, 0)
+	binaryData := make(map[string][]byte, 0)
 
 	for _, config := range cf {
 		binaryData[config.ConfigFileId] = config.Content
@@ -109,16 +121,16 @@ func (dc* DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_appli
 		ObjectMeta: v12.ObjectMeta{
 			Name:      fmt.Sprintf("config-map-%s-%s", service.ServiceId, service.ServiceInstanceId),
 			Namespace: dc.data.Namespace,
-			Labels:    map[string]string{
-				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:        dc.data.FragmentId,
-				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:            dc.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :            dc.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :           dc.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID :                  dc.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID :                service.ServiceId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID :       service.ServiceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID :          service.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
+			Labels: map[string]string{
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       dc.data.FragmentId,
+				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           dc.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            dc.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           dc.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:                  dc.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID:                service.ServiceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
 			},
 		},
 		BinaryData: binaryData,

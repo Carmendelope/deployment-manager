@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package network
 
 import (
@@ -18,11 +34,11 @@ import (
 
 const (
 	DefaultSidecarTimeout = time.Second * 10
-	ZtRedirectorPort = 1576
-	UpdateRetries = 3
-	JoinRetries = 3
-	RetrySleep = 2 * time.Second
-	)
+	ZtRedirectorPort      = 1576
+	UpdateRetries         = 3
+	JoinRetries           = 3
+	RetrySleep            = 2 * time.Second
+)
 
 // NetworkUpdater interface with the operations to manage the update of network information on application pods.
 type NetworkUpdater interface {
@@ -37,7 +53,6 @@ type NetworkUpdater interface {
 	// SendJoinZTConnection send a join message to the pods
 	SendJoinZTConnection(targetPods []TargetPod, networkId string, isInbound bool) derrors.Error
 	SendLeaveZTConnection(targetPods []TargetPod, networkId string, isInbound bool) derrors.Error
-
 }
 
 // TargetPod representing a pod to be updated.
@@ -92,13 +107,13 @@ func (knu *KubernetesNetworkUpdater) GetTargetNamespace(organizationID string, a
 	// Check that it exists at least one single namespace running
 	var targetNamespace *coreV1.Namespace = nil
 	for _, namespace := range list.Items {
-		if namespace.Status.Phase != coreV1.NamespaceTerminating{
+		if namespace.Status.Phase != coreV1.NamespaceTerminating {
 			// if this is not terminating we assume it is correct
 			targetNamespace = &namespace
 		}
 	}
 
-	if targetNamespace == nil  {
+	if targetNamespace == nil {
 		return "", false, derrors.NewInternalError("running namespaces not found").WithParams(list.Items)
 	}
 
@@ -125,12 +140,12 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 		servID, existServID := pod.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]
 
 		if existsOrgID && existsAppInstID && existsServGroupID && existServID && orgID == organizationID &&
-			appInstID == appInstanceID && servGroupID == serviceGroupID && servID == serviceID{
+			appInstID == appInstanceID && servGroupID == serviceGroupID && servID == serviceID {
 			for _, container := range pod.Spec.Containers {
 
 				if pod.Status.Phase == coreV1.PodFailed {
 					// failed pods are ignored
-					log.Debug().Str("namespace",namespace).Str("podName", pod.Name).Msg("ignore pod in failed status")
+					log.Debug().Str("namespace", namespace).Str("podName", pod.Name).Msg("ignore pod in failed status")
 					continue
 				}
 
@@ -160,7 +175,6 @@ func (knu *KubernetesNetworkUpdater) GetPodsForApp(namespace string, organizatio
 	return targetPods, nil
 }
 
-
 func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organizationID string, appInstanceID string, serviceID string) ([]TargetPod, derrors.Error) {
 	podClient := knu.client.CoreV1().Pods(namespace)
 	opts := v1.ListOptions{}
@@ -178,19 +192,19 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 		servID, existServID := pod.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]
 
 		if existsOrgID && existsAppInstID && existServID && orgID == organizationID &&
-			appInstID == appInstanceID && servID == serviceID{
+			appInstID == appInstanceID && servID == serviceID {
 			for _, container := range pod.Spec.Containers {
 
 				if pod.Status.Phase == coreV1.PodFailed {
 					// failed pods are ignored
-					log.Debug().Str("namespace",namespace).Str("podName", pod.Name).Msg("ignore pod in failed status")
+					log.Debug().Str("namespace", namespace).Str("podName", pod.Name).Msg("ignore pod in failed status")
 					continue
 				}
 
 				// Any outbound pod must have the NALEJ_ENV_IS_PROXY flag with false value. Otherwise, they indicate a
 				// zt-proxy.
 				hasVar, valueVar := hasEnvVar(container, utils.NALEJ_ENV_IS_PROXY)
-				if  hasVar {
+				if hasVar {
 					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
 						Str("is a proxy?", valueVar).Msg("ZT sidecar container detected")
 					// the value must be a boolean
@@ -202,11 +216,11 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 						continue
 					}
 					log.Debug().Str("name", container.Name).Str("podIP", pod.Status.PodIP).
-					Str("is a proxy?", valueVar).Msg("ZT sidecar added to the candidate list")
+						Str("is a proxy?", valueVar).Msg("ZT sidecar added to the candidate list")
 					toAdd := NewTargetPod(pod.Name, container.Name, isProxy, pod.Status.PodIP)
 					targetPods = append(targetPods, *toAdd)
 
-				}else{
+				} else {
 					log.Debug().Interface("container", container).Msg("has no env var")
 				}
 			}
@@ -215,20 +229,20 @@ func (knu *KubernetesNetworkUpdater) GetAllPodsForApp(namespace string, organiza
 	return targetPods, nil
 }
 
-func hasEnvVar(container coreV1.Container, name string) (bool,string) {
+func hasEnvVar(container coreV1.Container, name string) (bool, string) {
 	for _, containerVar := range container.Env {
 		if containerVar.Name == name {
 			return true, containerVar.Value
 		}
 	}
-	return false,""
+	return false, ""
 }
 
 // UpdatePodsRoute updates a set of pods with a given route.
 func (knu *KubernetesNetworkUpdater) UpdatePodsRoute(targetPods []TargetPod, route *grpc_zt_nalej_go.Route) derrors.Error {
 	log.Debug().Interface("route", route).Int("num pods", len(targetPods)).Msg("updating pod routes")
 	for _, target := range targetPods {
-		log.Debug().Str("pod", target.PodName).Str("podIp",target.PodIP).
+		log.Debug().Str("pod", target.PodName).Str("podIp", target.PodIP).
 			Str("container", target.ContainerName).Msg("Updating pod")
 		client, ctx, cancel, err := knu.getSidecarClient(target.PodIP)
 		if cancel != nil {
@@ -241,7 +255,7 @@ func (knu *KubernetesNetworkUpdater) UpdatePodsRoute(targetPods []TargetPod, rou
 		}
 		done := false
 		var rerr error = nil
-		for attempts := 0;attempts < UpdateRetries; attempts++ {
+		for attempts := 0; attempts < UpdateRetries; attempts++ {
 			_, rerr = client.SetRoute(ctx, route)
 			if rerr != nil {
 				log.Error().Str("pod", target.PodName).Str("container", target.ContainerName).
@@ -264,8 +278,8 @@ func (knu *KubernetesNetworkUpdater) UpdatePodsRoute(targetPods []TargetPod, rou
 
 func (knu *KubernetesNetworkUpdater) JoinMustBeSent(pod TargetPod, isInbound bool) bool {
 	//
-	if (isInbound && pod.OutboundProxy)  ||
-	   (! isInbound && ! pod.OutboundProxy){
+	if (isInbound && pod.OutboundProxy) ||
+		(!isInbound && !pod.OutboundProxy) {
 		return true
 	}
 	return false
@@ -345,7 +359,7 @@ func (knu *KubernetesNetworkUpdater) SendLeaveZTConnection(targetPods []TargetPo
 			var rerr error = nil
 			for attempts := 0; attempts < JoinRetries; attempts++ {
 				_, rerr = client.LeaveZTNetwork(ctx, &grpc_zt_nalej_go.ZTNetworkId{
-					NetworkId:           networkId,
+					NetworkId: networkId,
 				})
 				if rerr != nil {
 					log.Error().Str("pod", target.PodName).Str("container", target.ContainerName).

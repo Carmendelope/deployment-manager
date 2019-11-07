@@ -1,5 +1,17 @@
 /*
- * Copyright (C) 2019 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Kubernetes Events provider
@@ -17,11 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-        "k8s.io/client-go/discovery"
-        "k8s.io/client-go/kubernetes/scheme"
-        "k8s.io/client-go/rest"
-        "k8s.io/client-go/restmapper"
-        "k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // EventsProvider implements the EventsProvider interface; it
@@ -72,7 +84,7 @@ type EventsProvider struct {
 func NewEventsProvider(configfile string, incluster bool, labelSelector string) (*EventsProvider, derrors.Error) {
 	log.Debug().Str("config", configfile).Bool("in-cluster", incluster).Msg("creating kubernetes events provider")
 
-        var kubeconfig *rest.Config
+	var kubeconfig *rest.Config
 	var err error
 	if incluster {
 		kubeconfig, err = rest.InClusterConfig()
@@ -82,7 +94,7 @@ func NewEventsProvider(configfile string, incluster bool, labelSelector string) 
 	if err != nil {
 		return nil, derrors.NewInternalError("failed to create kubeclient configuration", err)
 	}
-        log.Info().Str("host", kubeconfig.Host).Msg("created kubeconfig")
+	log.Info().Str("host", kubeconfig.Host).Msg("created kubeconfig")
 
 	// Create discovery client
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(kubeconfig)
@@ -96,25 +108,25 @@ func NewEventsProvider(configfile string, incluster bool, labelSelector string) 
 	mapper := restmapper.NewDiscoveryRESTMapper(resources)
 
 	provider := &EventsProvider{
-		kubeconfig: kubeconfig,
-		clients: map[schema.GroupVersion]rest.Interface{},
-		watchers: map[schema.GroupVersionKind]*Watcher{},
-		dispatchers: []*Dispatcher{},
-		restMapper: mapper,
+		kubeconfig:    kubeconfig,
+		clients:       map[schema.GroupVersion]rest.Interface{},
+		watchers:      map[schema.GroupVersionKind]*Watcher{},
+		dispatchers:   []*Dispatcher{},
+		restMapper:    mapper,
 		labelSelector: labelSelector,
-		stopChan: make(chan struct{}),
+		stopChan:      make(chan struct{}),
 	}
 	return provider, nil
 }
 
 // Start collecting metrics
-func (p *EventsProvider) Start() (derrors.Error) {
+func (p *EventsProvider) Start() derrors.Error {
 	log.Info().Msg("starting kubernetes events listener")
 
 	p.started = true
 
 	// Start all watchers - this syncs the Kubernetes event caches as well
-	for _, watcher := range(p.watchers) {
+	for _, watcher := range p.watchers {
 		err := watcher.Start(p.stopChan)
 		if err != nil {
 			p.Stop()
@@ -123,7 +135,7 @@ func (p *EventsProvider) Start() (derrors.Error) {
 	}
 
 	// Start all processing queue items in dispatchers
-	for _, dispatcher := range(p.dispatchers) {
+	for _, dispatcher := range p.dispatchers {
 		err := dispatcher.Start(p.stopChan)
 		if err != nil {
 			p.Stop()
@@ -146,7 +158,7 @@ func (p *EventsProvider) AddDispatcher(dispatcher *Dispatcher) derrors.Error {
 	}
 
 	// Set up watchers
-	for _, kind := range(dispatcher.Dispatchable()) {
+	for _, kind := range dispatcher.Dispatchable() {
 		// Get watcher
 		watcher, derr := p.createWatcher(kind)
 		if derr != nil {
@@ -239,7 +251,7 @@ func (p *EventsProvider) createClient(gv schema.GroupVersion) (rest.Interface, d
 }
 
 // Stop collecting metrics
-func (p *EventsProvider) Stop() (derrors.Error) {
+func (p *EventsProvider) Stop() derrors.Error {
 	log.Info().Msg("stopping kubernetes event provider")
 	// Stop informers
 	close(p.stopChan)

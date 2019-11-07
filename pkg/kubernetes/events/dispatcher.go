@@ -1,5 +1,17 @@
 /*
- * Copyright (C) 2019 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Dispatches Kubernetes events functions from a DispatchFuncs
@@ -18,8 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-        "k8s.io/client-go/kubernetes/scheme"
-        "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -30,8 +42,9 @@ type KindList []schema.GroupVersionKind
 
 // Actions that a Kubernetes event can describe
 type EventType string
+
 const (
-	EventAdd EventType = "add"
+	EventAdd    EventType = "add"
 	EventUpdate EventType = "update"
 	EventDelete EventType = "delete"
 )
@@ -41,9 +54,9 @@ func (e EventType) String() string {
 }
 
 type Event struct {
-	Key string
+	Key       string
 	OldObjKey string
-	Kind schema.GroupVersionKind
+	Kind      schema.GroupVersionKind
 	EventType EventType
 }
 
@@ -86,17 +99,17 @@ func NewDispatcher(funcs DispatchFuncs) (*Dispatcher, derrors.Error) {
 	kinds := funcs.SupportedKinds()
 
 	dispatcher := &Dispatcher{
-		dispatchFuncs: funcs,
-		funcMap: make(map[schema.GroupVersionKind]DispatchFunc, len(kinds)),
-		queue: queue,
-		indexers: make(map[schema.GroupVersionKind]cache.Indexer, len(kinds)),
+		dispatchFuncs:  funcs,
+		funcMap:        make(map[schema.GroupVersionKind]DispatchFunc, len(kinds)),
+		queue:          queue,
+		indexers:       make(map[schema.GroupVersionKind]cache.Indexer, len(kinds)),
 		deletedIndexer: cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, cache.Indexers{}),
 	}
 
 	funcsValue := reflect.ValueOf(funcs)
 
 	// Create the dynamic function map to this exact instance
-	for _, kind := range(kinds) {
+	for _, kind := range kinds {
 		fName := fmt.Sprintf("On%s", kind.Kind)
 		fValue := funcsValue.MethodByName(fName)
 		if !fValue.IsValid() {
@@ -110,7 +123,7 @@ func NewDispatcher(funcs DispatchFuncs) (*Dispatcher, derrors.Error) {
 
 func (d *Dispatcher) Dispatchable() KindList {
 	kinds := make(KindList, 0, len(d.funcMap))
-	for k, _ := range(d.funcMap) {
+	for k, _ := range d.funcMap {
 		kinds = append(kinds, k)
 	}
 
@@ -289,7 +302,7 @@ func getKind(obj interface{}) (schema.GroupVersionKind, error) {
 	// at least warn
 	if len(kinds) > 1 {
 		kindLog := log.Warn().Str("resource", meta.GetSelfLink())
-		for _, k := range(kinds) {
+		for _, k := range kinds {
 			kindLog = kindLog.Str("candidate", k.String())
 		}
 		kindLog.Msg("received ambiguous object, picking first candidate")
@@ -315,11 +328,10 @@ func createEvent(obj interface{}, eventType EventType) (Event, error) {
 	}
 
 	e := Event{
-		Key: key,
-		Kind: kind,
+		Key:       key,
+		Kind:      kind,
 		EventType: eventType,
 	}
 
 	return e, nil
 }
-

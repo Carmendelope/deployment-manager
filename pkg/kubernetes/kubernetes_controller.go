@@ -1,7 +1,17 @@
 /*
- *  Copyright (C) 2018 Nalej Group - All Rights Reserved
+ * Copyright 2019 Nalej
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package kubernetes
@@ -80,10 +90,10 @@ func (c *KubernetesController) OnDeployment(oldObj, obj interface{}, action even
 
 	// This deployment is monitored, and all its replicas are available
 	// if there are enough replicas, we assume this is working
-	if (dep.Status.UnavailableReplicas == 0 && dep.Status.AvailableReplicas > 0){
+	if dep.Status.UnavailableReplicas == 0 && dep.Status.AvailableReplicas > 0 {
 		return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
-			dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()),
-			entities.NALEJ_SERVICE_RUNNING,"", []entities.EndpointInstance{})
+			dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()),
+			entities.NALEJ_SERVICE_RUNNING, "", []entities.EndpointInstance{})
 	}
 
 	foundStatus := entities.KubernetesDeploymentStatusTranslation(dep.Status)
@@ -94,12 +104,12 @@ func (c *KubernetesController) OnDeployment(oldObj, obj interface{}, action even
 			info = fmt.Sprintf("%s %s", info, condition)
 		}
 	}
-	log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
+	log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT, dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
 		Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
-		Str("uid",string(dep.GetUID())).Interface("status", foundStatus).
+		Str("uid", string(dep.GetUID())).Interface("status", foundStatus).
 		Msg("set deployment status")
 	return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
-		dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] ,string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
+		dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()), foundStatus, info, []entities.EndpointInstance{})
 }
 
 func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.EventType) error {
@@ -118,7 +128,7 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 	if found && purpose == utils.NALEJ_ANNOTATION_VALUE_DEVICE_GROUP_SERVICE {
 		log.Debug().Interface("analyzing", dep).Msg("Checking service for device group ingestion")
 
-		if dep.Spec.Type == corev1.ServiceTypeLoadBalancer{
+		if dep.Spec.Type == corev1.ServiceTypeLoadBalancer {
 			log.Debug().Msg("Load balancer detected")
 			if dep.Status.LoadBalancer.Ingress == nil || len(dep.Status.LoadBalancer.Ingress) == 0 {
 				log.Debug().Interface("loadbalancer", dep.Status).Msg("Load balancer is not ready, skip")
@@ -126,31 +136,31 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 			}
 
 			for _, ip := range dep.Status.LoadBalancer.Ingress {
-				for _, port := range dep.Spec.Ports{
+				for _, port := range dep.Spec.Ports {
 					ep := entities.EndpointInstance{
 						EndpointInstanceId: string(dep.UID),
-						EndpointType: entities.ENDPOINT_TYPE_INGESTION,
-						FQDN: ip.IP,
-						Port: port.Port,
+						EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+						FQDN:               ip.IP,
+						Port:               port.Port,
 					}
 					log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
 					endpoints = append(endpoints, ep)
 				}
 			}
-		} else if dep.Spec.Type == corev1.ServiceTypeNodePort{
+		} else if dep.Spec.Type == corev1.ServiceTypeNodePort {
 			log.Debug().Msg("Node port detected")
-			for _, port := range dep.Spec.Ports{
+			for _, port := range dep.Spec.Ports {
 				ep := entities.EndpointInstance{
 					EndpointInstanceId: string(dep.UID),
-					EndpointType: entities.ENDPOINT_TYPE_INGESTION,
-					FQDN: config.GetConfig().ClusterPublicHostname,
-					Port: port.NodePort,
+					EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+					FQDN:               config.GetConfig().ClusterPublicHostname,
+					Port:               port.NodePort,
 				}
 				log.Debug().Interface("endpoint", ep).Msg("Node port is ready")
 				endpoints = append(endpoints, ep)
 			}
 		}
-	} else if found && purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE{
+	} else if found && purpose == utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE {
 		log.Debug().Interface("analyzing", dep).Msg("Checking service for load balancer")
 		if dep.Spec.Type == corev1.ServiceTypeLoadBalancer {
 			log.Debug().Msg("Load balancer detected")
@@ -163,9 +173,9 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 				for _, port := range dep.Spec.Ports {
 					ep := entities.EndpointInstance{
 						EndpointInstanceId: string(dep.UID),
-						EndpointType: entities.ENDPOINT_TYPE_INGESTION,
-						FQDN: ip.IP,
-						Port: port.Port,
+						EndpointType:       entities.ENDPOINT_TYPE_INGESTION,
+						FQDN:               ip.IP,
+						Port:               port.Port,
 					}
 					log.Debug().Interface("endpoint", ep).Msg("Load balancer is ready")
 					endpoints = append(endpoints, ep)
@@ -174,12 +184,12 @@ func (c *KubernetesController) OnService(oldObj, obj interface{}, action events.
 		}
 	}
 
-	log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
+	log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT, dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
 		Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
-		Str("uid",string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
+		Str("uid", string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
 		Msg("set service new status to ready")
 	return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
-		dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID],string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,"",
+		dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING, "",
 		endpoints)
 }
 
@@ -201,16 +211,16 @@ func (c *KubernetesController) OnIngress(oldObj, obj interface{}, action events.
 		}
 	}
 
-	if ready && len(dep.Spec.Rules) > 0{
+	if ready && len(dep.Spec.Rules) > 0 {
 		port := int32(0)
-		if len (dep.Spec.Rules) > 0 && len(dep.Spec.Rules[0].IngressRuleValue.HTTP.Paths) > 0 {
+		if len(dep.Spec.Rules) > 0 && len(dep.Spec.Rules[0].IngressRuleValue.HTTP.Paths) > 0 {
 			port = dep.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.ServicePort.IntVal
 		}
 
 		// Take the local cluster hostname.
 		hostname := dep.Spec.Rules[0].Host
 
-		log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT,dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
+		log.Debug().Str(utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT, dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT]).
 			Str(utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID, dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
 			Str("uid", string(dep.GetUID())).Interface("status", entities.NALEJ_SERVICE_RUNNING).
 			Msg("set ingress new status to ready")
@@ -218,10 +228,10 @@ func (c *KubernetesController) OnIngress(oldObj, obj interface{}, action events.
 		return c.monitoredInstances.SetResourceStatus(dep.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],
 			dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], string(dep.GetUID()), entities.NALEJ_SERVICE_RUNNING,
 			"", []entities.EndpointInstance{entities.EndpointInstance{
-				FQDN: hostname,
+				FQDN:               hostname,
 				EndpointInstanceId: string(dep.UID),
-				EndpointType: entities.ENDPOINT_TYPE_WEB,
-				Port: port,
+				EndpointType:       entities.ENDPOINT_TYPE_WEB,
+				Port:               port,
 			}})
 	}
 

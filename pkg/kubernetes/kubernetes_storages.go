@@ -1,5 +1,17 @@
 /*
- *  Copyright (C) 2018 Nalej Group - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package kubernetes
@@ -23,18 +35,18 @@ import (
 )
 
 const (
-	STORAGE_CLASS_AZURE_CLUSTER_LOCAL =    "managed-premium"
-	STORAGE_CLASS_AZURE_CLUSTER_REPLICA =  "managed-premium"
-	STORAGE_CLASS_NALEJ_CLUSTER_LOCAL =    "nalej-sc-local"
-	STORAGE_CLASS_NALEJ_CLUSTER_REPLICA =  "nalej-sc-local-replica"
+	STORAGE_CLASS_AZURE_CLUSTER_LOCAL   = "managed-premium"
+	STORAGE_CLASS_AZURE_CLUSTER_REPLICA = "managed-premium"
+	STORAGE_CLASS_NALEJ_CLUSTER_LOCAL   = "nalej-sc-local"
+	STORAGE_CLASS_NALEJ_CLUSTER_REPLICA = "nalej-sc-local-replica"
 )
 
 type DeployableStorage struct {
-	client          coreV1.PersistentVolumeClaimInterface
-	data            entities.DeploymentMetadata
-	class    		string
-	nodes 			int
-	pvcs      		map[string][]*v1.PersistentVolumeClaim
+	client coreV1.PersistentVolumeClaimInterface
+	data   entities.DeploymentMetadata
+	class  string
+	nodes  int
+	pvcs   map[string][]*v1.PersistentVolumeClaim
 }
 
 func NewDeployableStorage(
@@ -44,95 +56,95 @@ func NewDeployableStorage(
 	sc := ""
 	// get number of nodes in a cluster. Log message if storage type is "cluster replica" and nodes < 3
 	numNodes := 0
-	nodes, err := client.CoreV1().Nodes().List(metaV1.ListOptions{Limit:int64(3),})
+	nodes, err := client.CoreV1().Nodes().List(metaV1.ListOptions{Limit: int64(3)})
 	if err == nil {
 		numNodes = len(nodes.Items)
 	}
 	return &DeployableStorage{
-		client:         client.CoreV1().PersistentVolumeClaims(data.Namespace),
-		data:           data,
-		nodes: 			numNodes,
-		class:			sc,
-		pvcs:           make(map[string][]*v1.PersistentVolumeClaim, 0),
+		client: client.CoreV1().PersistentVolumeClaims(data.Namespace),
+		data:   data,
+		nodes:  numNodes,
+		class:  sc,
+		pvcs:   make(map[string][]*v1.PersistentVolumeClaim, 0),
 	}
 }
 
-func (ds*DeployableStorage) GetId() string {
+func (ds *DeployableStorage) GetId() string {
 	return ds.data.Stage.StageId
 }
 
-func (ds*DeployableStorage) generatePVC(storageId string, service *grpc_application_go.ServiceInstance,
+func (ds *DeployableStorage) generatePVC(storageId string, service *grpc_application_go.ServiceInstance,
 	storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
-
 
 	if storage.Size == 0 {
 		storage.Size = DefaultStorageAllocationSize
 	}
-	sizeQuantity := resource.NewQuantity(storage.Size,resource.BinarySI)
+	sizeQuantity := resource.NewQuantity(storage.Size, resource.BinarySI)
 	return &v1.PersistentVolumeClaim{
-		TypeMeta:   v12.TypeMeta{
+		TypeMeta: v12.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
 			APIVersion: "v1",
 		},
 		ObjectMeta: v12.ObjectMeta{
-			Name:         storageId,
-			Namespace:    ds.data.Namespace,
+			Name:      storageId,
+			Namespace: ds.data.Namespace,
 			Labels: map[string]string{
-				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT :       ds.data.FragmentId,
-				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:            ds.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR :            ds.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID :           ds.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID :                  ds.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID :                storageId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID :       service.ServiceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID :          service.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : service.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       ds.data.FragmentId,
+				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           ds.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            ds.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           ds.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:                  ds.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID:                storageId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
 			},
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce,},
+			AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			StorageClassName: &ds.class,
-			Resources: v1.ResourceRequirements{ Requests:v1.ResourceList{v1.ResourceStorage:*sizeQuantity}},
-
+			Resources:        v1.ResourceRequirements{Requests: v1.ResourceList{v1.ResourceStorage: *sizeQuantity}},
 		},
 	}
 }
 
 //This function returns the storage class name based on the storage type and cluster environment
-func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageType) string{
-    sc := ""
-    // Get the right class based on cluster hosting environment
-    switch(config.GetConfig().TargetPlatform) {
-    case grpc_installer_go.Platform_AZURE:
-          // use azure provided storage class. By default managed-premium is local replicated PVs
-          // TODO: if we want we can create nalej storage class for azure to allocate PVs from non replicated pool
-        switch(stype) {
-        case grpc_application_go.StorageType_CLUSTER_LOCAL:
-            sc = STORAGE_CLASS_AZURE_CLUSTER_LOCAL
-        case grpc_application_go.StorageType_CLUSTER_REPLICA:
-            sc = STORAGE_CLASS_AZURE_CLUSTER_REPLICA
-        default: sc = ""
-        }
-    case grpc_installer_go.Platform_MINIKUBE:
-        switch(stype) {
-        case grpc_application_go.StorageType_CLUSTER_LOCAL:
-            sc = STORAGE_CLASS_NALEJ_CLUSTER_LOCAL
-        case grpc_application_go.StorageType_CLUSTER_REPLICA:
-        	if ds.nodes < 3 {
-				log.Debug().Interface("Nodes",ds.nodes ).Msg("Less than minimum 3 required for Storage Type CLUSTER_REPLICA")
+func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageType) string {
+	sc := ""
+	// Get the right class based on cluster hosting environment
+	switch config.GetConfig().TargetPlatform {
+	case grpc_installer_go.Platform_AZURE:
+		// use azure provided storage class. By default managed-premium is local replicated PVs
+		// TODO: if we want we can create nalej storage class for azure to allocate PVs from non replicated pool
+		switch stype {
+		case grpc_application_go.StorageType_CLUSTER_LOCAL:
+			sc = STORAGE_CLASS_AZURE_CLUSTER_LOCAL
+		case grpc_application_go.StorageType_CLUSTER_REPLICA:
+			sc = STORAGE_CLASS_AZURE_CLUSTER_REPLICA
+		default:
+			sc = ""
+		}
+	case grpc_installer_go.Platform_MINIKUBE:
+		switch stype {
+		case grpc_application_go.StorageType_CLUSTER_LOCAL:
+			sc = STORAGE_CLASS_NALEJ_CLUSTER_LOCAL
+		case grpc_application_go.StorageType_CLUSTER_REPLICA:
+			if ds.nodes < 3 {
+				log.Debug().Interface("Nodes", ds.nodes).Msg("Less than minimum 3 required for Storage Type CLUSTER_REPLICA")
 			}
-            sc = STORAGE_CLASS_NALEJ_CLUSTER_REPLICA
-        default: sc = ""
-        }
-    default:
-        sc = ""
-    }
-    return sc
+			sc = STORAGE_CLASS_NALEJ_CLUSTER_REPLICA
+		default:
+			sc = ""
+		}
+	default:
+		sc = ""
+	}
+	return sc
 }
 
 // This function returns an array in case we support other Secrets in the future.
-func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go.ServiceInstance) []*v1.PersistentVolumeClaim {
-	if service.Storage == nil{
+func (ds *DeployableStorage) BuildStorageForServices(service *grpc_application_go.ServiceInstance) []*v1.PersistentVolumeClaim {
+	if service.Storage == nil {
 		return nil
 	}
 	pvcs := make([]*v1.PersistentVolumeClaim, 0)
@@ -141,7 +153,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		// TODO: Currently handle only cluster_local type, other types in plan phase.
-		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL && storage.Type != grpc_application_go.StorageType_CLUSTER_REPLICA{
+		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL && storage.Type != grpc_application_go.StorageType_CLUSTER_REPLICA {
 			// TODO:Ideally we should return error and user should know why
 			log.Error().Str("serviceName", service.Name).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
 			// service will fail if we continue, as no PVC can be bound
@@ -155,7 +167,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 			continue
 		}
 		// construct PVC ID - based on serviceId and storage Index
-		pvcId := common.GeneratePVCName(service.ServiceGroupInstanceId,service.ServiceId,fmt.Sprintf("%d",index))
+		pvcId := common.GeneratePVCName(service.ServiceGroupInstanceId, service.ServiceId, fmt.Sprintf("%d", index))
 		toAdd := ds.generatePVC(pvcId, service, storage)
 		pvcs = append(pvcs, toAdd)
 	}
@@ -167,7 +179,7 @@ func (ds*DeployableStorage) BuildStorageForServices(service *grpc_application_go
 }
 
 // storage should be build only once when platform application cluster modules are deployed.
-func (ds*DeployableStorage) Build() error {
+func (ds *DeployableStorage) Build() error {
 	for _, service := range ds.data.Stage.Services {
 		toAdd := ds.BuildStorageForServices(service)
 		if toAdd != nil && len(toAdd) > 0 {
@@ -178,7 +190,7 @@ func (ds*DeployableStorage) Build() error {
 	return nil
 }
 
-func (ds*DeployableStorage) Deploy(controller executor.DeploymentController) error {
+func (ds *DeployableStorage) Deploy(controller executor.DeploymentController) error {
 	numCreated := 0
 	for serviceId, pvcs := range ds.pvcs {
 		for _, toCreate := range pvcs {
@@ -196,7 +208,7 @@ func (ds*DeployableStorage) Deploy(controller executor.DeploymentController) err
 	return nil
 }
 
-func (ds*DeployableStorage) Undeploy() error {
+func (ds *DeployableStorage) Undeploy() error {
 	deleted := 0
 	for serviceId, pvcs := range ds.pvcs {
 		for _, toDelete := range pvcs {
@@ -213,5 +225,3 @@ func (ds*DeployableStorage) Undeploy() error {
 	log.Debug().Int("deleted", deleted).Msg("Persistence Storage have been deleted")
 	return nil
 }
-
-

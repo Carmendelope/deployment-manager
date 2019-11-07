@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package login_helper
 
 import (
@@ -12,11 +28,11 @@ import (
 )
 
 type Connection struct {
-	Hostname string
-	Port int
-	UseTLS bool
-	CACertPath string
-	ClientCertPath string
+	Hostname         string
+	Port             int
+	UseTLS           bool
+	CACertPath       string
+	ClientCertPath   string
 	SkipCAValidation bool
 }
 
@@ -34,10 +50,10 @@ func (c *Connection) GetInsecureConnection() (*grpc.ClientConn, derrors.Error) {
 	return conn, nil
 }
 
-func (c* Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error){
+func (c *Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error) {
 	rootCAs := x509.NewCertPool()
 	tlsConfig := &tls.Config{
-		ServerName:   c.Hostname,
+		ServerName: c.Hostname,
 	}
 
 	if c.CACertPath != "" {
@@ -58,7 +74,7 @@ func (c* Connection) GetSecureConnection() (*grpc.ClientConn, derrors.Error){
 
 	if c.ClientCertPath != "" {
 		log.Debug().Str("clientCertPath", c.ClientCertPath).Msg("loading client certificate")
-		clientCert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/tls.crt", c.ClientCertPath),fmt.Sprintf("%s/tls.key", c.ClientCertPath))
+		clientCert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/tls.crt", c.ClientCertPath), fmt.Sprintf("%s/tls.key", c.ClientCertPath))
 		if err != nil {
 			log.Error().Str("error", err.Error()).Msg("Error loading client certificate")
 			return nil, derrors.NewInternalError("Error loading client certificate")
@@ -93,7 +109,7 @@ func (c *Connection) GetConnection() (*grpc.ClientConn, derrors.Error) {
 
 // printRelevantTLSConfig prints some relevant information from a TLS Config structure, namely:
 // ClientAuth, ServerName. RootCAs, Certificates and InsecureSkipVerify
-func printRelevantTLSConfig (c *tls.Config) {
+func printRelevantTLSConfig(c *tls.Config) {
 	if int(c.ClientAuth) != 0 {
 		log.Debug().Int("ClientAuth", int(c.ClientAuth)).Msg("client auth")
 	}
