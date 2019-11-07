@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kubernetes
 
 import (
@@ -19,31 +35,30 @@ import (
 type LoadBalancerInfo struct {
 	ServiceId         string
 	ServiceInstanceId string
-	Services []ServiceInfo
+	Services          []ServiceInfo
 }
 
- type DeployableLoadBalancer struct {
-	 // kubernetes Client
-	 client v12.ServiceInterface
-	 // Deployment metadata
-	 data entities.DeploymentMetadata
-	 loadBalancers []ServiceInfo
+type DeployableLoadBalancer struct {
+	// kubernetes Client
+	client v12.ServiceInterface
+	// Deployment metadata
+	data          entities.DeploymentMetadata
+	loadBalancers []ServiceInfo
 }
 
 func NewDeployableLoadBalancer(client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableLoadBalancer {
 
 	return &DeployableLoadBalancer{
-		client: client.CoreV1().Services(data.Namespace),
-		data: data,
-		loadBalancers: make([]ServiceInfo,0),
+		client:        client.CoreV1().Services(data.Namespace),
+		data:          data,
+		loadBalancers: make([]ServiceInfo, 0),
 	}
 }
 
+func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *apiv1.Service {
 
-func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) *apiv1.Service {
-
-	extendedLabels := make(map[string]string,0)
-	extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] =  dl.data.FragmentId
+	extendedLabels := make(map[string]string, 0)
+	extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = dl.data.FragmentId
 	extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = dl.data.OrganizationId
 	extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = dl.data.AppDescriptorId
 	extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = dl.data.AppInstanceId
@@ -55,7 +70,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE] = utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE
 
 	extendedSelectors := map[string]string{
-		utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT :      dl.data.FragmentId,
+		utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       dl.data.FragmentId,
 		utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           dl.data.OrganizationId,
 		utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            dl.data.AppDescriptorId,
 		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           dl.data.AppInstanceId,
@@ -67,15 +82,15 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 	}
 
 	found := false
-	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
+	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++ {
 		port := service.ExposedPorts[portIndex]
 		// if there is a rule with a port and in the service definition this port has no endpoint -> Create a TCP load balancer
-		if port.ExposedPort == rule.TargetPort && (port.Endpoints == nil || len(port.Endpoints) == 0 ){
+		if port.ExposedPort == rule.TargetPort && (port.Endpoints == nil || len(port.Endpoints) == 0) {
 			found = true
 
 			ports := make([]apiv1.ServicePort, 0)
 			ports = append(ports, apiv1.ServicePort{
-				Port: port.ExposedPort,
+				Port:       port.ExposedPort,
 				TargetPort: intstr.FromInt(int(rule.TargetPort)),
 			})
 
@@ -83,14 +98,14 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 			k8sService := apiv1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: dl.data.Namespace,
-					Name: fmt.Sprintf("lb%s", common.FormatName(service.Name)),
-					Labels: extendedLabels,
+					Name:      fmt.Sprintf("lb%s", common.FormatName(service.Name)),
+					Labels:    extendedLabels,
 				},
 				Spec: apiv1.ServiceSpec{
 					ExternalName: fmt.Sprintf("lb%s", common.FormatName(service.Name)),
-					Ports: ports,
-					Type: apiv1.ServiceTypeLoadBalancer,
-					Selector: extendedSelectors,
+					Ports:        ports,
+					Type:         apiv1.ServiceTypeLoadBalancer,
+					Selector:     extendedSelectors,
 					// spec to preserve the client source IP
 					ExternalTrafficPolicy: apiv1.ServiceExternalTrafficPolicyTypeLocal,
 				},
@@ -105,7 +120,6 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 func (dl *DeployableLoadBalancer) GetId() string {
 	return dl.data.Stage.StageId
 }
-
 
 func (dl *DeployableLoadBalancer) Build() error {
 
@@ -134,12 +148,12 @@ func (dl *DeployableLoadBalancer) Deploy(controller executor.DeploymentControlle
 	for _, servInfo := range dl.loadBalancers {
 		created, err := dl.client.Create(&servInfo.Service)
 		if err != nil {
-			log.Error().Err(err).Msgf("error creating service %s",servInfo.Service.Name)
+			log.Error().Err(err).Msgf("error creating service %s", servInfo.Service.Name)
 			return err
 		}
-		log.Debug().Str("uid",string(created.GetUID())).Str("appInstanceID",dl.data.AppInstanceId).
+		log.Debug().Str("uid", string(created.GetUID())).Str("appInstanceID", dl.data.AppInstanceId).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
-		res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT],string(created.GetUID()),
+		res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT], string(created.GetUID()),
 			created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")

@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2018 Nalej Group - All Rights Reserved
+ * Copyright 2019 Nalej
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package network
@@ -73,7 +84,7 @@ func (h *Handler) SetServiceRoute(context context.Context, request *pbDeployment
 	return &pbCommon.Success{}, nil
 }
 
-func (h *Handler) AuthorizeZTConnection(_ context.Context, request *grpc_network_go.AuthorizeZTConnectionRequest) (*pbCommon.Success, error){
+func (h *Handler) AuthorizeZTConnection(_ context.Context, request *grpc_network_go.AuthorizeZTConnectionRequest) (*pbCommon.Success, error) {
 	log.Debug().Interface("request", request).Msg("authorize ZT Connection request")
 
 	vErr := entities.ValidateAuthorizeZTConnectionRequest(request)
@@ -89,7 +100,7 @@ func (h *Handler) AuthorizeZTConnection(_ context.Context, request *grpc_network
 }
 
 // JoinZTNetwork message to Request a zt-agent to join into a new Network
-func (h *Handler) JoinZTNetwork(_ context.Context, request *pbDeploymentMgr.JoinZTNetworkRequest) (*pbCommon.Success, error){
+func (h *Handler) JoinZTNetwork(_ context.Context, request *pbDeploymentMgr.JoinZTNetworkRequest) (*pbCommon.Success, error) {
 	log.Debug().Interface("request", request).Msg("join ZT Network request")
 
 	vErr := entities.ValidateJoinZTNetworkRequest(request)
@@ -104,7 +115,7 @@ func (h *Handler) JoinZTNetwork(_ context.Context, request *pbDeploymentMgr.Join
 
 }
 
-func (h *Handler) LeaveZTNetwork(_ context.Context, request *pbDeploymentMgr.LeaveZTNetworkRequest) (*pbCommon.Success, error){
+func (h *Handler) LeaveZTNetwork(_ context.Context, request *pbDeploymentMgr.LeaveZTNetworkRequest) (*pbCommon.Success, error) {
 	log.Debug().Interface("request", request).Msg("leave ZT Network request")
 
 	vErr := entities.ValidateLeaveZTNetworkRequest(request)
