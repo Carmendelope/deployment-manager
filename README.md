@@ -31,17 +31,6 @@ Tests are executed using Ginkgo. To run all the available tests:
 make test
 ```
 
-### Integration tests
-
-The following set of variables has to be set in order to proceed with integration tests.
-
-| Variable  | Example Value | Description |
-| ------------- | ------------- |------------- |
-| MANAGER_CLUSTER_IP | 127.0.0.1 | IP of the manager cluster in charge of this deployment manager |
-| RUN_INTEGRATION_TEST  | true | Run integration tests |
-| IT_CONDUCTOR_ADDRESS | localhost:5000 | Address of an available conductor for monitoring |
-
-
 ### Update dependencies
 
 Dependencies are managed using Godep. For an automatic dependencies download use:
@@ -67,11 +56,6 @@ deployment-manager-cli undeploy --orgId <organization id> --appId <app instance 
 
 ### Optional flag:
 `--server`: address where the component is deployed (`localhost:5200` by default.)
-
-
-## Known Issues
-
-Explain any relevant issues that may affect this repo.
 
 
 ## Contributing
