@@ -1,5 +1,17 @@
 /*
- * Copyright (C) 2019 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Watcher handles events from informers
@@ -17,9 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-        "k8s.io/client-go/kubernetes/scheme"
-        "k8s.io/client-go/rest"
-        "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 // Watcher sets up and manages the lifecycle of an informer; it deals with
@@ -66,7 +78,7 @@ func NewWatcher(client rest.Interface, gvk *schema.GroupVersionKind, resource st
 	informer := cache.NewSharedIndexInformer(watchlist, objType, 0 /* No resync */, cache.Indexers{})
 
 	watcher := &Watcher{
-		gvk: gvk,
+		gvk:      gvk,
 		informer: informer,
 	}
 

@@ -1,5 +1,17 @@
 /*
- * Copyright (C) 2019 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Prometheus implementation for metrics interface
@@ -9,8 +21,8 @@ package prometheus
 import (
 	"net/http"
 
-	"github.com/nalej/derrors"
 	"github.com/nalej/deployment-manager/pkg/metrics"
+	"github.com/nalej/derrors"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -29,7 +41,7 @@ type MetricsProvider struct {
 
 type Subsystem struct {
 	Created, Deleted, Errors prometheus.Counter
-	Running prometheus.Gauge
+	Running                  prometheus.Gauge
 }
 
 func NewMetricsProvider() (*MetricsProvider, derrors.Error) {
@@ -37,13 +49,12 @@ func NewMetricsProvider() (*MetricsProvider, derrors.Error) {
 
 	registry := prometheus.NewRegistry()
 
-	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-	})
+	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 
 	provider := &MetricsProvider{
-		registry: registry,
+		registry:   registry,
 		subsystems: map[metrics.MetricType]*Subsystem{},
-		handler: handler,
+		handler:    handler,
 	}
 
 	return provider, nil
@@ -98,7 +109,7 @@ func (p *MetricsProvider) GetCollector() metrics.Collector {
 	return p
 }
 
-func (p *MetricsProvider) getSubsystem(t metrics.MetricType) (*Subsystem) {
+func (p *MetricsProvider) getSubsystem(t metrics.MetricType) *Subsystem {
 	subsystem, found := p.subsystems[t]
 	if !found {
 		// NOTE/WARNING: We can do this without locking the map,

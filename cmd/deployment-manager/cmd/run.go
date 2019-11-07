@@ -1,7 +1,17 @@
 /*
- *  Copyright (C) 2018 Nalej Group - All Rights Reserved
+ * Copyright 2019 Nalej
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package cmd
@@ -52,7 +62,7 @@ func init() {
 	runCmd.Flags().StringP("dns", "s", "", "List of dns ips separated by commas")
 	runCmd.Flags().String("targetPlatform", "MINIKUBE", "Target platform: MINIKUBE or AZURE")
 
-	runCmd.Flags().String("publicRegistryUserName",  "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
+	runCmd.Flags().String("publicRegistryUserName", "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
 	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
 	runCmd.Flags().Uint32("ztSidecarPort", 1000, "Port where the ZT sidecar expects route updates")
@@ -66,33 +76,33 @@ func init() {
 func Run() {
 
 	config := config.Config{
-		Debug:                debugLevel,
-		Port:                 uint32(viper.GetInt32("port")),
-		MetricsPort:          uint32(viper.GetInt32("metricsPort")),
-		ClusterAPIAddress:    viper.GetString("clusterAPIAddress"),
-		ManagementHostname:   viper.GetString("managementHostname"),
-		ClusterAPIHostname:   viper.GetString("clusterAPIHostname"),
-		ClusterAPIPort:       uint32(viper.GetInt32("clusterAPIPort")),
-		UseTLSForClusterAPI:  viper.GetBool("useTLSForClusterAPI"),
-		LoginHostname:        viper.GetString("loginHostname"),
-		LoginPort:            uint32(viper.GetInt32("loginPort")),
-		UseTLSForLogin:       viper.GetBool("useTLSForLogin"),
-		ClusterPublicHostname:viper.GetString("clusterPublicHostname"),
-		DeploymentMgrAddress: viper.GetString("depMgrAddress"),
-		Local:                viper.GetBool("local"),
-		Email:                viper.GetString("email"),
-		Password:             viper.GetString("password"),
-		DNS:                  viper.GetString("dns"),
-		TargetPlatformName:   viper.GetString("targetPlatform"),
-		PublicCredentials:    grpc_application_go.ImageCredentials{
-			Username:             viper.GetString("publicRegistryUserName"),
-			Password:             viper.GetString("publicRegistryPassword"),
-			Email:                "devops@nalej.com",
-			DockerRepository:     viper.GetString("publicRegistryURL"),
+		Debug:                 debugLevel,
+		Port:                  uint32(viper.GetInt32("port")),
+		MetricsPort:           uint32(viper.GetInt32("metricsPort")),
+		ClusterAPIAddress:     viper.GetString("clusterAPIAddress"),
+		ManagementHostname:    viper.GetString("managementHostname"),
+		ClusterAPIHostname:    viper.GetString("clusterAPIHostname"),
+		ClusterAPIPort:        uint32(viper.GetInt32("clusterAPIPort")),
+		UseTLSForClusterAPI:   viper.GetBool("useTLSForClusterAPI"),
+		LoginHostname:         viper.GetString("loginHostname"),
+		LoginPort:             uint32(viper.GetInt32("loginPort")),
+		UseTLSForLogin:        viper.GetBool("useTLSForLogin"),
+		ClusterPublicHostname: viper.GetString("clusterPublicHostname"),
+		DeploymentMgrAddress:  viper.GetString("depMgrAddress"),
+		Local:                 viper.GetBool("local"),
+		Email:                 viper.GetString("email"),
+		Password:              viper.GetString("password"),
+		DNS:                   viper.GetString("dns"),
+		TargetPlatformName:    viper.GetString("targetPlatform"),
+		PublicCredentials: grpc_application_go.ImageCredentials{
+			Username:         viper.GetString("publicRegistryUserName"),
+			Password:         viper.GetString("publicRegistryPassword"),
+			Email:            "devops@nalej.com",
+			DockerRepository: viper.GetString("publicRegistryURL"),
 		},
-		ZTSidecarPort: uint32(viper.GetInt32("ztSidecarPort")),
-		CACertPath: viper.GetString("caCertPath"),
-		ClientCertPath: viper.GetString("clientCertPath"),
+		ZTSidecarPort:            uint32(viper.GetInt32("ztSidecarPort")),
+		CACertPath:               viper.GetString("caCertPath"),
+		ClientCertPath:           viper.GetString("clientCertPath"),
 		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),
 	}
 

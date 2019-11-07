@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kubernetes
 
 import (
@@ -61,8 +77,7 @@ func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 	return result
 }
 
-
-func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string){
+func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
 	ingressName := service.Name
 	if rule.TargetPort != 80 {
 		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
@@ -82,17 +97,17 @@ func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.Servic
 	return ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix
 }
 
-func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_application_go.ServiceInstance, rule * grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
+func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
 	annotationPath := ""
 
 	found := false
-	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++{
+	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++ {
 		port := service.ExposedPorts[portIndex]
 		if port.ExposedPort == rule.TargetPort && port.Endpoints != nil {
-			for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex ++ {
+			for endpointIndex := 0; endpointIndex < len(service.ExposedPorts[portIndex].Endpoints) && !found; endpointIndex++ {
 				endpoint := service.ExposedPorts[portIndex].Endpoints[endpointIndex]
 				if endpoint.Type == grpc_application_go.EndpointType_WEB || endpoint.Type == grpc_application_go.EndpointType_REST {
 					if endpoint.Path != "/" {
@@ -121,14 +136,12 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		return nil
 	}
 
-
 	ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix := di.getNamePrefixes(service, rule)
 
 	// labels cannot be higher than 63 characters
 	ingressPrefixName := fmt.Sprintf("%s.%s.%s", ingressName, serviceGroupInstPrefix, appInstPrefix)
 	ingressGlobalFqdn := fmt.Sprintf("%s.%s.%s.%s.ep.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix, config.GetConfig().ManagementHostname)
 	ingressHostname := fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, config.GetConfig().ClusterPublicHostname)
-
 
 	// create the ingress annotations
 	annotations := map[string]string{
@@ -152,17 +165,17 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 			Name:      fmt.Sprintf("ingress-%s-%d", service.ServiceId, rule.TargetPort),
 			Namespace: di.data.Namespace,
 			Labels: map[string]string{
-				"cluster":                                        "application",
-				"component":                                      "ingress-nginx",
-				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT: di.data.FragmentId,
-				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:    ingressPrefixName,
-				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:     di.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:      di.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:     di.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID:            di.data.Stage.StageId,
-				utils.NALEJ_ANNOTATION_SERVICE_ID:          service.ServiceId,
-				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID: service.ServiceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:    service.ServiceGroupId,
+				"cluster":   "application",
+				"component": "ingress-nginx",
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       di.data.FragmentId,
+				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:          ingressPrefixName,
+				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           di.data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            di.data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           di.data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:                  di.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_SERVICE_ID:                service.ServiceId,
+				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
 			},
 			Annotations: annotations,
@@ -191,9 +204,6 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		},
 	}
 }
-
-
-
 
 // TODO Check the rules to build the Ingresses.
 func (di *DeployableIngress) Build() error {

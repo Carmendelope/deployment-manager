@@ -1,5 +1,17 @@
 /*
- * Copyright (C) 2019 Nalej - All Rights Reserved
+ * Copyright 2019 Nalej
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 // Prometheus utils
@@ -11,8 +23,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/nalej/derrors"
 	"github.com/nalej/deployment-manager/pkg/metrics"
+	"github.com/nalej/derrors"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -22,7 +34,7 @@ import (
 // This function turned out way too long - it's only used for some debug logging :(
 func parseMetrics(pMetrics []*dto.MetricFamily) (metrics.Metrics, derrors.Error) {
 	parsedMetrics := metrics.Metrics{}
-	for _, pMetric := range(pMetrics) {
+	for _, pMetric := range pMetrics {
 		// Parse the metric name into metric types and the specific counter
 		metricSplits := strings.Split(*pMetric.Name, "_")
 		if len(metricSplits) < 2 {
@@ -88,7 +100,7 @@ func createSubsystem(t metrics.MetricType) *Subsystem {
 	return &Subsystem{
 		Created: prometheus.NewCounter(createdOpts),
 		Deleted: prometheus.NewCounter(deletedOpts),
-		Errors: prometheus.NewCounter(errorsOpts),
+		Errors:  prometheus.NewCounter(errorsOpts),
 		Running: prometheus.NewGauge(runningOpts),
 	}
 }
