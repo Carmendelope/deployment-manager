@@ -22,7 +22,7 @@ spec:
       serviceAccountName: deployment-manager
       containers:
       - name: deployment-manager
-        image: __NPH_REGISTRY/__NPH_REGISTRY_NAMESPACE/deployment-manager:__NPH_VERSION
+        image: __NPH_REGISTRY_NAMESPACE/deployment-manager:__NPH_VERSION
         imagePullPolicy: Always
         securityContext:
           runAsUser: 2000
@@ -127,8 +127,6 @@ spec:
           - name: ca-certificate-volume
             readOnly: true
             mountPath: /nalej/ca-certificate
-      imagePullSecrets:
-      - name: nalej-registry
       volumes:
         - name: tls-client-certificate-volume
           secret:
