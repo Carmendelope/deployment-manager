@@ -8,32 +8,25 @@ TARGET=bin
 
 # Component variables
 VERSION=$(shell jq -r '.version' .nalej-component.json)
+DOCKER_VERSION=${VERSION}
 COMMIT=$(shell git rev-parse HEAD)
 APPS=$(shell jq -r '.application_list[]' .nalej-component.json)
 IMGS=$(shell jq -r '.image_list[]' .nalej-component.json)
 
 # Docker variables
-ACR_DEVELOPMENT=nalejdev
-ACR_STAGING=nalejstaging
-ACR_PRODUCTION=nalejregistry
-ACR_PUBLIC=nalejpublic
-DOCKER_REGISTRY:=development
-AZURE_CR=$(ACR_DEVELOPMENT)
-DOCKER_REPOSITORY=$(shell whoami)
+ENVIRONMENT:=development
+DOCKER_REPOSITORY=${DOCKERHUB_USER}
+LATEST:=false
 
-ifeq ($(DOCKER_REGISTRY),staging)
-	AZURE_CR=$(ACR_STAGING)
-	DOCKER_REPOSITORY=nalej
+ifeq ($(ENVIRONMENT),development)
+	LATEST=false
 endif
 
-ifeq ($(DOCKER_REGISTRY),production)
-	AZURE_CR=$(ACR_PRODUCTION)
+ifeq ($(ENVIRONMENT),staging)
 	DOCKER_REPOSITORY=nalej
+	DOCKER_VERSION=edge
 endif
 
-ifeq ($(DOCKER_REGISTRY),public)
-	AZURE_CR=$(ACR_PUBLIC)
+ifeq ($(ENVIRONMENT),production)
 	DOCKER_REPOSITORY=nalej
 endif
-
-REGISTRY_HOST=$(AZURE_CR).azurecr.io

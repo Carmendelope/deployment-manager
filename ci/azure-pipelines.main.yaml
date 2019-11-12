@@ -7,7 +7,7 @@ variables:
   - name: GOBIN
     value: '$(GOPATH)/bin'
   - name: GOROOT
-    value: '/usr/local/go1.12'
+    value: '/usr/local/go1.13'
   - name: GOPATH
     value: '$(system.defaultWorkingDirectory)/gopath'
   - name: modulePath
@@ -19,13 +19,13 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-      tags: v1.0.1
+      ref: refs/tags/v1.0.3
 
 jobs:
 - job: MainWorkflow
 
   pool:
-    vmImage: 'Ubuntu-16.04'
+    vmImage: 'ubuntu-latest'
   
   steps:
   - template: misc/variables.yaml@ci_templates
@@ -73,28 +73,20 @@ jobs:
       version: $(version)
   
   - template: docker/login.yaml@ci_templates
-    parameters:
-      username: $(spAppId)
-      password: $(spPassword)
-      dockerRegistry: $(stagingDockerRegistry)
-    
+
   - template: docker/build.yaml@ci_templates
     parameters:
       modulePath: $(modulePath)
       imageList: $(imageList)
-      dockerRegistry: $(stagingDockerRegistry)
-      version: $(version)
+      version: edge
   
   - template: docker/push.yaml@ci_templates
     parameters:
       modulePath: $(modulePath)
       imageList: $(imageList)
-      dockerRegistry: $(stagingDockerRegistry)
-      version: $(version)
+      version: edge
     
   - template: docker/logout.yaml@ci_templates
-    parameters:
-      dockerRegistry: $(stagingDockerRegistry)
 
   - template: slack/build/finish.yaml@ci_templates
     parameters:

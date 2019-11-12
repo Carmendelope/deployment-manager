@@ -8,7 +8,6 @@
     "deployment-manager"
   ],
   "tools": [
-    "azure",
     "k8s",
     "docker"
   ]
