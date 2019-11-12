@@ -40,7 +40,7 @@ const (
 type DeployableKubernetesStage struct {
 	// kubernetes Client
 	client *kubernetes.Clientset
-	// deployment data
+	// deployment Data
 	data entities.DeploymentMetadata
 	// collection of Deployments
 	Deployments *DeployableDeployments

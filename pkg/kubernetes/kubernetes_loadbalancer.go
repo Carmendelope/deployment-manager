@@ -106,7 +106,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 					Ports:        ports,
 					Type:         apiv1.ServiceTypeLoadBalancer,
 					Selector:     extendedSelectors,
-					// spec to preserve the client source IP
+					// spec to preserve the Client source IP
 					ExternalTrafficPolicy: apiv1.ServiceExternalTrafficPolicyTypeLocal,
 				},
 			}

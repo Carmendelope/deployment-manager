@@ -149,7 +149,7 @@ func (d *DeployableDeviceGroups) Deploy(controller executor.DeploymentController
 		log.Debug().Str("uid", string(created.GetUID())).
 			Str("name", servInfo.Service.Name).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
-		//res := entities.NewMonitoredPlatformResource(string(created.GetUID()), d.data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
+		//res := entities.NewMonitoredPlatformResource(string(created.GetUID()), d.Data, servInfo.ServiceId, servInfo.ServiceInstanceId,"")
 		res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT], string(created.GetUID()),
 			created.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], created.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
 			created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], created.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],

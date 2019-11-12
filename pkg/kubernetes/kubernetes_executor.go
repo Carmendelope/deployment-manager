@@ -194,7 +194,7 @@ func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId strin
 	deleteOptions := metav1.DeleteOptions{}
 	queryOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("nalej-deployment-fragment=%s", fragmentId)}
 
-	// deployments
+	// Deployments
 	err := k.Client.AppsV1().Deployments(namespace).DeleteCollection(&deleteOptions, queryOptions)
 	if err != nil {
 		log.Error().Err(err).Msg("error undeploying fragments")

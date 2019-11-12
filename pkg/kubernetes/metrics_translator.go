@@ -47,7 +47,7 @@ type MetricsTranslator struct {
 	// Server startup
 	startupTime metav1.Time
 
-	// We have a reference back to the data stores of the informers for
+	// We have a reference back to the Data stores of the informers for
 	// each kind of resource we support. We use this to look up and
 	// cross-reference resources to figure out the needed translation.
 	stores map[string]cache.Store

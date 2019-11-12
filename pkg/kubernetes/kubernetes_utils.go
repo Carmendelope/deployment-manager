@@ -57,7 +57,7 @@ func ReformatLabel(input string) string {
 	return adapted
 }
 
-// Create a Kubernetes client to interact as kubectl
+// Create a Kubernetes Client to interact as kubectl
 func GetKubernetesClient(internal bool) (*kubernetes.Clientset, derrors.Error) {
 	var c *kubernetes.Clientset
 	var err error
@@ -69,11 +69,11 @@ func GetKubernetesClient(internal bool) (*kubernetes.Clientset, derrors.Error) {
 	}
 	if err != nil {
 		log.Error().Err(err).Msg("impossible to create kubernetes clientset")
-		return nil, derrors.AsError(err, "impossible to create kubernetes client")
+		return nil, derrors.AsError(err, "impossible to create kubernetes Client")
 	}
 	if c == nil {
-		log.Error().Msg("kubernetes client set is nil")
-		return nil, derrors.NewInternalError("kubernetes client set was nil")
+		log.Error().Msg("kubernetes Client set is nil")
+		return nil, derrors.NewInternalError("kubernetes Client set was nil")
 	}
 	return c, nil
 }

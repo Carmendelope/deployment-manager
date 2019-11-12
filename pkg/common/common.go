@@ -110,3 +110,17 @@ func GetNamePVC(name string, id string, index string) string {
 func GetServiceFQDN(serviceName string, organizationId string, appInstanceId string) string {
 	return fmt.Sprintf("%s-%s-%s", FormatName(serviceName), organizationId[0:10], appInstanceId[0:10])
 }
+
+// Helping function to extract a boolean pointer from a boolean.
+// params:
+//  b
+// return:
+//  The corresponding pointer.
+func BoolPtr(b bool) *bool { return &b }
+
+
+// Helping function for pointer conversion.
+func Int32Ptr(i int32) *int32 { return &i }
+
+// Helping function for pointer conversion.
+func Int64Ptr(i int64) *int64 { return &i }

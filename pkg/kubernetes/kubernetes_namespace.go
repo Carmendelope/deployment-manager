@@ -40,7 +40,7 @@ const NamespaceListTimeout = 2
 type DeployableNamespace struct {
 	// kubernetes Client
 	client v12.NamespaceInterface
-	// deployment data
+	// deployment Data
 	data entities.DeploymentMetadata
 	// namespace
 	namespace apiv1.Namespace
