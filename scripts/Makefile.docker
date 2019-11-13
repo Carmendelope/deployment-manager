@@ -24,7 +24,7 @@ define docker-push-recipe
 	if [ -f components/$$img/$(DOCKERFILE) ]; then \
 		{ $(DOCKERCMD) push $(DOCKER_REPOSITORY)/$$img:$(DOCKER_VERSION) || exit 1; } && \
 		echo " - Pushed $$img Docker image to DockerHub" ; \
-		if [ $(LATEST) == "true" ]; then \
+		if [ "$(LATEST)" == "true" ]; then \
 			{ $(DOCKERCMD) tag $(DOCKER_REPOSITORY)/$$img:$(DOCKER_VERSION) $(DOCKER_REPOSITORY)/$$img:latest || exit 1; } && \
 			{ $(DOCKERCMD) push $(DOCKER_REPOSITORY)/$$img:latest || exit 1; } ; \
 		fi ; \
