@@ -15,10 +15,9 @@
  *
  */
 
-package network
+package executor
 
 import (
-    "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/derrors"
 )
 
@@ -28,11 +27,11 @@ import (
 type NetworkDecorator interface {
 
     // Decoratre with networking solutions entries when they are built.
-    Build(aux executor.Deployable, args ...interface{}) derrors.Error
+    Build(aux Deployable, args ...interface{}) derrors.Error
 
     // Decorate with networking solutions a deployable entry when its deployment is called.
-    Deploy(aux executor.Deployable, args ...interface{}) derrors.Error
+    Deploy(aux Deployable, args ...interface{}) derrors.Error
 
     // Remove any unnecessary entries when a deployable element is removed.
-    Undeploy(aux executor.Deployable, args ...interface{}) derrors.Error
+    Undeploy(aux Deployable, args ...interface{}) derrors.Error
 }

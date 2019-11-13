@@ -66,12 +66,13 @@ type DeployableKubernetesStage struct {
 //   stage these resources belong to
 //   targetNamespace name of the namespace the resources will be deployed into
 func NewDeployableKubernetesStage(
-	client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableKubernetesStage {
+	client *kubernetes.Clientset, data entities.DeploymentMetadata,
+	networkDecorator executor.NetworkDecorator) *DeployableKubernetesStage {
 	return &DeployableKubernetesStage{
 		client:              client,
 		data:                data,
 		Services:            NewDeployableService(client, data),
-		Deployments:         NewDeployableDeployment(client, data),
+		Deployments:         NewDeployableDeployment(client, data, networkDecorator),
 		Ingresses:           NewDeployableIngress(client, data),
 		Configmaps:          NewDeployableConfigMaps(client, data),
 		Secrets:             NewDeployableSecrets(client, data),

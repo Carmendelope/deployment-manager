@@ -36,8 +36,6 @@ import (
 )
 
 const (
-	// Name of the Docker ZT agent image
-	ZTAgentImageName = "nalejpublic.azurecr.io/nalej/zt-agent:v0.4.0"
 	// Prefix defining Nalej Services
 	NalejServicePrefix = "NALEJ_SERV_"
 	// Default imagePullPolicy
@@ -51,13 +49,6 @@ const (
 // Deployable Deployments
 //-----------------------
 
-// Struct for internal use containing information for a deployment. This is intended to be used by the monitoring service.
-type DeploymentInfo struct {
-	ServiceId         string
-	ServiceInstanceId string
-	Deployment        appsv1.Deployment
-}
-
 type DeployableDeployments struct {
 	// kubernetes Client
 	Client v1.DeploymentInterface
@@ -65,27 +56,28 @@ type DeployableDeployments struct {
 	Data entities.DeploymentMetadata
 	// array of Deployments ready to be deployed
 	// [[service_id, service_instance_id, deployment],...]
-	Deployments []DeploymentInfo
+	Deployments []appsv1.Deployment
 	// array of agents deployed for every service
 	// [[service_id, service_instance_id, deployment],...]
-	ztAgents []DeploymentInfo
+	//ztAgents []DeploymentInfo
+	// network decorator object for deployments
+	networkDecorator executor.NetworkDecorator
 }
 
 func NewDeployableDeployment(
-	client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableDeployments {
+	client *kubernetes.Clientset, data entities.DeploymentMetadata, networkDecorator executor.NetworkDecorator) *DeployableDeployments {
 	return &DeployableDeployments{
 		Client:      client.AppsV1().Deployments(data.Namespace),
 		Data:        data,
-		Deployments: make([]DeploymentInfo, 0),
-		ztAgents:    make([]DeploymentInfo, 0),
+		Deployments: make([]appsv1.Deployment, 0),
+		networkDecorator: networkDecorator,
 	}
 }
 
 // NewDeployableDeploymentForTest creates a new empty DeployableDeployment (only for TEST!)
 func NewDeployableDeploymentForTest() *DeployableDeployments {
 	return &DeployableDeployments{
-		Deployments: make([]DeploymentInfo, 0),
-		ztAgents:    make([]DeploymentInfo, 0),
+		Deployments: make([]appsv1.Deployment, 0),
 	}
 }
 
@@ -308,19 +300,23 @@ func (d *DeployableDeployments) Build() error {
 				append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
 		}
 
-		d.Deployments = append(d.Deployments, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, deployment})
+		d.Deployments = append(d.Deployments, deployment)
 
-		// If we have at least one single port defined there will be a K8s service. Create the corresponding proxy agent
-		if len(service.ExposedPorts) != 0 {
-			agent := d.createZtAgent(service, extendedLabels)
-			d.ztAgents = append(d.ztAgents, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, agent})
+		// call the network decorator
+		errNetDecorator := d.networkDecorator.Build(d,service)
+		if errNetDecorator != nil {
+			log.Error().Err(errNetDecorator).Msg("error building network components")
+			return errNetDecorator
 		}
 	}
+
+
 
 	return nil
 }
 
 // Private helper function to generate zt agents
+/*
 func (d *DeployableDeployments) createZtAgent(service *grpc_application_go.ServiceInstance, extendedLabels map[string]string) appsv1.Deployment {
 	// value for privileged user
 	user0 := int64(0)
@@ -434,6 +430,7 @@ func (d *DeployableDeployments) createZtAgent(service *grpc_application_go.Servi
 	}
 	return agent
 }
+*/
 
 /*
 
@@ -659,7 +656,7 @@ func (d *DeployableDeployments) Build() error {
 
 
 func (d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
-
+	/*
 	for _, depInfo := range d.ztAgents {
 		deployed, err := d.Client.Create(&depInfo.Deployment)
 		if err != nil {
@@ -675,17 +672,21 @@ func (d *DeployableDeployments) Deploy(controller executor.DeploymentController)
 			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
 		controller.AddMonitoredResource(&res)
 	}
-
+	*/
 	// same approach for service Deployments
-	for _, depInfo := range d.Deployments {
+	for _, deployment := range d.Deployments {
 
-		deployed, err := d.Client.Create(&depInfo.Deployment)
+		deployed, err := d.Client.Create(&deployment)
 		if err != nil {
-			log.Error().Interface("deployment", depInfo.Deployment).Err(err).Msgf("error creating deployment %s", depInfo.Deployment.Name)
+			log.Debug().Interface("deployment", deployment).
+				Err(err).Msgf("error creating deployment %s", deployment.Name)
+			log.Error().Interface("deployment", deployment).
+				Err(err).Msgf("error creating deployment %s", deployment.Name)
 			return err
 		}
 		log.Debug().Str("uid", string(deployed.GetUID())).Str("appInstanceID", d.Data.AppInstanceId).
-			Str("serviceID", depInfo.ServiceId).Str("serviceInstanceId", depInfo.ServiceInstanceId).
+			Str("serviceID", deployment.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID]).
+			Str("serviceInstanceId", deployment.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID]).
 			Msg("add nalej deployment resource to be monitored")
 		res := entities.NewMonitoredPlatformResource(deployed.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT], string(deployed.GetUID()),
 			deployed.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], deployed.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
@@ -699,9 +700,9 @@ func (d *DeployableDeployments) Deploy(controller executor.DeploymentController)
 
 func (d *DeployableDeployments) Undeploy() error {
 	for _, dep := range d.Deployments {
-		err := d.Client.Delete(dep.Deployment.Name, metav1.NewDeleteOptions(DeleteGracePeriod))
+		err := d.Client.Delete(dep.Name, metav1.NewDeleteOptions(DeleteGracePeriod))
 		if err != nil {
-			log.Error().Err(err).Msgf("error creating deployment %s", dep.Deployment.Name)
+			log.Error().Err(err).Msgf("error creating deployment %s", dep.Name)
 			return err
 		}
 	}
@@ -786,9 +787,6 @@ func (d *DeployableDeployments) getContainerEnvVariables(service *pbApplication.
 		},
 		{
 			Name: utils.NALEJ_ENV_ZT_NETWORK_ID, Value: d.Data.ZtNetworkId,
-		},
-		{
-			Name: utils.NALEJ_ENV_IS_PROXY, Value: fmt.Sprintf("%t", isProxy),
 		},
 		{
 			Name: utils.NALEJ_ENV_MANAGER_ADDR, Value: config.GetConfig().DeploymentMgrAddress,

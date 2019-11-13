@@ -29,6 +29,22 @@ import (
 
 const EnvClusterId = "CLUSTER_ID"
 
+type NetworkType string
+
+const (
+	NetworkTypeError = ""
+	NetworkTypeZt = "zt"
+)
+
+func NetworkTypeFromString(net string) (NetworkType, error) {
+	switch net {
+	case NetworkTypeZt:
+		return NetworkTypeZt, nil
+	default:
+		return NetworkTypeError, derrors.NewInvalidArgumentError("unknown network type")
+	}
+}
+
 // Configuration structure
 type Config struct {
 	// Debug is enabled
@@ -37,9 +53,6 @@ type Config struct {
 	Port uint32
 	// port for HTTP metrics endpoint
 	MetricsPort uint32
-	// ClusterAPIAddress address
-	// Deprecated: Use clusterAPIHostname and clusterAPIPort instead.
-	ClusterAPIAddress string
 	// ClusterAPIHostname with the hostname of the cluster API on the management cluster
 	ClusterAPIHostname string
 	// ClusterAPIPort with the port where the cluster API is listening.
@@ -83,6 +96,8 @@ type Config struct {
 	ClientCertPath string
 	// Skip Server validation
 	SkipServerCertValidation bool
+	// Network type
+	NetworkType NetworkType
 }
 
 func (conf *Config) envOrElse(envName string, paramValue string) string {
@@ -111,9 +126,6 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("metricsPort must be valid")
 	}
 
-	if conf.ClusterAPIAddress != "" {
-		return derrors.NewInvalidArgumentError("clusterAPIAddress has been deprecated")
-	}
 
 	if conf.ClusterAPIHostname == "" || conf.ClusterAPIPort <= 0 {
 		return derrors.NewInvalidArgumentError("clusterAPIHostname and clusterAPIPort must me set")
@@ -163,13 +175,11 @@ func (conf *Config) Print() {
 	log.Info().Str("URL", conf.LoginHostname).Uint32("port", conf.LoginPort).Bool("TLS", conf.UseTLSForLogin).Msg("Login API on management cluster")
 	log.Info().Str("URL", conf.ManagementHostname).Msg("Management hostname")
 	log.Info().Str("URL", conf.ClusterPublicHostname).Msg("Cluster public hostname")
-	if conf.ClusterAPIAddress != "" {
-		log.Warn().Str("address", conf.ClusterAPIAddress).Msg("Deprecated Cluster API address is set")
-	}
 	log.Info().Str("Email", conf.Email).Str("password", strings.Repeat("*", len(conf.Password))).Msg("Application cluster credentials")
 	log.Info().Str("DNS", conf.DNS).Msg("List of DNS ips")
 	log.Info().Str("type", conf.TargetPlatform.String()).Msg("Target platform")
 	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
+	log.Info().Interface("networkType", conf.NetworkType).Msg("Network type")
 
 }
 

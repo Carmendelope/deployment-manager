@@ -70,16 +70,22 @@ func init() {
 	runCmd.Flags().String("clientCertPath", "", "Path for the client certificate")
 	runCmd.Flags().Bool("skipServerCertValidation", true, "Skip CA authentication validation")
 
+	runCmd.Flags().String("networkType", "zt", "Define the underlying networking type for the user apps.")
+
 	viper.BindPFlags(runCmd.Flags())
 }
 
 func Run() {
 
+	netType, err := config.NetworkTypeFromString(viper.GetString("networkType"))
+	if err != nil {
+		return
+	}
+
 	config := config.Config{
 		Debug:                 debugLevel,
 		Port:                  uint32(viper.GetInt32("port")),
 		MetricsPort:           uint32(viper.GetInt32("metricsPort")),
-		ClusterAPIAddress:     viper.GetString("clusterAPIAddress"),
 		ManagementHostname:    viper.GetString("managementHostname"),
 		ClusterAPIHostname:    viper.GetString("clusterAPIHostname"),
 		ClusterAPIPort:        uint32(viper.GetInt32("clusterAPIPort")),
@@ -104,6 +110,8 @@ func Run() {
 		CACertPath:               viper.GetString("caCertPath"),
 		ClientCertPath:           viper.GetString("clientCertPath"),
 		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),
+		NetworkType: 		  netType,
+
 	}
 
 	log.Info().Msg("launching deployment manager...")

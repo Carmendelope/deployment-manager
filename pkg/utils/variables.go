@@ -24,6 +24,8 @@ const (
 	NALEJ_ANNOTATION_CLUSTER_ID = "cluster-id"
 	// Identifier for the ZT network
 	NALEJ_ANNOTATION_ZT_NETWORK_ID = "nalej-zt-network-id"
+	// Boolean value setting a container to be used as an inbound proxy
+	NALEJ_ANNOTATION_IS_PROXY = "nalej-is-proxy"
 	// Address of the manager cluster
 	NALEJ_ANNOTATION_MANAGER_ADDR = "nalej-manager-addr"
 	// Annotation for the deployment id

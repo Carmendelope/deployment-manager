@@ -70,13 +70,14 @@ func NewKubernetesExecutor(internal bool, controller executor.DeploymentControll
 	return &toReturn, err
 }
 
-func (k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMetadata) (executor.Deployable, error) {
+func (k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMetadata,
+	networkDecorator executor.NetworkDecorator) (executor.Deployable, error) {
 
 	log.Debug().Msgf("fragment %s stage %s requested to be translated into K8s deployable",
 		metadata.FragmentId, metadata.Stage.StageId)
 
 	var resources executor.Deployable
-	k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata)
+	k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata, networkDecorator)
 	resources = k8sDeploy
 
 	err := k8sDeploy.Build()

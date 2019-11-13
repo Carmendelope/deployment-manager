@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"github.com/nalej/deployment-manager/pkg/common"
 	"github.com/nalej/deployment-manager/pkg/config"
-	"github.com/nalej/deployment-manager/pkg/decorators/network"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/kubernetes"
-	"github.com/nalej/derrors"
+    "github.com/nalej/deployment-manager/pkg/utils"
+    "github.com/nalej/derrors"
 	"github.com/nalej/grpc-application-go"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -49,40 +49,39 @@ const (
 )
 
 type ZerotierDecorator struct {
+    // Empty
 }
 
-func NewZerotierDecorator() network.NetworkDecorator {
+func NewZerotierDecorator() executor.NetworkDecorator {
 	return &ZerotierDecorator{}
 }
 
+
 func (d *ZerotierDecorator) Build(aux executor.Deployable, args ...interface{}) derrors.Error {
 	switch target := aux.(type) {
+	// Process a deployment
 	case *kubernetes.DeployableDeployments:
 		// We expect a service to be sent as first argument
 		if len(args) != 1 {
 			return derrors.NewInvalidArgumentError("ZerotierDecorator expects one argument")
 		}
 		switch serv := args[0].(type) {
-		case grpc_application_go.ServiceInstance:
-			switch vars := args[0].(type) {
-			case []apiv1.EnvVar:
-				errSidecars := d.createSidecars(target, serv, vars)
-				if errSidecars != nil {
-					return errSidecars
-				}
-				errInbounds := d.createInbounds(target, serv, vars)
-				if errInbounds != nil {
-					return errInbounds
-				}
-			default:
-				return derrors.NewInvalidArgumentError("expected array of variables as second argument")
+		case *grpc_application_go.ServiceInstance:
+			errSidecars := d.createSidecars(target, serv)
+			if errSidecars != nil {
+				return errSidecars
 			}
-
-		default:
+			errInbounds := d.createInbounds(target, serv)
+			if errInbounds != nil {
+				return errInbounds
+			}
+        default:
 			return derrors.NewInvalidArgumentError("expected deployment service in first argument")
 		}
+    default:
+        // nothing to do
+        return nil
 	}
-
 	return nil
 }
 
@@ -94,17 +93,22 @@ func (d *ZerotierDecorator) Undeploy(aux executor.Deployable, args ...interface{
 	return nil
 }
 
-// Create the ZT sidecars that give access to the ZT network.
+// Create the ZT sidecars that give access to the ZT network. Modify the generated deployments to include a sidecar
+// with all the necessary content to deploy a ZT sidecar. This new entries are automatically added to the deployable.
+// params:
+//   dep the object with the deployable information
+//   service the original service that is going to be translated into a set of k8s deployments
+// returns:
+//   error if any
 func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments,
-	service grpc_application_go.ServiceInstance, depVariables map[string]string) derrors.Error {
+	service *grpc_application_go.ServiceInstance) derrors.Error {
 
 	// value for privileged user
 	user0 := int64(0)
 	privilegedUser := &user0
 
 	// extend variables to indicate that this is not an inbound
-	extendedLabels := depVariables
-	extendedLabels[ZtIsProxyAnnotation] = "false"
+	extendedLabels := generateContainerVars(dep, service, false)
 
 	// extend created deployments with the ZT additional workers
 	// Every deployment must have a ZT sidecar and an additional proxy if services are enabled.
@@ -167,7 +171,7 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 			},
 		}
 		// Extend the containers with the sidecar
-		entry.Deployment.Spec.Template.Spec.Containers = append(entry.Deployment.Spec.Template.Spec.Containers, ztContainer)
+		entry.Spec.Template.Spec.Containers = append(entry.Spec.Template.Spec.Containers, ztContainer)
 		// Extend the volumes with the zt required volume
 		ztVolume := apiv1.Volume{
 			// zerotier sidecar volume
@@ -179,10 +183,10 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 			},
 		}
 
-		if len(entry.Deployment.Spec.Template.Spec.Volumes) == 0 {
-			entry.Deployment.Spec.Template.Spec.Volumes = []apiv1.Volume{ztVolume}
+		if len(entry.Spec.Template.Spec.Volumes) == 0 {
+			entry.Spec.Template.Spec.Volumes = []apiv1.Volume{ztVolume}
 		} else {
-			entry.Deployment.Spec.Template.Spec.Volumes = append(entry.Deployment.Spec.Template.Spec.Volumes, ztVolume)
+			entry.Spec.Template.Spec.Volumes = append(entry.Spec.Template.Spec.Volumes, ztVolume)
 		}
 	}
 
@@ -191,15 +195,20 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 
 // Create the inbounds corresponding for inner communications in an existing service.
 func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments,
-	service grpc_application_go.ServiceInstance, depVariables map[string]string) derrors.Error {
+	service *grpc_application_go.ServiceInstance) derrors.Error {
+
+    // If there are no exposed ports, simply return
+    if len(service.ExposedPorts) == 0 {
+        return nil
+    }
+
 
 	// value for privileged user
 	user0 := int64(0)
 	privilegedUser := &user0
 
-	// extend variables to indicate that this is not an inbound
-	extendedLabels := depVariables
-	extendedLabels[ZtIsProxyAnnotation] = "true"
+    // extend variables to indicate that this is an inbound
+    extendedLabels := generateContainerVars(dep, service, true)
 
 	// extend created deployments with the ZT additional workers
 	// Every deployment must have a ZT sidecar and an additional proxy if services are enabled.
@@ -304,8 +313,8 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 		},
 	}
 
-	// Add this inbound
-    // --> 
+	// Add this inbound to the list of deployments
+    dep.Deployments = append(dep.Deployments, agent)
 
 	return nil
 }
@@ -317,4 +326,30 @@ func mapToEnvVars(vars map[string]string) []apiv1.EnvVar {
 		result = append(result, apiv1.EnvVar{Name: k, Value: v})
 	}
 	return result
+}
+
+// Generate labels for the Zt sidecars.
+// params:
+//   d deployable element with the metadata required to tag instances
+//   service entry with the corresponding service metadata
+//   isProxy set to true if we have to run a proxy instance
+// return:
+//   map of labels with their values
+func generateContainerVars(d *kubernetes.DeployableDeployments,
+    service *grpc_application_go.ServiceInstance, isProxy bool) map[string]string{
+
+    extendedLabels := map[string]string{}
+    extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.FragmentId
+    extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
+    extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
+    extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.Data.AppInstanceId
+    extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.Data.Stage.StageId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+    extendedLabels[ZtIsProxyAnnotation] = fmt.Sprintf("%t", isProxy)
+    extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = fmt.Sprintf("%t", isProxy)
+
+    return extendedLabels
 }

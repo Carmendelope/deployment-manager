@@ -47,9 +47,10 @@ type Executor interface {
 	// Build a deployable object that can be executed into the current platform using its native description.
 	//  params:
 	//   data deployment metadata
+	//   networkDecorator additional processes required to set deployment networking
 	//  return:
 	//   deployable entity or error if any
-	BuildNativeDeployable(data entities.DeploymentMetadata) (Deployable, error)
+	BuildNativeDeployable(data entities.DeploymentMetadata, networkDecorator NetworkDecorator) (Deployable, error)
 
 	// Execute a deployment stage for the current platform.
 	//  params:
