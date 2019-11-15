@@ -101,7 +101,7 @@ func (d DeployableKubernetesStage) Build() error {
 	}
 	err = d.DeviceGroupServices.Build()
 	if err != nil {
-		log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("cannot create device group services")
+		log.Error().Err(err).Str("stageId", d.data.Stage.StageId).Msg("cannot create device group Services")
 		return err
 	}
 

@@ -33,7 +33,7 @@ import (
 	v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
-// DeployableDeviceGroups contains the services that will be created in order to expose
+// DeployableDeviceGroups contains the Services that will be created in order to expose
 // endpoints to a set of device groups.
 type DeployableDeviceGroups struct {
 	// kubernetes Client
@@ -135,7 +135,7 @@ func (d *DeployableDeviceGroups) Build() error {
 	for _, sr := range d.data.Stage.DeviceGroupRules {
 		d.Services = append(d.Services, d.createService(sr))
 	}
-	log.Debug().Interface("Num", len(d.Services)).Msg("services for device groups have been build and are ready to deploy")
+	log.Debug().Interface("Num", len(d.Services)).Msg("Services for device groups have been build and are ready to deploy")
 	return nil
 }
 

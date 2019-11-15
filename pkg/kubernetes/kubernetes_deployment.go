@@ -40,7 +40,7 @@ const (
 	NalejServicePrefix = "NALEJ_SERV_"
 	// Default imagePullPolicy
 	DefaultImagePullPolicy = apiv1.PullAlways
-	//Default storage size
+	// Default storage size
 	DefaultStorageAllocationSize = int64(100 * 1024 * 1024)
 	// Default Nalej public registry
 	DefaultNalejPublicRegistry = "nalej-public-registry"
@@ -56,10 +56,7 @@ type DeployableDeployments struct {
 	Data entities.DeploymentMetadata
 	// array of Deployments ready to be deployed
 	// [[service_id, service_instance_id, deployment],...]
-	Deployments []appsv1.Deployment
-	// array of agents deployed for every service
-	// [[service_id, service_instance_id, deployment],...]
-	//ztAgents []DeploymentInfo
+	Deployments []*appsv1.Deployment
 	// network decorator object for deployments
 	networkDecorator executor.NetworkDecorator
 }
@@ -69,7 +66,7 @@ func NewDeployableDeployment(
 	return &DeployableDeployments{
 		Client:      client.AppsV1().Deployments(data.Namespace),
 		Data:        data,
-		Deployments: make([]appsv1.Deployment, 0),
+		Deployments: make([]*appsv1.Deployment, 0),
 		networkDecorator: networkDecorator,
 	}
 }
@@ -77,7 +74,7 @@ func NewDeployableDeployment(
 // NewDeployableDeploymentForTest creates a new empty DeployableDeployment (only for TEST!)
 func NewDeployableDeploymentForTest() *DeployableDeployments {
 	return &DeployableDeployments{
-		Deployments: make([]appsv1.Deployment, 0),
+		Deployments: make([]*appsv1.Deployment, 0),
 	}
 }
 
@@ -176,280 +173,8 @@ func (d *DeployableDeployments) Build() error {
 		} else {
 			extendedLabels = make(map[string]string, 0)
 		}
-		extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.FragmentId
-		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
-		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
-		extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.Data.AppInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.Data.Stage.StageId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
-
-		environmentVariables := d.getEnvVariables(d.Data.NalejVariables, service.EnvironmentVariables)
-		environmentVariables = d.addDeviceGroupEnvVariables(environmentVariables, service.ServiceGroupInstanceId, service.ServiceInstanceId)
-
-		deployment := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.FormatName(service.Name),
-				Namespace: d.Data.Namespace,
-				Labels:    extendedLabels,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: int32Ptr(service.Specs.Replicas),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: extendedLabels,
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: extendedLabels,
-					},
-					Spec: apiv1.PodSpec{
-						// Do not inject K8S service names
-						EnableServiceLinks: getBool(false),
-						// Do not mount any service account token
-						AutomountServiceAccountToken: getBool(false),
-						// Set POD DNS policies
-						DNSPolicy: apiv1.DNSNone,
-						DNSConfig: &apiv1.PodDNSConfig{
-							Nameservers: d.Data.DNSHosts,
-						},
-						ImagePullSecrets: []apiv1.LocalObjectReference{
-							{
-								Name: DefaultNalejPublicRegistry,
-							},
-						},
-						Containers: []apiv1.Container{
-							// User defined container
-							{
-								Name:            common.FormatName(service.Name),
-								Image:           service.Image,
-								Env:             environmentVariables,
-								Ports:           d.getContainerPorts(service.ExposedPorts, false),
-								ImagePullPolicy: DefaultImagePullPolicy,
-							},
-						},
-					},
-				},
-			},
-		}
-
-		if service.Credentials != nil {
-			log.Debug().Msg("Adding credentials to the deployment")
-			deployment.Spec.Template.Spec.ImagePullSecrets = append(deployment.Spec.Template.Spec.ImagePullSecrets,
-				apiv1.LocalObjectReference{
-					Name: service.Name,
-				})
-		}
-
-		if service.RunArguments != nil {
-			log.Debug().Msg("Adding arguments")
-			deployment.Spec.Template.Spec.Containers[0].Args = service.RunArguments
-		}
-
-		if service.Configs != nil && len(service.Configs) > 0 {
-			log.Debug().Msg("Adding config maps")
-			log.Debug().Msg("Creating volumes")
-			// NP-694. Support consolidating config maps
-			configVolumes, cmVolumeMounts := d.generateAllVolumes(service.ServiceId, service.ServiceInstanceId, service.Configs)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
-			log.Debug().Msg("Linking configmap volumes")
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = cmVolumeMounts
-		}
-		if service.Storage != nil && len(service.Storage) > 0 {
-			// Set VolumeMounts and Volumes based on storage type
-			volumes := make([]apiv1.Volume, 0)
-			volumeMounts := make([]apiv1.VolumeMount, 0)
-
-			for i, storage := range service.Storage {
-				if storage.Size == 0 {
-					storage.Size = DefaultStorageAllocationSize
-				}
-				var v *apiv1.Volume
-				if storage.Type == grpc_application_go.StorageType_EPHEMERAL {
-					v = &apiv1.Volume{
-						Name: fmt.Sprintf("vol-1%d", i),
-						VolumeSource: apiv1.VolumeSource{
-							EmptyDir: &apiv1.EmptyDirVolumeSource{
-								Medium:    apiv1.StorageMediumDefault,
-								SizeLimit: resource.NewQuantity(storage.Size, resource.BinarySI),
-							},
-						},
-					}
-				} else {
-					v = &apiv1.Volume{
-						Name: fmt.Sprintf("vol-1%d", i),
-						VolumeSource: apiv1.VolumeSource{
-							PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-								// claim name should be same as pvcID that was generated in BuildStorageForServices.
-								// TODO Check storage attached to replicas
-								ClaimName: common.GeneratePVCName(service.ServiceGroupInstanceId, service.ServiceId, fmt.Sprintf("%d", i)),
-							},
-						},
-					}
-				}
-				volumes = append(volumes, *v)
-				vm := &apiv1.VolumeMount{
-					Name:      v.Name,
-					MountPath: storage.MountPath,
-				}
-				volumeMounts = append(volumeMounts, *vm)
-			}
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumes...)
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts =
-				append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
-		}
-
-		d.Deployments = append(d.Deployments, deployment)
-
-		// call the network decorator
-		errNetDecorator := d.networkDecorator.Build(d,service)
-		if errNetDecorator != nil {
-			log.Error().Err(errNetDecorator).Msg("error building network components")
-			return errNetDecorator
-		}
-	}
 
 
-
-	return nil
-}
-
-// Private helper function to generate zt agents
-/*
-func (d *DeployableDeployments) createZtAgent(service *grpc_application_go.ServiceInstance, extendedLabels map[string]string) appsv1.Deployment {
-	// value for privileged user
-	user0 := int64(0)
-	privilegedUser := &user0
-
-	ztAgentName := fmt.Sprintf("zt-%s", common.FormatName(service.Name))
-	// The proxy has the same labels with the proxy flag activated
-	// copy the map and modify the proxy flag
-	ztAgentLabels := make(map[string]string, 0)
-	for k, v := range extendedLabels {
-		ztAgentLabels[k] = v
-	}
-	ztAgentLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "true"
-
-	agent := appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ztAgentName,
-			Namespace: d.Data.Namespace,
-			Labels:    ztAgentLabels,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: ztAgentLabels,
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: ztAgentLabels,
-				},
-				// Every pod template is designed to use a container with the requested image
-				// and a helping sidecar with a containerized zerotier that joins the network
-				// after running
-				Spec: apiv1.PodSpec{
-					// Do not mount any service account token
-					AutomountServiceAccountToken: getBool(false),
-					Containers: []apiv1.Container{
-						// zero-tier sidecar
-						{
-							Name:  ztAgentName,
-							Image: ZTAgentImageName,
-							Args: []string{
-								"run",
-							},
-							Env: d.getContainerEnvVariables(service, true),
-							LivenessProbe: &apiv1.Probe{
-								InitialDelaySeconds: 20,
-								PeriodSeconds:       60,
-								TimeoutSeconds:      20,
-								Handler: apiv1.Handler{
-									Exec: &apiv1.ExecAction{
-										Command: []string{
-											"./nalej/zt-agent",
-											"check",
-											"--appInstanceId", d.Data.AppInstanceId,
-											"--appName", d.Data.AppName,
-											"--serviceName", common.FormatName(service.Name),
-											"--deploymentId", d.Data.DeploymentId,
-											"--fragmentId", d.Data.Stage.FragmentId,
-											"--managerAddr", config.GetConfig().DeploymentMgrAddress,
-											"--organizationId", d.Data.OrganizationId,
-											"--organizationName", d.Data.OrganizationName,
-											"--networkId", d.Data.ZtNetworkId,
-											"--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-											"--serviceAppInstanceId", service.ServiceInstanceId,
-										},
-									},
-								},
-							},
-							// The proxy exposes the same ports of the deployment
-							Ports:           d.getContainerPorts(service.ExposedPorts, true),
-							ImagePullPolicy: DefaultImagePullPolicy,
-							SecurityContext: &apiv1.SecurityContext{
-								RunAsUser:  privilegedUser,
-								Privileged: boolPtr(true),
-								Capabilities: &apiv1.Capabilities{
-									Add: []apiv1.Capability{
-										"NET_ADMIN",
-										"SYS_ADMIN",
-									},
-								},
-							},
-
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "dev-net-tun",
-									ReadOnly:  true,
-									MountPath: "/dev/net/tun",
-								},
-							},
-						},
-					},
-					ImagePullSecrets: []apiv1.LocalObjectReference{
-						{
-							Name: DefaultNalejPublicRegistry,
-						},
-					},
-					Volumes: []apiv1.Volume{
-						// zerotier sidecar volume
-						{
-							Name: "dev-net-tun",
-							VolumeSource: apiv1.VolumeSource{
-								HostPath: &apiv1.HostPathVolumeSource{
-									Path: "/dev/net/tun",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	return agent
-}
-*/
-
-/*
-
-func (d *DeployableDeployments) Build() error {
-
-	for serviceIndex, service := range d.Data.Stage.Services {
-		log.Debug().Msgf("build deployment %s %d out of %d", service.ServiceId, serviceIndex+1, len(d.Data.Stage.Services))
-
-		// value for privileged user
-		user0 := int64(0)
-		privilegedUser := &user0
-
-		var extendedLabels map[string]string
-		if service.Labels != nil {
-			// users have already defined labels for this app
-			extendedLabels = service.Labels
-		} else {
-			extendedLabels = make(map[string]string, 0)
-		}
 		extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.FragmentId
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
@@ -489,84 +214,14 @@ func (d *DeployableDeployments) Build() error {
 						DNSConfig: &apiv1.PodDNSConfig{
 							Nameservers: d.Data.DNSHosts,
 						},
-						ImagePullSecrets: []apiv1.LocalObjectReference{
-							{
-								Name: DefaultNalejPublicRegistry,
-							},
-						},
 						Containers: []apiv1.Container{
 							// User defined container
 							{
 								Name:            common.FormatName(service.Name),
 								Image:           service.Image,
 								Env:             environmentVariables,
-								Ports:           d.getContainerPorts(service.ExposedPorts, false),
+								Ports:           d.getContainerPorts(service.ExposedPorts),
 								ImagePullPolicy: DefaultImagePullPolicy,
-							},
-							// ZT sidecar container
-							{
-								Name:  "zt-sidecar",
-								Image: ZTAgentImageName,
-								Args: []string{
-									"run",
-								},
-								Env: d.getContainerEnvVariables(service, false),
-								LivenessProbe: &apiv1.Probe{
-									InitialDelaySeconds: 20,
-									PeriodSeconds:       60,
-									TimeoutSeconds:      20,
-									Handler: apiv1.Handler{
-										Exec: &apiv1.ExecAction{
-											Command: []string{
-												"./nalej/zt-agent",
-												"check",
-												"--appInstanceId", d.Data.AppInstanceId,
-												"--appName", d.Data.AppName,
-												"--serviceName", service.Name,
-												"--deploymentId", d.Data.DeploymentId,
-												"--fragmentId", d.Data.Stage.FragmentId,
-												"--managerAddr", config.GetConfig().DeploymentMgrAddress,
-												"--organizationId", d.Data.OrganizationId,
-												"--organizationName", d.Data.OrganizationName,
-												"--networkId", d.Data.ZtNetworkId,
-												"--serviceGroupInstanceId", service.ServiceGroupInstanceId,
-												"--serviceAppInstanceId", service.ServiceInstanceId,
-											},
-										},
-									},
-								},
-								// The proxy exposes the same ports of the deployment
-								Ports:           d.getContainerPorts(service.ExposedPorts, true),
-								ImagePullPolicy: DefaultImagePullPolicy,
-								SecurityContext: &apiv1.SecurityContext{
-									RunAsUser:  privilegedUser,
-									Privileged: boolPtr(true),
-									Capabilities: &apiv1.Capabilities{
-										Add: []apiv1.Capability{
-											"NET_ADMIN",
-											"SYS_ADMIN",
-										},
-									},
-								},
-
-								VolumeMounts: []apiv1.VolumeMount{
-									{
-										Name:      "dev-net-tun",
-										ReadOnly:  true,
-										MountPath: "/dev/net/tun",
-									},
-								},
-							},
-						},
-						Volumes: []apiv1.Volume{
-							// zerotier sidecar volume
-							{
-								Name: "dev-net-tun",
-								VolumeSource: apiv1.VolumeSource{
-									HostPath: &apiv1.HostPathVolumeSource{
-										Path: "/dev/net/tun",
-									},
-								},
 							},
 						},
 					},
@@ -640,43 +295,27 @@ func (d *DeployableDeployments) Build() error {
 				append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMounts...)
 		}
 
-		d.Deployments = append(d.Deployments, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, deployment})
+		d.Deployments = append(d.Deployments, &deployment)
+	}
 
-		// If we have at least one single port defined there will be a K8s service. Create the corresponding proxy agent
-		if len(service.ExposedPorts) != 0 {
-			agent := d.createZtAgent(service, extendedLabels)
-			d.ztAgents = append(d.ztAgents, DeploymentInfo{service.ServiceId, service.ServiceInstanceId, agent})
-		}
-
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := d.networkDecorator.Build(d)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error building network components")
+		return errNetDecorator
 	}
 
 	return nil
 }
- */
+
 
 
 func (d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
-	/*
-	for _, depInfo := range d.ztAgents {
-		deployed, err := d.Client.Create(&depInfo.Deployment)
-		if err != nil {
-			log.Error().Err(err).Msgf("error creating deployment for zt-agent %s", depInfo.Deployment.Name)
-			return err
-		}
-		log.Debug().Str("uid", string(deployed.GetUID())).Str("appInstanceID", d.Data.AppInstanceId).
-			Str("serviceID", depInfo.ServiceId).Str("serviceInstanceId", depInfo.ServiceInstanceId).
-			Msg("add zt-agent deployment resource to be monitored")
-		res := entities.NewMonitoredPlatformResource(deployed.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT], string(deployed.GetUID()),
-			deployed.Labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR], deployed.Labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID],
-			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
-			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
-		controller.AddMonitoredResource(&res)
-	}
-	*/
+
 	// same approach for service Deployments
 	for _, deployment := range d.Deployments {
 
-		deployed, err := d.Client.Create(&deployment)
+		deployed, err := d.Client.Create(deployment)
 		if err != nil {
 			log.Debug().Interface("deployment", deployment).
 				Err(err).Msgf("error creating deployment %s", deployment.Name)
@@ -762,76 +401,11 @@ func (d *DeployableDeployments) getEnvVariables(nalejVariables map[string]string
 //   ports list of exposed ports
 //  return:
 //   list of ports into k8s api format
-func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port, isSidecar bool) []apiv1.ContainerPort {
+func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) []apiv1.ContainerPort {
 	obtained := make([]apiv1.ContainerPort, 0, len(ports))
 	for _, p := range ports {
 		obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})
 	}
-	if isSidecar {
-		obtained = append(obtained, apiv1.ContainerPort{ContainerPort: int32(config.GetConfig().ZTSidecarPort), Name: "ztrouteport"})
-	}
 	return obtained
 }
 
-// Generate a set of environment variables for a container. This private function is particularly designed to
-// support the building of proxies.
-// params:
-//  service specification to be deployed
-//  isProxy boolean value indicating whether the environment variables to be created correspond to a proxy
-// return:
-//  slice of api environment variables
-func (d *DeployableDeployments) getContainerEnvVariables(service *pbApplication.ServiceInstance, isProxy bool) []apiv1.EnvVar {
-	return []apiv1.EnvVar{
-		{
-			Name: utils.NALEJ_ENV_CLUSTER_ID, Value: config.GetConfig().ClusterId,
-		},
-		{
-			Name: utils.NALEJ_ENV_ZT_NETWORK_ID, Value: d.Data.ZtNetworkId,
-		},
-		{
-			Name: utils.NALEJ_ENV_MANAGER_ADDR, Value: config.GetConfig().DeploymentMgrAddress,
-		},
-		{
-			Name: utils.NALEJ_ENV_DEPLOYMENT_ID, Value: d.Data.DeploymentId,
-		},
-		{
-			Name: utils.NALEJ_ENV_DEPLOYMENT_FRAGMENT, Value: d.Data.Stage.FragmentId,
-		},
-		{
-			Name: utils.NALEJ_ENV_ORGANIZATION_ID, Value: d.Data.OrganizationId,
-		},
-		{
-			Name: utils.NALEJ_ENV_ORGANIZATION_NAME, Value: d.Data.OrganizationName,
-		},
-		{
-			Name: utils.NALEJ_ENV_APP_DESCRIPTOR, Value: d.Data.AppDescriptorId,
-		},
-		{
-			Name: utils.NALEJ_ENV_APP_NAME, Value: d.Data.AppName,
-		},
-		{
-			Name: utils.NALEJ_ENV_APP_INSTANCE_ID, Value: d.Data.AppInstanceId,
-		},
-		{
-			Name: utils.NALEJ_ENV_STAGE_ID, Value: d.Data.Stage.StageId,
-		},
-		{
-			Name: utils.NALEJ_ENV_SERVICE_NAME, Value: service.Name,
-		},
-		{
-			Name: utils.NALEJ_ENV_SERVICE_ID, Value: service.ServiceId,
-		},
-		{
-			Name: utils.NALEJ_ENV_SERVICE_FQDN, Value: common.GetServiceFQDN(service.Name, service.OrganizationId, service.AppInstanceId),
-		},
-		{
-			Name: utils.NALEJ_ENV_SERVICE_INSTANCE_ID, Value: service.ServiceInstanceId,
-		},
-		{
-			Name: utils.NALEJ_ENV_SERVICE_GROUP_ID, Value: service.ServiceGroupId,
-		},
-		{
-			Name: utils.NALEJ_ENV_SERVICE_GROUP_INSTANCE_ID, Value: service.ServiceGroupInstanceId,
-		},
-	}
-}

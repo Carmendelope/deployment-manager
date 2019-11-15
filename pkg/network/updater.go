@@ -383,6 +383,7 @@ func (knu *KubernetesNetworkUpdater) SendLeaveZTConnection(targetPods []TargetPo
 
 func (knu *KubernetesNetworkUpdater) getSidecarClient(targetIP string) (grpc_zt_nalej_go.SidecarClient, context.Context, context.CancelFunc, derrors.Error) {
 	address := fmt.Sprintf("%s:%d", targetIP, ZtRedirectorPort)
+	log.Debug().Msgf("get sidecar client for %s",address)
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		return nil, nil, nil, derrors.AsError(err, "cannot create connection with unified logging coordinator")

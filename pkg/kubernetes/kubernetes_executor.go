@@ -230,7 +230,7 @@ func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId strin
 	if err != nil {
 		log.Error().Err(err).Msg("error undeploying fragments")
 	}
-	// services
+	// Services
 	list, err := k.Client.CoreV1().Services(namespace).List(queryOptions)
 	if err != nil {
 		log.Error().Err(err).Msg("error undeploying fragments")

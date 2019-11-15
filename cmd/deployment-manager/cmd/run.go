@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"github.com/nalej/deployment-manager/pkg/config"
+	"github.com/nalej/deployment-manager/pkg/network"
 	"github.com/nalej/deployment-manager/pkg/service"
 	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog"
@@ -65,7 +66,7 @@ func init() {
 	runCmd.Flags().String("publicRegistryUserName", "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
 	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
-	runCmd.Flags().Uint32("ztSidecarPort", 1000, "Port where the ZT sidecar expects route updates")
+	runCmd.Flags().Uint32("ztSidecarPort", network.ZtRedirectorPort, "Port where the ZT sidecar expects route updates")
 	runCmd.Flags().String("caCertPath", "", "Path for the CA certificate")
 	runCmd.Flags().String("clientCertPath", "", "Path for the client certificate")
 	runCmd.Flags().Bool("skipServerCertValidation", true, "Skip CA authentication validation")
