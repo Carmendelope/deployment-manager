@@ -42,8 +42,6 @@ const (
 	DefaultImagePullPolicy = apiv1.PullAlways
 	// Default storage size
 	DefaultStorageAllocationSize = int64(100 * 1024 * 1024)
-	// Default Nalej public registry
-	DefaultNalejPublicRegistry = "nalej-public-registry"
 )
 
 // Deployable Deployments
@@ -307,7 +305,6 @@ func (d *DeployableDeployments) Build() error {
 
 	return nil
 }
-
 
 
 func (d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
