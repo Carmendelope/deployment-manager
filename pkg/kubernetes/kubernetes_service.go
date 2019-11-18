@@ -75,6 +75,7 @@ func (s *DeployableServices) Build() error {
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+		extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
 
 		ports := getServicePorts(service.ExposedPorts)
 		if ports != nil {
