@@ -73,8 +73,6 @@ const (
 	// This is the definition of variables.
 	// Environment variable declared in the cluster with the cluster id
 	NALEJ_ENV_CLUSTER_ID = "CLUSTER_ID"
-	// Identifier for the ZT network
-	NALEJ_ENV_ZT_NETWORK_ID = "NALEJ_ZT_NETWORK_ID"
 	// Boolean value setting a container to be used as an inbound proxy
 	NALEJ_ENV_IS_PROXY = "NALEJ_IS_PROXY"
 	// Address of the manager cluster

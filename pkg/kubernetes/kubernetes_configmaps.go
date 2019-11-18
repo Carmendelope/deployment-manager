@@ -81,16 +81,16 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInsta
 		},
 		ObjectMeta: v12.ObjectMeta{
 			Name:      cf.ConfigFileId,
-			Namespace: dc.data.Namespace,
+			Namespace: dc.Data.Namespace,
 			Labels:    map[string]string{
-				utils.NALEJ_ANNOTATION_ORGANIZATION_ID : dc.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : dc.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID : dc.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_ORGANIZATION_ID : dc.Data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : dc.Data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : dc.Data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID : dc.Data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID : serviceId,
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID : serviceInstanceId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : dc.data.ServiceGroupId,
-				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : dc.data.ServiceGroupInstanceId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID : dc.Data.ServiceGroupId,
+				utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID : dc.Data.ServiceGroupInstanceId,
 			},
 		},
 		BinaryData: map[string][]byte{

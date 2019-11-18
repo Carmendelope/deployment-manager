@@ -62,6 +62,8 @@ type Manager struct {
 	queue structures.RequestsQueue
 	// Config
 	PublicCredentials grpc_application_go.ImageCredentials
+	// Network decorator
+	networkDecorator executor.NetworkDecorator
 }
 
 func NewManager(
@@ -69,7 +71,8 @@ func NewManager(
 	clusterPublicHostname string,
 	queue structures.RequestsQueue,
 	dnsHosts []string, monitored monitor.MonitoredInstances,
-	publicCredentials grpc_application_go.ImageCredentials) *Manager {
+	publicCredentials grpc_application_go.ImageCredentials,
+	networkDecorator executor.NetworkDecorator) *Manager {
 	return &Manager{
 		executor:              *executor,
 		clusterPublicHostname: clusterPublicHostname,
@@ -77,6 +80,7 @@ func NewManager(
 		monitored:             monitored,
 		queue:                 queue,
 		PublicCredentials:     publicCredentials,
+		networkDecorator:      networkDecorator,
 	}
 }
 
@@ -157,7 +161,7 @@ func (m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequ
 		// fill the stage specific information
 		metadata.Stage = *stage
 
-		deployable, executionError := m.executor.BuildNativeDeployable(metadata)
+		deployable, executionError := m.executor.BuildNativeDeployable(metadata, m.networkDecorator)
 
 		if executionError != nil {
 			log.Error().Err(executionError).Msgf("impossible to build deployment for fragment %s", request.Fragment.FragmentId)

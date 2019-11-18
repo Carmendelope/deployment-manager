@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"github.com/nalej/deployment-manager/pkg/config"
+	"github.com/nalej/deployment-manager/pkg/network"
 	"github.com/nalej/deployment-manager/pkg/service"
 	"github.com/nalej/grpc-application-go"
 	"github.com/rs/zerolog"
@@ -65,21 +66,27 @@ func init() {
 	runCmd.Flags().String("publicRegistryUserName", "", "Username to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_USERNAME")
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
 	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
-	runCmd.Flags().Uint32("ztSidecarPort", 1000, "Port where the ZT sidecar expects route updates")
+	runCmd.Flags().Uint32("ztSidecarPort", network.ZtRedirectorPort, "Port where the ZT sidecar expects route updates")
 	runCmd.Flags().String("caCertPath", "", "Path for the CA certificate")
 	runCmd.Flags().String("clientCertPath", "", "Path for the client certificate")
 	runCmd.Flags().Bool("skipServerCertValidation", true, "Skip CA authentication validation")
+
+	runCmd.Flags().String("networkType", "zt", "Define the underlying networking type for the user apps.")
 
 	viper.BindPFlags(runCmd.Flags())
 }
 
 func Run() {
 
+	netType, err := config.NetworkTypeFromString(viper.GetString("networkType"))
+	if err != nil {
+		return
+	}
+
 	config := config.Config{
 		Debug:                 debugLevel,
 		Port:                  uint32(viper.GetInt32("port")),
 		MetricsPort:           uint32(viper.GetInt32("metricsPort")),
-		ClusterAPIAddress:     viper.GetString("clusterAPIAddress"),
 		ManagementHostname:    viper.GetString("managementHostname"),
 		ClusterAPIHostname:    viper.GetString("clusterAPIHostname"),
 		ClusterAPIPort:        uint32(viper.GetInt32("clusterAPIPort")),
@@ -104,6 +111,8 @@ func Run() {
 		CACertPath:               viper.GetString("caCertPath"),
 		ClientCertPath:           viper.GetString("clientCertPath"),
 		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),
+		NetworkType: 		  netType,
+
 	}
 
 	log.Info().Msg("launching deployment manager...")

@@ -21,6 +21,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/nalej/deployment-manager/pkg/decorators/network/zerotier"
+	"github.com/nalej/deployment-manager/pkg/executor"
 	offline_policy "github.com/nalej/deployment-manager/pkg/offline-policy"
 	"io/ioutil"
 	"net"
@@ -226,9 +228,18 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
 
 	// Instantiate a memory queue for requests
 	requestsQueue := structures.NewMemoryRequestQueue()
+
+	// Build the network decorator according to config info
+	networkDecorator, errNetworkDecorator := getNetworkDecorator(cfg)
+	if errNetworkDecorator != nil {
+		log.Panic().Err(errNetworkDecorator).Msg("impossible to build network decorator")
+		return nil, errNetworkDecorator
+	}
+
 	// Instantiate deployment manager service
 	log.Info().Msg("star deployment requests manager")
-	mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, requestsQueue, nalejDNSForPods, instanceMonitor, cfg.PublicCredentials)
+	mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, requestsQueue, nalejDNSForPods, instanceMonitor,
+		cfg.PublicCredentials, networkDecorator)
 	go mgr.Run()
 	log.Info().Msg("done")
 
@@ -363,4 +374,13 @@ func (d *DeploymentManagerService) startMetrics(httpListener net.Listener, errCh
 	}()
 
 	return httpServer, nil
+}
+
+
+func getNetworkDecorator(configuration *config.Config) (executor.NetworkDecorator, derrors.Error) {
+	switch configuration.NetworkType {
+	case config.NetworkTypeZt:
+		return zerotier.NewZerotierDecorator(), nil
+	}
+	return nil, derrors.NewInvalidArgumentError("unknown decorator type")
 }

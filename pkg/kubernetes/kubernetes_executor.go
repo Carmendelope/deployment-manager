@@ -70,13 +70,14 @@ func NewKubernetesExecutor(internal bool, controller executor.DeploymentControll
 	return &toReturn, err
 }
 
-func (k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMetadata) (executor.Deployable, error) {
+func (k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMetadata,
+	networkDecorator executor.NetworkDecorator) (executor.Deployable, error) {
 
 	log.Debug().Msgf("fragment %s stage %s requested to be translated into K8s deployable",
 		metadata.FragmentId, metadata.Stage.StageId)
 
 	var resources executor.Deployable
-	k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata)
+	k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata, networkDecorator)
 	resources = k8sDeploy
 
 	err := k8sDeploy.Build()
@@ -194,7 +195,7 @@ func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId strin
 	deleteOptions := metav1.DeleteOptions{}
 	queryOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("nalej-deployment-fragment=%s", fragmentId)}
 
-	// deployments
+	// Deployments
 	err := k.Client.AppsV1().Deployments(namespace).DeleteCollection(&deleteOptions, queryOptions)
 	if err != nil {
 		log.Error().Err(err).Msg("error undeploying fragments")
@@ -229,7 +230,7 @@ func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId strin
 	if err != nil {
 		log.Error().Err(err).Msg("error undeploying fragments")
 	}
-	// services
+	// Services
 	list, err := k.Client.CoreV1().Services(namespace).List(queryOptions)
 	if err != nil {
 		log.Error().Err(err).Msg("error undeploying fragments")
