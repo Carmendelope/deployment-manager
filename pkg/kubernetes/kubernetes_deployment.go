@@ -37,15 +37,13 @@ import (
 
 const (
 	// Name of the Docker ZT agent image
-	ZTAgentImageName = "nalejpublic.azurecr.io/nalej/zt-agent:v0.4.0"
+	ZTAgentImageName = "nalej/zt-agent:v0.4.0"
 	// Prefix defining Nalej Services
 	NalejServicePrefix = "NALEJ_SERV_"
 	// Default imagePullPolicy
 	DefaultImagePullPolicy = apiv1.PullAlways
 	//Default storage size
 	DefaultStorageAllocationSize = int64(100 * 1024 * 1024)
-	// Default Nalej public registry
-	DefaultNalejPublicRegistry = "nalej-public-registry"
 )
 
 // Deployable Deployments
@@ -226,11 +224,6 @@ func (d *DeployableDeployments) Build() error {
 						DNSPolicy: apiv1.DNSNone,
 						DNSConfig: &apiv1.PodDNSConfig{
 							Nameservers: d.data.DNSHosts,
-						},
-						ImagePullSecrets: []apiv1.LocalObjectReference{
-							{
-								Name: DefaultNalejPublicRegistry,
-							},
 						},
 						Containers: []apiv1.Container{
 							// User defined container
@@ -481,11 +474,6 @@ func (d *DeployableDeployments) createZtAgent(service *grpc_application_go.Servi
 									MountPath: "/dev/net/tun",
 								},
 							},
-						},
-					},
-					ImagePullSecrets: []apiv1.LocalObjectReference{
-						{
-							Name: DefaultNalejPublicRegistry,
 						},
 					},
 					Volumes: []apiv1.Volume{
