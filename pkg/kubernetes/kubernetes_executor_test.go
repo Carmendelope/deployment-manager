@@ -76,7 +76,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var stage pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
         var preDeployed executor.Deployable
-        namespace := "test-app-single"
+        Namespace := "test-app-single"
         ztNetworkId := "testztid"
         appInstanceId := "errorapp"
         organizationId := "test-organization"
@@ -123,10 +123,10 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
                 ginkgo.Skip("integration testing is not set")
             }
 
-            aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
+            aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, Namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId, organizationId, organizationName,
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, Namespace, ztNetworkId, organizationId, organizationName,
                 deploymentId, appInstanceId, appName)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -150,7 +150,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var stage pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
         var preDeployed executor.Deployable
-        namespace := "test-app-double"
+        Namespace := "test-app-double"
         ztNetworkId := "testztid"
         appInstanceId := "test-app-double"
         organizationId := "test-organization"
@@ -201,10 +201,10 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
                 ginkgo.Skip("integration testing is not set")
             }
 
-            aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
+            aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, Namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, namespace, ztNetworkId,organizationId, organizationName,
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage, Namespace, ztNetworkId,organizationId, organizationName,
                 deploymentId, appInstanceId, appName)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -228,7 +228,7 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
         var stage2 pbConductor.DeploymentStage
         var fragment pbConductor.DeploymentFragment
         var preDeployed executor.Deployable
-        namespace := "test-app-two-stages"
+        Namespace := "test-app-two-stages"
         ztNetworkId := "testztid"
         organizationId := "test-organization"
         appInstanceId := "test-app-001"
@@ -282,10 +282,10 @@ var _ = ginkgo.Describe("Analysis of kubernetes structures creation", func() {
                 ginkgo.Skip("integration testing is not set")
             }
 
-            aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, namespace, monitor)
+            aux, err := k8sExecutor.PrepareEnvironmentForDeployment(&fragment, Namespace, monitor)
             preDeployed = aux
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
-            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage1, namespace, ztNetworkId,organizationId, organizationName,
+            toDeploy, err := k8sExecutor.BuildNativeDeployable(&stage1, Namespace, ztNetworkId,organizationId, organizationName,
                 deploymentId, appInstanceId, appName)
             gomega.Expect(toDeploy).NotTo(gomega.BeNil())
             gomega.Expect(err).ShouldNot(gomega.HaveOccurred())

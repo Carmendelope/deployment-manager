@@ -34,12 +34,15 @@ type NetworkType string
 const (
 	NetworkTypeError = ""
 	NetworkTypeZt = "zt"
+	NetworkTypeIstio = "istio"
 )
 
 func NetworkTypeFromString(net string) (NetworkType, error) {
 	switch net {
 	case NetworkTypeZt:
 		return NetworkTypeZt, nil
+	case NetworkTypeIstio:
+		return NetworkTypeIstio, nil
 	default:
 		return NetworkTypeError, derrors.NewInvalidArgumentError("unknown network type")
 	}

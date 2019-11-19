@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("Kubernetes ConfigMap tests", func() {
 	ginkgo.BeforeSuite(func() {
 		log.Debug().Msg("BeforeSuite")
 		client = NewDeployableConfigMapsForTest(entities.DeploymentMetadata{
-			Namespace: "namespace",
+			Namespace: "Namespace",
 		})
 		deploymentClient = NewDeployableDeploymentForTest()
 

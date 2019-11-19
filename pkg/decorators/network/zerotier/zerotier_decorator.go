@@ -73,10 +73,12 @@ func (d *ZerotierDecorator) Build(aux executor.Deployable, args ...interface{}) 
 }
 
 func (d *ZerotierDecorator) Deploy(aux executor.Deployable, args ...interface{}) derrors.Error {
+	// Nothing to do
 	return nil
 }
 
 func (d *ZerotierDecorator) Undeploy(aux executor.Deployable, args ...interface{}) derrors.Error {
+	// Nothing to do
 	return nil
 }
 

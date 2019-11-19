@@ -29,8 +29,12 @@
   digest = "1:d69d2ba23955582a64e367ff2b0808cdbd048458c178cea48f11ab8c40bd7aea"
   name = "github.com/gogo/protobuf"
   packages = [
+    "gogoproto",
+    "jsonpb",
     "proto",
+    "protoc-gen-gogo/descriptor",
     "sortkeys",
+    "types",
   ]
   pruneopts = ""
   revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
@@ -807,7 +811,56 @@
   version = "v2.2.5"
 
 [[projects]]
-  digest = "1:8a3902b1f1aab51953de9741e4a62daaab441788d85ba7f50709ceca8e26b6ff"
+  digest = "1:9bb1b224f3db75fb350895d81660d46f5535e916aa42901419f5bba8a4f666aa"
+  name = "istio.io/api"
+  packages = [
+    "authentication/v1alpha1",
+    "mixer/v1",
+    "mixer/v1/config/client",
+    "networking/v1alpha3",
+    "policy/v1beta1",
+    "rbac/v1alpha1",
+    "security/v1beta1",
+    "type/v1beta1",
+  ]
+  pruneopts = ""
+  revision = "35e06ef8d83858a2ccabd7a0d57128879b40a586"
+  version = "1.4.0"
+
+[[projects]]
+  digest = "1:ac0827ff711b61880fcd7a842eea073c47623e0b53429b8ed27479f7bcaec0e6"
+  name = "istio.io/client-go"
+  packages = [
+    "pkg/apis/authentication/v1alpha1",
+    "pkg/apis/config/v1alpha2",
+    "pkg/apis/networking/v1alpha3",
+    "pkg/apis/rbac/v1alpha1",
+    "pkg/apis/security/v1beta1",
+    "pkg/clientset/versioned",
+    "pkg/clientset/versioned/scheme",
+    "pkg/clientset/versioned/typed/authentication/v1alpha1",
+    "pkg/clientset/versioned/typed/config/v1alpha2",
+    "pkg/clientset/versioned/typed/networking/v1alpha3",
+    "pkg/clientset/versioned/typed/rbac/v1alpha1",
+    "pkg/clientset/versioned/typed/security/v1beta1",
+  ]
+  pruneopts = ""
+  revision = "9bd0ba57c3d24745eac756d3df8411d969f94d34"
+  version = "1.4.0"
+
+[[projects]]
+  digest = "1:08fc4e9de7826015a01fab79f1e21a9261dfd3dab3b696f5f8023177312f1173"
+  name = "istio.io/gogo-genproto"
+  packages = [
+    "googleapis/google/api",
+    "googleapis/google/rpc",
+  ]
+  pruneopts = ""
+  revision = "f7d19ec0141d49ac9efc83b5e61fa81ba103b445"
+  version = "1.4.0"
+
+[[projects]]
+  digest = "1:c05ae2345381c325aa1fca71e88c9cf61060c2c8c3f9b54310953da0c0e2c122"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1alpha1",
@@ -843,8 +896,8 @@
     "storage/v1beta1",
   ]
   pruneopts = ""
-  revision = "5cb15d34447165a97c76ed5a60e4e99c8a01ecfe"
-  version = "kubernetes-1.13.5"
+  revision = "dacd7df5a50b93833c2a2c2f81348f910be8bfc7"
+  version = "kubernetes-1.13.12"
 
 [[projects]]
   digest = "1:c05610391a133b223e1736a3b8cbd725da30f64c0c6a93d6422714ccfd8f4a73"
@@ -1011,6 +1064,7 @@
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
+    "istio.io/client-go/pkg/clientset/versioned",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",

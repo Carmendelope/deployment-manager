@@ -40,9 +40,10 @@ type Executor interface {
 	// Execute any initial preparation to deploy a fragment.
 	//  params:
 	//   data information for deployment
+	//   networkDecorator additional network for networking operations
 	//  return:
 	//   error if any
-	PrepareEnvironmentForDeployment(data entities.DeploymentMetadata) (Deployable, error)
+	PrepareEnvironmentForDeployment(data entities.DeploymentMetadata, networkDecorator NetworkDecorator) (Deployable, error)
 
 	// Build a deployable object that can be executed into the current platform using its native description.
 	//  params:
@@ -83,9 +84,10 @@ type Executor interface {
 	//  params:
 	//   request undeployment request
 	//   toUndeploy deployable entities associated with the fragment that have to be undeployed
+	//   networkDecorator decorator in charge of removing needed networking entities
 	//  return:
 	//   error if any
-	UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error
+	UndeployNamespace(request *pbDeploymentMgr.UndeployRequest, networkDecorator NetworkDecorator) error
 }
 
 // A monitor system to inform the cluster API about the current status

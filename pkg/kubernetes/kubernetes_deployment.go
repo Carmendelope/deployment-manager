@@ -314,8 +314,6 @@ func (d *DeployableDeployments) Deploy(controller executor.DeploymentController)
 
 		deployed, err := d.Client.Create(deployment)
 		if err != nil {
-			log.Debug().Interface("deployment", deployment).
-				Err(err).Msgf("error creating deployment %s", deployment.Name)
 			log.Error().Interface("deployment", deployment).
 				Err(err).Msgf("error creating deployment %s", deployment.Name)
 			return err
@@ -329,6 +327,13 @@ func (d *DeployableDeployments) Deploy(controller executor.DeploymentController)
 			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
 			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
 		controller.AddMonitoredResource(&res)
+	}
+
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := d.networkDecorator.Build(d)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error running networking decorator during deployment deploy")
+		return errNetDecorator
 	}
 
 	return nil

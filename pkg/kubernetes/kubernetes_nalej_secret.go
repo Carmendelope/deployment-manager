@@ -34,7 +34,7 @@ import (
 const NalejPublicRegistryName = "nalej-public-registry"
 
 // DeployableNalejSecret represents the 'nalej-public-registry' secret on the user namespaces
-// We need DeployableNalejSecret because' nalej-public-registry' secret is special (unique per namespace),
+// We need DeployableNalejSecret because' nalej-public-registry' secret is special (unique per Namespace),
 // DeployableSecrets are builded per each stage
 type DeployableNalejSecret struct {
 	client  coreV1.SecretInterface
