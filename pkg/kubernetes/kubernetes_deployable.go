@@ -73,7 +73,7 @@ func NewDeployableKubernetesStage(
 		data:                data,
 		Services:            NewDeployableService(client, data),
 		Deployments:         NewDeployableDeployment(client, data, networkDecorator),
-		Ingresses:           NewDeployableIngress(client, data),
+		Ingresses:           NewDeployableIngress(client, data, networkDecorator),
 		Configmaps:          NewDeployableConfigMaps(client, data),
 		Secrets:             NewDeployableSecrets(client, data),
 		Storage:             NewDeployableStorage(client, data),

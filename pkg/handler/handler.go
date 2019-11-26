@@ -101,10 +101,14 @@ func (h *Handler) ValidDeployFragmentRequest(request *pbDeploymentMgr.Deployment
 		log.Error().Msg("impossible to process request with no request_id")
 		return false
 	}
+
+	/*
+	// TODO only check if network mode in ZT is enabled
 	if request.ZtNetworkId == "" {
 		log.Error().Msg("impossible to process request with no zt_network_id")
 		return false
 	}
+	*/
 	if request.Fragment == nil || request.Fragment.FragmentId == "" {
 		log.Error().Msg("impossible to process request with no fragment_id")
 		return false

@@ -207,11 +207,13 @@ func (d *DeployableDeployments) Build() error {
 						EnableServiceLinks: getBool(false),
 						// Do not mount any service account token
 						AutomountServiceAccountToken: getBool(false),
+						/*
 						// Set POD DNS policies
 						DNSPolicy: apiv1.DNSNone,
 						DNSConfig: &apiv1.PodDNSConfig{
 							Nameservers: d.Data.DNSHosts,
 						},
+						*/
 						Containers: []apiv1.Container{
 							// User defined container
 							{

@@ -45,22 +45,25 @@ type IngressesInfo struct {
 
 type DeployableIngress struct {
 	client    extV1Beta1.IngressInterface
-	data      entities.DeploymentMetadata
+	Data      entities.DeploymentMetadata
 	ingresses []IngressesInfo
+	// network decorator object for deployments
+	networkDecorator executor.NetworkDecorator
 }
 
 func NewDeployableIngress(
 	client *kubernetes.Clientset,
-	data entities.DeploymentMetadata) *DeployableIngress {
+	data entities.DeploymentMetadata, networkDecorator executor.NetworkDecorator) *DeployableIngress {
 	return &DeployableIngress{
 		client:    client.ExtensionsV1beta1().Ingresses(data.Namespace),
-		data:      data,
+		Data:      data,
 		ingresses: make([]IngressesInfo, 0),
+		networkDecorator: networkDecorator,
 	}
 }
 
 func (di *DeployableIngress) GetId() string {
-	return di.data.Stage.StageId
+	return di.Data.Stage.StageId
 }
 
 func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
@@ -90,7 +93,7 @@ func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.Servic
 	if len(appInstPrefix) > InstPrefixLength {
 		appInstPrefix = appInstPrefix[0:InstPrefixLength]
 	}
-	orgPrefix := di.data.OrganizationId
+	orgPrefix := di.Data.OrganizationId
 	if len(orgPrefix) > OrgPrefixLength {
 		orgPrefix = orgPrefix[0:OrgPrefixLength]
 	}
@@ -147,7 +150,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 	annotations := map[string]string{
 		"kubernetes.io/ingress.class": "nginx",
 		"organizationId":              service.OrganizationId,
-		"appInstanceId":               di.data.AppInstanceId,
+		"appInstanceId":               di.Data.AppInstanceId,
 		"serviceId":                   service.ServiceId,
 	}
 	// Overwrite the application root path with the user specified one so that when
@@ -163,16 +166,16 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 		},
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:      fmt.Sprintf("ingress-%s-%d", service.ServiceId, rule.TargetPort),
-			Namespace: di.data.Namespace,
+			Namespace: di.Data.Namespace,
 			Labels: map[string]string{
 				"cluster":   "application",
 				"component": "ingress-nginx",
-				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       di.data.FragmentId,
+				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       di.Data.FragmentId,
 				utils.NALEJ_ANNOTATION_INGRESS_ENDPOINT:          ingressPrefixName,
-				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           di.data.OrganizationId,
-				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            di.data.AppDescriptorId,
-				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           di.data.AppInstanceId,
-				utils.NALEJ_ANNOTATION_STAGE_ID:                  di.data.Stage.StageId,
+				utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           di.Data.OrganizationId,
+				utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:            di.Data.AppDescriptorId,
+				utils.NALEJ_ANNOTATION_APP_INSTANCE_ID:           di.Data.AppInstanceId,
+				utils.NALEJ_ANNOTATION_STAGE_ID:                  di.Data.Stage.StageId,
 				utils.NALEJ_ANNOTATION_SERVICE_ID:                service.ServiceId,
 				utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
 				utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
@@ -207,11 +210,11 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 
 // TODO Check the rules to build the Ingresses.
 func (di *DeployableIngress) Build() error {
-	log.Debug().Int("number public rules", len(di.data.Stage.PublicRules)).Msg("Building ingresses")
+	log.Debug().Int("number public rules", len(di.Data.Stage.PublicRules)).Msg("Building ingresses")
 
-	for _, publicRule := range di.data.Stage.PublicRules {
+	for _, publicRule := range di.Data.Stage.PublicRules {
 		log.Debug().Interface("rule", publicRule).Msg("Checking public rule")
-		for _, service := range di.data.Stage.Services {
+		for _, service := range di.Data.Stage.Services {
 			log.Debug().Interface("service", service).Msg("Checking service for public ingress")
 			if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
 				toAdd := di.BuildIngressesForServiceWithRule(service, publicRule)
@@ -221,6 +224,13 @@ func (di *DeployableIngress) Build() error {
 				}
 			}
 		}
+	}
+
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := di.networkDecorator.Build(di)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error building network components")
+		return errNetDecorator
 	}
 
 	log.Debug().Interface("Ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
@@ -246,6 +256,14 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 			controller.AddMonitoredResource(&res)
 		}
 	}
+
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := di.networkDecorator.Deploy(di)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error deploying network components")
+		return errNetDecorator
+	}
+
 	return nil
 }
 
@@ -264,6 +282,14 @@ func (di *DeployableIngress) Undeploy() error {
 		deleted++
 	}
 	log.Debug().Int("deleted", deleted).Msg("Ingresses has been deleted")
+
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := di.networkDecorator.Undeploy(di)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error undeploying network components")
+		return errNetDecorator
+	}
+
 	return nil
 
 }

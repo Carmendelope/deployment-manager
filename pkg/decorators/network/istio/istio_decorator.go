@@ -18,23 +18,36 @@
 package istio
 
 import (
+    "fmt"
+    "github.com/nalej/deployment-manager/pkg/config"
     "github.com/nalej/deployment-manager/pkg/executor"
     "github.com/nalej/deployment-manager/pkg/kubernetes"
+    "github.com/nalej/deployment-manager/pkg/utils"
     "github.com/nalej/derrors"
+    "github.com/nalej/grpc-application-go"
+    "github.com/nalej/grpc-conductor-go"
+    "github.com/rs/zerolog/log"
+    "istio.io/api/networking/v1alpha3"
+    metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "k8s.io/client-go/rest"
+    versionedclient "istio.io/client-go/pkg/clientset/versioned"
+    networking "istio.io/client-go/pkg/apis/networking/v1alpha3"
+
 )
 
 const(
     IstioLabelInjection = "istio-injection"
+    InstPrefixLength = 6
+    OrgPrefixLength = 8
 )
 
 type IstioDecorator struct {
     // Istio client
-    //Client *versionedclient.Clientset
+    Client *versionedclient.Clientset
 }
 
 func NewIstioDecorator() (executor.NetworkDecorator, derrors.Error){
 
-    /*
     config, err := rest.InClusterConfig()
     if err != nil {
         return nil, derrors.NewInternalError("impossible to get local configuration for internal k8s client", err)
@@ -48,9 +61,6 @@ func NewIstioDecorator() (executor.NetworkDecorator, derrors.Error){
     }
 
     return &IstioDecorator{Client: ic}, nil
-    */
-    return &IstioDecorator{}, nil
-
 
 }
 
@@ -66,12 +76,15 @@ func (id *IstioDecorator) Build(aux executor.Deployable, args ...interface{}) de
         return nil
     }
     return nil
-
-
 }
 
 func (id *IstioDecorator) Deploy(aux executor.Deployable, args ...interface{}) derrors.Error {
-   // Nothing to do
+   // Ingresses use the the Istio gateway solution
+   switch target := aux.(type){
+   case *kubernetes.DeployableIngress:
+       return id.deployIstioIngress(target)
+   }
+
    return nil
 }
 
@@ -91,4 +104,180 @@ func (id *IstioDecorator) decorateNamespace(namespace *kubernetes.DeployableName
     return nil
 }
 
+// Deploy an ingress for a service to be exposed. This is translated into a gateway entry and
+// its corresponding virtual service.
+func (id *IstioDecorator) deployIstioIngress(ingress *kubernetes.DeployableIngress) derrors.Error {
 
+    // we will generate one gateway per service
+    gateways := make(map[string]*networking.Gateway,0)
+    // we have a map of pending virtual services
+    virtualServices := make(map[string]*networking.VirtualService)
+
+    // Iterate through services and create ingresses when they require them
+    for _, publicRule := range ingress.Data.Stage.PublicRules {
+        log.Debug().Interface("rule", publicRule).Msg("Checking public rule")
+        for _, service := range ingress.Data.Stage.Services {
+            log.Debug().Interface("service", service).Msg("Checking service for istio public ingress")
+            if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
+                // create a gateway if not done yet and add as many ports as required
+                gateway, found := gateways[service.Name]
+                if !found {
+                    gateway = &networking.Gateway{}
+                    gateways[service.Name] = gateway
+                }
+                // update the gateway with new information about ports following this rule
+                id.updateIstioGateway(gateway, ingress, service, publicRule)
+                gateways[service.Name] = gateway
+
+                // Every service requires an Istio virtual service connected with a gateway
+                vs := id.createIstioVirtualService(gateway, ingress, service, publicRule)
+                virtualServices[service.Name] = vs
+            }
+        }
+    }
+
+
+    // Deploy all the gateways
+    for name, gw := range gateways {
+        log.Debug().Str("namespace", gw.Namespace).Str("gateway", name).Msg("create gateway")
+        _, err := id.Client.NetworkingV1alpha3().Gateways(ingress.Data.Namespace).Create(gw)
+        if err != nil {
+            log.Error().Interface("gateway", gw).Err(err).Msg("error generating gateway")
+            return derrors.NewInternalError("impossible to generate gateway", err)
+        }
+    }
+    // Deploy all the virtual services
+    for name, vs := range virtualServices {
+        log.Debug().Str("namespace", vs.Namespace).Str("virtualservice", name).Msg("create virtualservice")
+        _, err := id.Client.NetworkingV1alpha3().VirtualServices(ingress.Data.Namespace).Create(vs)
+        if err != nil {
+            log.Error().Interface("virtualservice", vs).Err(err).Msg("error generating virtualservice")
+            return derrors.NewInternalError("impossible to generate virtual service", err)
+        }
+    }
+
+    return nil
+}
+
+
+func(id *IstioDecorator) updateIstioGateway(gateway *networking.Gateway, ingress *kubernetes.DeployableIngress,
+    service *grpc_application_go.ServiceInstance,
+    publicRule *grpc_conductor_go.PublicSecurityRuleInstance){
+
+    // create a gateway for the service
+
+    // get the corresponding names for this ingress
+    ingressName, serviceGroupInstPrefix, appInstPrefix, _ := id.getNamePrefixes(service, publicRule)
+
+    // the gateway was not initialized
+    if gateway.Spec.Servers == nil{
+
+        gateway.ObjectMeta = metaV1.ObjectMeta{
+            Name: service.Name,
+            Namespace: ingress.Data.Namespace,
+            Labels: id.generateLabels(ingress, service),
+        }
+
+        // Use default Istio gateway
+        gateway.Spec.Selector = map[string]string{"istio": "ingressgateway"}
+        // Initialize servers entry
+        gateway.Spec.Servers = make([]*v1alpha3.Server,0)
+    }
+
+    // Add a server following the public rule
+    newServer := v1alpha3.Server{
+        Hosts: []string{
+            fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, config.GetConfig().ClusterPublicHostname),
+        },
+        Port: &v1alpha3.Port{
+            Number: uint32(publicRule.TargetPort),
+            Protocol: "http",
+            Name: fmt.Sprintf("port-%d-http",publicRule.TargetPort),
+        },
+    }
+
+    gateway.Spec.Servers = append(gateway.Spec.Servers, &newServer)
+
+}
+
+func(id *IstioDecorator) createIstioVirtualService(gateway *networking.Gateway, ingress *kubernetes.DeployableIngress,
+    service *grpc_application_go.ServiceInstance,
+    publicRule *grpc_conductor_go.PublicSecurityRuleInstance) *networking.VirtualService {
+
+    // create a virtual service to expose the ingress
+    vs := &networking.VirtualService{
+        ObjectMeta: metaV1.ObjectMeta{
+            Name: service.Name,
+            Labels: id.generateLabels(ingress, service),
+        },
+        Spec: v1alpha3.VirtualService{
+            Gateways:[]string{gateway.Name},
+            Hosts: []string{"*"},
+            Http:[]*v1alpha3.HTTPRoute{
+                {
+                    Route: []*v1alpha3.HTTPRouteDestination{
+                        {
+                            Destination: &v1alpha3.Destination{
+                                Port: &v1alpha3.PortSelector{
+                                    Number: uint32(publicRule.TargetPort),
+                                },
+                                Host: service.Name,
+                            },
+                        },
+                    },
+                },
+                },
+            },
+        }
+
+
+    return vs
+}
+
+
+func(id *IstioDecorator) generateLabels(d *kubernetes.DeployableIngress,
+    service *grpc_application_go.ServiceInstance) map[string]string {
+
+    extendedLabels := make(map[string]string, 0)
+    if service.Labels != nil {
+        // users have already defined labels for this app
+        for k,v := range service.Labels {
+            extendedLabels[k] = v
+        }
+    }
+
+    extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.FragmentId
+    extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
+    extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
+    extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.Data.AppInstanceId
+    extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.Data.Stage.StageId
+    extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_ID] = d.Data.DeploymentId
+    extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.Stage.FragmentId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
+    extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+    extendedLabels["clusters"] = "application"
+    return extendedLabels
+}
+
+func(id *IstioDecorator) getNamePrefixes(service *grpc_application_go.ServiceInstance,
+    rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
+    ingressName := service.Name
+    if rule.TargetPort != 80 {
+        ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
+    }
+    serviceGroupInstPrefix := service.ServiceGroupInstanceId
+    if len(serviceGroupInstPrefix) > InstPrefixLength {
+        serviceGroupInstPrefix = serviceGroupInstPrefix[0:InstPrefixLength]
+    }
+    appInstPrefix := service.AppInstanceId
+    if len(appInstPrefix) > InstPrefixLength {
+        appInstPrefix = appInstPrefix[0:InstPrefixLength]
+    }
+    orgPrefix := service.OrganizationId
+    if len(orgPrefix) > OrgPrefixLength {
+        orgPrefix = orgPrefix[0:OrgPrefixLength]
+    }
+    return ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix
+}
