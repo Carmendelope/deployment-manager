@@ -207,13 +207,6 @@ func (d *DeployableDeployments) Build() error {
 						EnableServiceLinks: getBool(false),
 						// Do not mount any service account token
 						AutomountServiceAccountToken: getBool(false),
-						/*
-						// Set POD DNS policies
-						DNSPolicy: apiv1.DNSNone,
-						DNSConfig: &apiv1.PodDNSConfig{
-							Nameservers: d.Data.DNSHosts,
-						},
-						*/
 						Containers: []apiv1.Container{
 							// User defined container
 							{
@@ -245,7 +238,6 @@ func (d *DeployableDeployments) Build() error {
 		if service.Configs != nil && len(service.Configs) > 0 {
 			log.Debug().Msg("Adding config maps")
 			log.Debug().Msg("Creating volumes")
-			// NP-694. Support consolidating config maps
 			configVolumes, cmVolumeMounts := d.generateAllVolumes(service.ServiceId, service.ServiceInstanceId, service.Configs)
 			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
 			log.Debug().Msg("Linking configmap volumes")

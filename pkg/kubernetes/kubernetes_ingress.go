@@ -46,7 +46,7 @@ type IngressesInfo struct {
 type DeployableIngress struct {
 	client    extV1Beta1.IngressInterface
 	Data      entities.DeploymentMetadata
-	ingresses []IngressesInfo
+	Ingresses []IngressesInfo
 	// network decorator object for deployments
 	networkDecorator executor.NetworkDecorator
 }
@@ -55,9 +55,9 @@ func NewDeployableIngress(
 	client *kubernetes.Clientset,
 	data entities.DeploymentMetadata, networkDecorator executor.NetworkDecorator) *DeployableIngress {
 	return &DeployableIngress{
-		client:    client.ExtensionsV1beta1().Ingresses(data.Namespace),
-		Data:      data,
-		ingresses: make([]IngressesInfo, 0),
+		client:           client.ExtensionsV1beta1().Ingresses(data.Namespace),
+		Data:             data,
+		Ingresses:        make([]IngressesInfo, 0),
 		networkDecorator: networkDecorator,
 	}
 }
@@ -69,7 +69,7 @@ func (di *DeployableIngress) GetId() string {
 func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 	result := make(map[string][]string, 0)
 
-	for _, ings := range di.ingresses {
+	for _, ings := range di.Ingresses {
 		endpoints := make([]string, 0)
 		for _, endpoint := range ings.Ingresses {
 			endpoints = append(endpoints, endpoint.Spec.Rules[0].Host)
@@ -149,6 +149,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 	// create the ingress annotations
 	annotations := map[string]string{
 		"kubernetes.io/ingress.class": "nginx",
+		"nginx.ingress.kubernetes.io/service-upstream": "true",
 		"organizationId":              service.OrganizationId,
 		"appInstanceId":               di.Data.AppInstanceId,
 		"serviceId":                   service.ServiceId,
@@ -210,7 +211,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 
 // TODO Check the rules to build the Ingresses.
 func (di *DeployableIngress) Build() error {
-	log.Debug().Int("number public rules", len(di.Data.Stage.PublicRules)).Msg("Building ingresses")
+	log.Debug().Int("number public rules", len(di.Data.Stage.PublicRules)).Msg("Building Ingresses")
 
 	for _, publicRule := range di.Data.Stage.PublicRules {
 		log.Debug().Interface("rule", publicRule).Msg("Checking public rule")
@@ -220,7 +221,7 @@ func (di *DeployableIngress) Build() error {
 				toAdd := di.BuildIngressesForServiceWithRule(service, publicRule)
 				if toAdd != nil {
 					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
-					di.ingresses = append(di.ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, []*v1beta1.Ingress{toAdd}})
+					di.Ingresses = append(di.Ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, []*v1beta1.Ingress{toAdd}})
 				}
 			}
 		}
@@ -233,13 +234,13 @@ func (di *DeployableIngress) Build() error {
 		return errNetDecorator
 	}
 
-	log.Debug().Interface("Ingresses", di.ingresses).Msg("Ingresses have been build and are ready to deploy")
+	log.Debug().Interface("Ingresses", di.Ingresses).Msg("Ingresses have been build and are ready to deploy")
 	return nil
 }
 
 func (di *DeployableIngress) Deploy(controller executor.DeploymentController) error {
 	numCreated := 0
-	for _, ingresses := range di.ingresses {
+	for _, ingresses := range di.Ingresses {
 		for _, toCreate := range ingresses.Ingresses {
 			log.Debug().Interface("toCreate", toCreate).Msg("Creating ingress")
 			created, err := di.client.Create(toCreate)
@@ -269,7 +270,7 @@ func (di *DeployableIngress) Deploy(controller executor.DeploymentController) er
 
 func (di *DeployableIngress) Undeploy() error {
 	deleted := 0
-	for _, ingresses := range di.ingresses {
+	for _, ingresses := range di.Ingresses {
 		for _, toDelete := range ingresses.Ingresses {
 			err := di.client.Delete(toDelete.Name, metaV1.NewDeleteOptions(DeleteGracePeriod))
 			if err != nil {

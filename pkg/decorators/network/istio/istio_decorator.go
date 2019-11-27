@@ -28,11 +28,10 @@ import (
     "github.com/nalej/grpc-conductor-go"
     "github.com/rs/zerolog/log"
     "istio.io/api/networking/v1alpha3"
+    networking "istio.io/client-go/pkg/apis/networking/v1alpha3"
+    versionedclient "istio.io/client-go/pkg/clientset/versioned"
     metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/rest"
-    versionedclient "istio.io/client-go/pkg/clientset/versioned"
-    networking "istio.io/client-go/pkg/apis/networking/v1alpha3"
-
 )
 
 const(
@@ -71,6 +70,10 @@ func (id *IstioDecorator) Build(aux executor.Deployable, args ...interface{}) de
     // Process a namespace
     case *kubernetes.DeployableNamespace:
         return id.decorateNamespace(target)
+    case *kubernetes.DeployableDeployments:
+        return id.decorateDeployments(target)
+    case *kubernetes.DeployableServices:
+        return id.decorateServices(target)
     default:
         // nothing to do
         return nil
@@ -80,19 +83,80 @@ func (id *IstioDecorator) Build(aux executor.Deployable, args ...interface{}) de
 
 func (id *IstioDecorator) Deploy(aux executor.Deployable, args ...interface{}) derrors.Error {
    // Ingresses use the the Istio gateway solution
+   /*
    switch target := aux.(type){
    case *kubernetes.DeployableIngress:
        return id.deployIstioIngress(target)
    }
+   */
 
    return nil
 }
 
-    // Remove any unnecessary entries when a deployable element is removed.
+// Remove any unnecessary entries when a deployable element is removed.
 func (id *IstioDecorator) Undeploy(aux executor.Deployable, args ...interface{}) derrors.Error {
     return nil
 }
 
+
+// Decorate services by extending the number of available services to include those services
+// that are declared to be accessible but are not deployed onto this cluster.
+// params:
+//  target service to be decorated
+// return:
+//  error if any
+func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices) derrors.Error {
+    // Those services connected with the ingress we have to disable the inbound ports
+    /*
+    for _, publicRule := range target.Data.Stage.PublicRules {
+        found := false
+        for _, s := range target.Services{
+            // If we already have a service for this public rule skip to the next one
+            if publicRule.TargetServiceGroupInstanceId == s.Service.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] &&
+                publicRule.TargetServiceInstanceId == s.Service.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] {
+                found = true
+                break
+            }
+        }
+        if !found {
+            // Create a service
+            newServ := apiv1.Service{
+                ObjectMeta: metaV1.ObjectMeta{
+                    Name:
+                },
+                Spec: {},
+            }
+        }
+    }
+    */
+
+    return nil
+}
+
+
+// Decorate deployments to skip Istio network catching.
+// params:
+//  target kubernetes deployment to be decorated
+// return:
+//   error if any
+func (id *IstioDecorator) decorateDeployments(target *kubernetes.DeployableDeployments) derrors.Error {
+    // Those services connected with the ingress we have to disable the inbound ports
+    for _, publicRule := range target.Data.Stage.PublicRules {
+        for _, dep := range target.Deployments {
+            if publicRule.TargetServiceGroupInstanceId == dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] &&
+                publicRule.TargetServiceInstanceId == dep.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] {
+                log.Debug().Str("serviceName",dep.Name).Msg("candidate for Istio ingress endpoint")
+                // Set the corresponding flags
+                if dep.Spec.Template.Annotations == nil {
+                    dep.Spec.Template.Annotations = make(map[string]string,0)
+                }
+                dep.Spec.Template.Annotations["traffic.sidecar.istio.io/includeInboundPorts"] = ""
+            }
+        }
+    }
+
+    return nil
+}
 
 // Add the Istio labels required by any namespace to enable de network traffic injection.
 // params:
