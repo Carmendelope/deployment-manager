@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-conductor-go"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	"github.com/rs/zerolog/log"
@@ -29,7 +30,7 @@ var _ = ginkgo.Describe("Kubernetes ConfigMap tests", func() {
 	var client *DeployableConfigMaps
 	var deploymentClient *DeployableDeployments
 	var configFiles []*grpc_application_go.ConfigFile
-	var service *grpc_application_go.ServiceInstance
+	var service *grpc_conductor_go.ServiceInstance
 
 	ginkgo.BeforeSuite(func() {
 		log.Debug().Msg("BeforeSuite")
@@ -66,7 +67,7 @@ var _ = ginkgo.Describe("Kubernetes ConfigMap tests", func() {
 	ginkgo.It("Should be able to create a configMap", func() {
 		log.Debug().Msg("IT")
 
-		service = &grpc_application_go.ServiceInstance{Name: "service_id"}
+		service = &grpc_conductor_go.ServiceInstance{ServiceName: "service_id"}
 
 		config := client.generateConsolidateConfigMap(service, configFiles)
 		gomega.Expect(len(config.BinaryData)).Should(gomega.Equal(len(configFiles)))

@@ -22,7 +22,6 @@ import (
 	"github.com/nalej/deployment-manager/pkg/common"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
-	"github.com/nalej/grpc-application-go"
 	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	apiv1 "k8s.io/api/core/v1"
@@ -55,7 +54,7 @@ func NewDeployableLoadBalancer(client *kubernetes.Clientset, data entities.Deplo
 	}
 }
 
-func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *apiv1.Service {
+func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *apiv1.Service {
 
 	extendedLabels := make(map[string]string, 0)
 	extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = dl.data.FragmentId
@@ -98,11 +97,11 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 			k8sService := apiv1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: dl.data.Namespace,
-					Name:      fmt.Sprintf("lb%s", common.FormatName(service.Name)),
+					Name:      fmt.Sprintf("lb%s", common.FormatName(service.ServiceName)),
 					Labels:    extendedLabels,
 				},
 				Spec: apiv1.ServiceSpec{
-					ExternalName: fmt.Sprintf("lb%s", common.FormatName(service.Name)),
+					ExternalName: fmt.Sprintf("lb%s", common.FormatName(service.ServiceName)),
 					Ports:        ports,
 					Type:         apiv1.ServiceTypeLoadBalancer,
 					Selector:     extendedSelectors,
@@ -132,7 +131,7 @@ func (dl *DeployableLoadBalancer) Build() error {
 			if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
 				toAdd := dl.BuildLoadBalancerForServiceWithRule(service, publicRule)
 				if toAdd != nil {
-					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new load Balancer for service")
+					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.ServiceName).Msg("Adding new load Balancer for service")
 					dl.loadBalancers = append(dl.loadBalancers, ServiceInfo{service.ServiceId, service.ServiceInstanceId, *toAdd})
 				}
 			}

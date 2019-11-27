@@ -82,11 +82,11 @@ func (s *DeployableServices) Build() error {
 			k8sService := apiv1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: s.Data.Namespace,
-					Name:      common.FormatName(service.Name),
+					Name:      common.FormatName(service.ServiceName),
 					Labels:    extendedLabels,
 				},
 				Spec: apiv1.ServiceSpec{
-					ExternalName: common.FormatName(service.Name),
+					ExternalName: common.FormatName(service.ServiceName),
 					Ports:        ports,
 					Type:         apiv1.ServiceTypeNodePort,
 					Selector:     extendedLabels,

@@ -147,6 +147,7 @@ type DeploymentMetadata struct {
 	OrganizationName      string                         `json:"organization_name,omitempty"`
 	DeploymentId          string                         `json:"deployment_id,omitempty"`
 	AppDescriptorId       string                         `json:"app_descriptor_id,omitempty"`
+	AppDescriptorName     string                         `json:"app_descriptor_name,omitempty"`
 	AppInstanceId         string                         `json:"app_instance_id,omitempty"`
 	AppName               string                         `json:"app_name,omitempty"`
 	ClusterPublicHostname string                         `json:"cluster_public_hostname,omitempty"`
