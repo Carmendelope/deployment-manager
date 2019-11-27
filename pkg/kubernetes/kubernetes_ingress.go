@@ -77,10 +77,10 @@ func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 	return result
 }
 
-func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
-	ingressName := service.Name
+func (di *DeployableIngress) getNamePrefixes(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
+	ingressName := service.ServiceName
 	if rule.TargetPort != 80 {
-		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
+		ingressName = fmt.Sprintf("%s-%d", service.ServiceName, rule.TargetPort)
 	}
 	serviceGroupInstPrefix := service.ServiceGroupInstanceId
 	if len(serviceGroupInstPrefix) > InstPrefixLength {
@@ -97,7 +97,7 @@ func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.Servic
 	return ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix
 }
 
-func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
+func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
@@ -115,7 +115,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 					}
 					toAdd := v1beta1.HTTPIngressPath{
 						Backend: v1beta1.IngressBackend{
-							ServiceName: service.Name,
+							ServiceName: service.ServiceName,
 							ServicePort: intstr.IntOrString{IntVal: rule.TargetPort},
 						},
 					}
@@ -216,7 +216,7 @@ func (di *DeployableIngress) Build() error {
 			if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
 				toAdd := di.BuildIngressesForServiceWithRule(service, publicRule)
 				if toAdd != nil {
-					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
+					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.ServiceName).Msg("Adding new ingress for service")
 					di.ingresses = append(di.ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, []*v1beta1.Ingress{toAdd}})
 				}
 			}

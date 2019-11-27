@@ -24,6 +24,7 @@ import (
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-conductor-go"
 	"github.com/nalej/grpc-installer-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
@@ -73,7 +74,7 @@ func (ds *DeployableStorage) GetId() string {
 	return ds.data.Stage.StageId
 }
 
-func (ds *DeployableStorage) generatePVC(storageId string, service *grpc_application_go.ServiceInstance,
+func (ds *DeployableStorage) generatePVC(storageId string, service *grpc_conductor_go.ServiceInstance,
 	storage *grpc_application_go.Storage) *v1.PersistentVolumeClaim {
 
 	if storage.Size == 0 {
@@ -143,7 +144,7 @@ func (ds *DeployableStorage) GetStorageClass(stype grpc_application_go.StorageTy
 }
 
 // This function returns an array in case we support other Secrets in the future.
-func (ds *DeployableStorage) BuildStorageForServices(service *grpc_application_go.ServiceInstance) []*v1.PersistentVolumeClaim {
+func (ds *DeployableStorage) BuildStorageForServices(service *grpc_conductor_go.ServiceInstance) []*v1.PersistentVolumeClaim {
 	if service.Storage == nil {
 		return nil
 	}
@@ -155,14 +156,14 @@ func (ds *DeployableStorage) BuildStorageForServices(service *grpc_application_g
 		// TODO: Currently handle only cluster_local type, other types in plan phase.
 		if storage.Type != grpc_application_go.StorageType_CLUSTER_LOCAL && storage.Type != grpc_application_go.StorageType_CLUSTER_REPLICA {
 			// TODO:Ideally we should return error and user should know why
-			log.Error().Str("serviceName", service.Name).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
+			log.Error().Str("serviceName", service.ServiceName).Str("StorageType", storage.Type.String()).Msg("storage not supported ")
 			// service will fail if we continue, as no PVC can be bound
 			continue
 		}
 		ds.class = ds.GetStorageClass(storage.Type)
 		if ds.class == "" {
 
-			log.Error().Str("serviceName", service.Name).Str("storage type: ", grpc_application_go.StorageType_name[int32(storage.Type)]).Str("or cluster environment: ",
+			log.Error().Str("serviceName", service.ServiceName).Str("storage type: ", grpc_application_go.StorageType_name[int32(storage.Type)]).Str("or cluster environment: ",
 				grpc_installer_go.Platform_name[int32(config.GetConfig().TargetPlatform)]).Msg("not supported ")
 			continue
 		}
@@ -171,7 +172,7 @@ func (ds *DeployableStorage) BuildStorageForServices(service *grpc_application_g
 		toAdd := ds.generatePVC(pvcId, service, storage)
 		pvcs = append(pvcs, toAdd)
 	}
-	log.Debug().Interface("number", len(pvcs)).Str("serviceName", service.Name).Msg("Storage prepared for service")
+	log.Debug().Interface("number", len(pvcs)).Str("serviceName", service.ServiceName).Msg("Storage prepared for service")
 	if len(pvcs) > 0 {
 		return pvcs
 	}

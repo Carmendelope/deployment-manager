@@ -38,6 +38,8 @@ const (
 	NALEJ_ANNOTATION_ORGANIZATION_NAME = "nalej-organization-name"
 	// Annotation application descriptor
 	NALEJ_ANNOTATION_APP_DESCRIPTOR = "nalej-app-descriptor"
+	// Annotation application descriptor
+	NALEJ_ANNOTATION_APP_DESCRIPTOR_NAME = "nalej-app-descriptor-name"
 	// Annotation for the application name
 	NALEJ_ANNOTATION_APP_NAME = "nalej-app-name"
 	// Annotation application instance
@@ -54,6 +56,8 @@ const (
 	NALEJ_ANNOTATION_SERVICE_INSTANCE_ID = "nalej-service-instance-id"
 	// Annotation for metadata to identify the group service
 	NALEJ_ANNOTATION_SERVICE_GROUP_ID = "nalej-service-group-id"
+	// Annotation for metadata with the service group name
+	NALEJ_ANNOTATION_SERVICE_GROUP_NAME = "nalej-service-group-name"
 	// Annotation for metadata to identify the group service
 	NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID = "nalej-service-group-instance-id"
 
