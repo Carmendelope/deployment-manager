@@ -80,8 +80,8 @@ func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 	return result
 }
 
-func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
-	ingressName := service.Name
+func (di *DeployableIngress) getNamePrefixes(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
+	ingressName := service.ServiceName
 	if rule.TargetPort != 80 {
 		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
 	}
@@ -100,7 +100,7 @@ func (di *DeployableIngress) getNamePrefixes(service *grpc_application_go.Servic
 	return ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix
 }
 
-func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_application_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
+func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
 
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
@@ -118,7 +118,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_appl
 					}
 					toAdd := v1beta1.HTTPIngressPath{
 						Backend: v1beta1.IngressBackend{
-							ServiceName: service.Name,
+							ServiceName: service.ServiceName,
 							ServicePort: intstr.IntOrString{IntVal: rule.TargetPort},
 						},
 					}

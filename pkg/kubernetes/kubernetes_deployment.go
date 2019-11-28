@@ -189,7 +189,7 @@ func (d *DeployableDeployments) Build() error {
 
 		deployment := appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.FormatName(service.Name),
+				Name:      common.FormatName(service.ServiceName),
 				Namespace: d.Data.Namespace,
 				Labels:    extendedLabels,
 			},
@@ -210,7 +210,7 @@ func (d *DeployableDeployments) Build() error {
 						Containers: []apiv1.Container{
 							// User defined container
 							{
-								Name:            common.FormatName(service.Name),
+								Name:            common.FormatName(service.ServiceName),
 								Image:           service.Image,
 								Env:             environmentVariables,
 								Ports:           d.getContainerPorts(service.ExposedPorts),
@@ -226,7 +226,7 @@ func (d *DeployableDeployments) Build() error {
 			log.Debug().Msg("Adding credentials to the deployment")
 			deployment.Spec.Template.Spec.ImagePullSecrets = append(deployment.Spec.Template.Spec.ImagePullSecrets,
 				apiv1.LocalObjectReference{
-					Name: service.Name,
+					Name: service.ServiceName,
 				})
 		}
 

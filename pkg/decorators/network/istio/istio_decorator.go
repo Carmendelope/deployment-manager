@@ -29,6 +29,7 @@ import (
     "github.com/rs/zerolog/log"
     "istio.io/api/networking/v1alpha3"
     networking "istio.io/client-go/pkg/apis/networking/v1alpha3"
+    apiv1 "k8s.io/api/core/v1"
     versionedclient "istio.io/client-go/pkg/clientset/versioned"
     metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/client-go/rest"
@@ -106,7 +107,28 @@ func (id *IstioDecorator) Undeploy(aux executor.Deployable, args ...interface{})
 // return:
 //  error if any
 func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices) derrors.Error {
-    // Those services connected with the ingress we have to disable the inbound ports
+    // Create a service for every rule allowing internal traffic if it is not declared yet.
+    for _, publicRule := range target.Data.Stage.PublicRules {
+        found := false
+        for _, s := range target.Services{
+            // If we already have a service for this public rule skip to the next one
+            if publicRule.TargetServiceGroupInstanceId == s.Service.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] &&
+                publicRule.TargetServiceInstanceId == s.Service.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] {
+                found = true
+                break
+            }
+        }
+        if !found {
+            // Create a service for this rule
+            newServ := apiv1.Service{
+                ObjectMeta: metaV1.ObjectMeta{
+                    Name:
+                }
+            }
+        }
+    }
+
+
     /*
     for _, publicRule := range target.Data.Stage.PublicRules {
         found := false

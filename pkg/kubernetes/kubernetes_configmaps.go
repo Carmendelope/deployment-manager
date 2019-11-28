@@ -22,6 +22,7 @@ import (
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,7 +101,7 @@ func (dc *DeployableConfigMaps) generateConfigMap(serviceId string, serviceInsta
 }
 */
 
-func (dc *DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_application_go.ServiceInstance, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
+func (dc *DeployableConfigMaps) generateConsolidateConfigMap(service *grpc_conductor_go.ServiceInstance, cf []*grpc_application_go.ConfigFile) *v1.ConfigMap {
 	log.Debug().Interface("configMap", cf).Msg("generating consolidate config map...")
 
 	if len(cf) == 0 {
@@ -144,7 +145,7 @@ func (dc *DeployableConfigMaps) Build() error {
 		//toAdd := dc.generateConsolidateConfigMap(service.ServiceId, service.ServiceInstanceId, service.Configs)
 		toAdd := dc.generateConsolidateConfigMap(service, service.Configs)
 		if toAdd != nil {
-			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new config file")
+			log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.ServiceName).Msg("Adding new config file")
 			dc.configmaps[service.ServiceId] = append(dc.configmaps[service.ServiceId], toAdd)
 		}
 	}

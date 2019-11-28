@@ -278,12 +278,12 @@
   version = "v0.0.37"
 
 [[projects]]
-  digest = "1:b20974f33d5927364de58b99328ee8bdbb23fa0911a92e3a868afec5d92d5466"
+  digest = "1:442429f610e3934106628ab549ddce78c45195ded6ba88ad76339b2a7756dc27"
   name = "github.com/nalej/grpc-conductor-go"
   packages = ["."]
   pruneopts = ""
-  revision = "7895e36f8e79a9219e48f5a1c72296d1f3928231"
-  version = "v0.0.92"
+  revision = "9cbe44351c8dbd004186abc61dff0430d497022a"
+  version = "v0.0.96"
 
 [[projects]]
   digest = "1:98b6027953482c9efb9ff40892c51d876d819a3a58543c7b5eb7c099c90d2d13"
@@ -462,7 +462,7 @@
   revision = "9abe38d0371deb4049011737cbd30e4ba80c673b"
 
 [[projects]]
-  digest = "1:f3e56d302f80d760e718743f89f4e7eaae532d4218ba330e979bd051f78de141"
+  digest = "1:6f218995d6a74636cfcab45ce03005371e682b4b9bee0e5eb0ccfd83ef85364f"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
@@ -470,8 +470,8 @@
     "prometheus/promhttp",
   ]
   pruneopts = ""
-  revision = "1cafe34db7fdec6022e17e00e1c1ea501022f3e4"
-  version = "v0.9.0"
+  revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
