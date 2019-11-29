@@ -23,6 +23,7 @@ import (
 	"github.com/nalej/deployment-manager/pkg/executor"
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-conductor-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,14 +65,14 @@ func (ds *DeployableSecrets) getDockerConfigJSON(ic *grpc_application_go.ImageCr
 	return toEncode
 }
 
-func (ds *DeployableSecrets) generateDockerSecret(service *grpc_application_go.ServiceInstance) *v1.Secret {
+func (ds *DeployableSecrets) generateDockerSecret(service *grpc_conductor_go.ServiceInstance) *v1.Secret {
 	return &v1.Secret{
 		TypeMeta: v12.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
 		},
 		ObjectMeta: v12.ObjectMeta{
-			Name:      service.Name,
+			Name:      service.ServiceName,
 			Namespace: ds.data.Namespace,
 			Labels: map[string]string{
 				utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       ds.data.FragmentId,
@@ -93,13 +94,13 @@ func (ds *DeployableSecrets) generateDockerSecret(service *grpc_application_go.S
 }
 
 // This function returns an array in case we support other Secrets in the future.
-func (ds *DeployableSecrets) BuildSecretsForService(service *grpc_application_go.ServiceInstance) []*v1.Secret {
+func (ds *DeployableSecrets) BuildSecretsForService(service *grpc_conductor_go.ServiceInstance) []*v1.Secret {
 	if service.Credentials == nil {
 		return nil
 	}
 	dockerSecret := ds.generateDockerSecret(service)
 	result := []*v1.Secret{dockerSecret}
-	log.Debug().Interface("number", len(result)).Str("serviceName", service.Name).Msg("Secrets prepared for service")
+	log.Debug().Interface("number", len(result)).Str("serviceName", service.ServiceName).Msg("Secrets prepared for service")
 	return result
 }
 

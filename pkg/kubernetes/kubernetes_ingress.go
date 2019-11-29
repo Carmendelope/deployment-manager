@@ -83,7 +83,7 @@ func (di *DeployableIngress) GetIngressesEndpoints() map[string][]string {
 func (di *DeployableIngress) getNamePrefixes(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) (string, string, string, string) {
 	ingressName := service.ServiceName
 	if rule.TargetPort != 80 {
-		ingressName = fmt.Sprintf("%s-%d", service.Name, rule.TargetPort)
+		ingressName = fmt.Sprintf("%s-%d", service.ServiceName, rule.TargetPort)
 	}
 	serviceGroupInstPrefix := service.ServiceGroupInstanceId
 	if len(serviceGroupInstPrefix) > InstPrefixLength {
@@ -220,7 +220,7 @@ func (di *DeployableIngress) Build() error {
 			if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
 				toAdd := di.BuildIngressesForServiceWithRule(service, publicRule)
 				if toAdd != nil {
-					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.Name).Msg("Adding new ingress for service")
+					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.ServiceName).Msg("Adding new ingress for service")
 					di.Ingresses = append(di.Ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, []*v1beta1.Ingress{toAdd}})
 				}
 			}

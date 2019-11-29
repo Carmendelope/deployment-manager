@@ -1,17 +1,8 @@
 variables: 
-  - group: common-vars
-  - group: slack-webhooks
-  - group: docker-registries
-  - group: ci-service-principal
-  - group: ssh-credentials
-  - name: GOBIN
-    value: '$(GOPATH)/bin'
-  - name: GOROOT
-    value: '/usr/local/go1.13'
-  - name: GOPATH
-    value: '$(system.defaultWorkingDirectory)/gopath'
-  - name: modulePath
-    value: '$(GOPATH)/src/github.com/$(Build.Repository.Name)'
+  - template: variables/global.yaml@ci_templates
+  - template: variables/go.yaml@ci_templates
+  - template: variables/k8s.yaml@ci_templates
+  - template: variables/git.yaml@ci_templates
 
 resources:
   repositories:
@@ -19,89 +10,50 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-      ref: refs/tags/v1.0.3
+      ref: refs/tags/v1.0.4
 
-jobs:
-- job: MainWorkflow
+stages:
+- stage: 'SlackStart'
+  jobs:
+  - job: 
+    pool:
+      vmImage: 'ubuntu-latest'    
+    steps:
+    - template: slack/build/start.yaml@ci_templates
+      parameters:
+        author: $(authorName)
+        repository: $(Build.Repository.Name)
+        branch: $(Build.SourceBranch)
+        commit: $(Build.SourceVersionMessage)
+        buildUrl: $(buildUrl)$(Build.BuildId)
+        slackWebhook: $(slackBuilds)
 
-  pool:
-    vmImage: 'ubuntu-latest'
-  
-  steps:
-  - template: misc/variables.yaml@ci_templates
+- stage: 'BinaryBuild'
+  dependsOn: 'SlackStart'
+  jobs:
+  - job: 
+    pool:
+      vmImage: 'ubuntu-latest'  
+    steps:
+    - template: misc/nalej-component.yaml@ci_templates 
+    - template: steps/go-main.yaml@ci_templates
 
-  - template: misc/nalej-component.yaml@ci_templates
+- stage: 'ImageBuild'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  dependsOn: 'BinaryBuild'
+  jobs:
+  - job: 
+    pool:
+      vmImage: 'ubuntu-latest'  
+    steps:
+    - template: misc/nalej-component.yaml@ci_templates 
+    - template: steps/docker-main.yaml@ci_templates
 
-  - template: slack/build/start.yaml@ci_templates
-    parameters:
-      author: $(authorName)
-      repository: $(Build.Repository.Name)
-      branch: $(Build.SourceBranch)
-      commit: $(Build.SourceVersionMessage)
-      buildUrl: $(buildUrl)$(Build.BuildId)
-      slackWebhook: $(slackBuilds)
-
-  - script: |
-      mkdir -p '$(GOBIN)'
-      mkdir -p '$(GOPATH)/pkg'
-      mkdir -p '$(modulePath)'
-      shopt -s extglob
-      shopt -s dotglob
-      mv !(gopath) '$(modulePath)'
-      echo '##vso[task.prependpath]$(GOBIN)'
-      echo '##vso[task.prependpath]$(GOROOT)/bin'
-    displayName: 'Set up the Go workspace'
-
-  - template: go/dep.yaml@ci_templates
-    parameters:
-      sshHostName: $(hostName)
-      sshPublicKey: $(sshPublicKey)
-      modulePath: $(modulePath)
-
-  - template: go/test.yaml@ci_templates
-    parameters:
-      modulePath: $(modulePath)
-
-  - template: go/gofmt.yaml@ci_templates
-    parameters:
-      modulePath: $(modulePath)
-
-  - template: go/build.yaml@ci_templates
-    parameters:
-      modulePath: $(modulePath)
-      appList: $(appList)
-      version: $(version)
-  
-  - template: docker/login.yaml@ci_templates
-
-  - template: docker/build.yaml@ci_templates
-    parameters:
-      modulePath: $(modulePath)
-      imageList: $(imageList)
-      version: edge
-  
-  - template: docker/push.yaml@ci_templates
-    parameters:
-      modulePath: $(modulePath)
-      imageList: $(imageList)
-      version: edge
-    
-  - template: docker/logout.yaml@ci_templates
-
-  - template: slack/build/finish.yaml@ci_templates
-    parameters:
-      author: $(authorName)
-      repository: $(Build.Repository.Name)
-      branch: $(Build.SourceBranch)
-      commit: $(Build.SourceVersionMessage)
-      buildUrl: $(buildUrl)$(Build.BuildId)
-      slackWebhook: $(slackBuilds)
-  
-  - template: slack/build/failed.yaml@ci_templates
-    parameters:
-      author: $(authorName)
-      repository: $(Build.Repository.Name)
-      branch: $(Build.SourceBranch)
-      commit: $(Build.SourceVersionMessage)
-      buildUrl: $(buildUrl)$(Build.BuildId)
-      slackWebhook: $(slackCIFailed)
+- stage: 'SlackFinish'
+  condition: always()
+  jobs:
+  - job: 
+    pool:
+      vmImage: 'ubuntu-latest'  
+    steps: 
+    - template: steps/slack-finish-main.yaml@ci_templates

@@ -26,6 +26,7 @@ import (
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/nalej/derrors"
 	"github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-conductor-go"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +125,7 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 							"check",
 							"--appInstanceId", dep.Data.AppInstanceId,
 							"--appName", dep.Data.AppName,
-							"--serviceName", service.Name,
+							"--serviceName", service.ServiceName,
 							"--deploymentId", dep.Data.DeploymentId,
 							"--fragmentId", dep.Data.Stage.FragmentId,
 							"--managerAddr", config.GetConfig().DeploymentMgrAddress,
@@ -210,7 +211,7 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 
 		// extend created deployments with the ZT additional workers
 		// Every deployment must have a ZT sidecar and an additional proxy if services are enabled.
-		ztAgentName := fmt.Sprintf("zt-%s", common.FormatName(service.Name))
+		ztAgentName := fmt.Sprintf("zt-%s", common.FormatName(service.ServiceName))
 
 		agent := appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -254,7 +255,7 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 												"check",
 												"--appInstanceId", dep.Data.AppInstanceId,
 												"--appName", dep.Data.AppName,
-												"--serviceName", common.FormatName(service.Name),
+												"--serviceName", common.FormatName(service.ServiceName),
 												"--deploymentId", dep.Data.DeploymentId,
 												"--fragmentId", dep.Data.Stage.FragmentId,
 												"--managerAddr", config.GetConfig().DeploymentMgrAddress,
@@ -314,7 +315,7 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 
 
 func generateContainerLabelsInbound(d *kubernetes.DeployableDeployments,
-	service *grpc_application_go.ServiceInstance) map[string]string {
+	service *grpc_conductor_go.ServiceInstance) map[string]string {
 
 	extendedLabels := make(map[string]string, 0)
 	if service.Labels != nil {
@@ -348,7 +349,7 @@ func generateContainerLabelsInbound(d *kubernetes.DeployableDeployments,
 // return:
 //   map of labels with their values
 func generateContainerVars(d *kubernetes.DeployableDeployments,
-	service *grpc_application_go.ServiceInstance, isProxy bool) []apiv1.EnvVar {
+	service *grpc_conductor_go.ServiceInstance, isProxy bool) []apiv1.EnvVar {
 	return []apiv1.EnvVar{
 		{
 			Name: utils.NALEJ_ENV_CLUSTER_ID, Value: config.GetConfig().ClusterId,
@@ -387,13 +388,13 @@ func generateContainerVars(d *kubernetes.DeployableDeployments,
 			Name: utils.NALEJ_ENV_STAGE_ID, Value: d.Data.Stage.StageId,
 		},
 		{
-			Name: utils.NALEJ_ENV_SERVICE_NAME, Value: service.Name,
+			Name: utils.NALEJ_ENV_SERVICE_NAME, Value: service.ServiceName,
 		},
 		{
 			Name: utils.NALEJ_ENV_SERVICE_ID, Value: service.ServiceId,
 		},
 		{
-			Name: utils.NALEJ_ENV_SERVICE_FQDN, Value: common.GetServiceFQDN(service.Name, service.OrganizationId, service.AppInstanceId),
+			Name: utils.NALEJ_ENV_SERVICE_FQDN, Value: common.GetServiceFQDN(service.ServiceName, service.OrganizationId, service.AppInstanceId),
 		},
 		{
 			Name: utils.NALEJ_ENV_SERVICE_INSTANCE_ID, Value: service.ServiceInstanceId,

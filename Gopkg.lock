@@ -270,12 +270,12 @@
   version = "v0.0.8"
 
 [[projects]]
-  digest = "1:2b00b625bf8fd68550061e0529e666aad3c287a90a39813369162e810878ff51"
+  digest = "1:5b4a712e9c2afbde8fe222cb0096183d0a0f72d1c2e4493cd39b55318b1a7c67"
   name = "github.com/nalej/grpc-common-go"
   packages = ["."]
   pruneopts = ""
-  revision = "ce5e80be8a78b9ae0bf02c5d78b68757e4889134"
-  version = "v0.0.37"
+  revision = "88afedc770cfa91e85284eeced920c2978fee8ef"
+  version = "v0.0.38"
 
 [[projects]]
   digest = "1:442429f610e3934106628ab549ddce78c45195ded6ba88ad76339b2a7756dc27"
@@ -494,7 +494,7 @@
   version = "v0.7.0"
 
 [[projects]]
-  digest = "1:336cceed363be8017a8de62baf456586ade14e7c107d909ae8b084d8205fdb3e"
+  digest = "1:4c64aa254bc24990bc0216de9dd955ff83f061e9baac7ed2ffc293442ab7514a"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
@@ -502,8 +502,8 @@
     "internal/util",
   ]
   pruneopts = ""
-  revision = "3a8122e6a950185a58d8d6a909450a575602becd"
-  version = "v0.0.7"
+  revision = "6d489fc7f1d9cd890a250f3ea3431b1744b9623f"
+  version = "v0.0.8"
 
 [[projects]]
   digest = "1:bb20b170036a4c2c75c40fe0aaf908437e7d03e33f28d9ddbad54f8ed017fb57"
@@ -587,7 +587,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b61fcec495a334d36135a43a5fd3eda2d8d61b764033c2434e26761398b7da00"
+  digest = "1:f58e146d19d1af39792c0b599b24b13de51f75b073ba52c1aa658fe535be9120"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -603,7 +603,7 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "ffdde105785063a81acd95bdf89ea53f6e0aac2d"
+  revision = "ef20fe5d793301b553005db740f730d87993f778"
 
 [[projects]]
   branch = "master"
@@ -618,14 +618,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:11845cae7402f689cdea0c89f6979f1e9ec2e15e413a4ebf6ce3d5eaee33aa87"
+  digest = "1:6530ff3e6639af9bab7d2cf1e141c348e63af92058fa64d0660a6e8817d41640"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = ""
-  revision = "bd437916bb0eb726b873ee8e9b2dcf212d32e2fd"
+  revision = "6d18c012aee9febd81bbf9806760c8c4480e870d"
 
 [[projects]]
   digest = "1:740b51a55815493a8d0f2b1e0d0ae48fe48953bf7eaf3fcc4198823bf67768c0"
@@ -1056,8 +1056,6 @@
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
-    "istio.io/api/networking/v1alpha3",
-    "istio.io/client-go/pkg/apis/networking/v1alpha3",
     "istio.io/client-go/pkg/clientset/versioned",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",

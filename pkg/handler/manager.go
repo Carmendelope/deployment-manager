@@ -118,6 +118,7 @@ func (m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequ
 	metadata := entities.DeploymentMetadata{
 		Namespace:             namespace,
 		AppDescriptorId:       request.Fragment.AppDescriptorId,
+		AppDescriptorName:     request.Fragment.AppDescriptorName,
 		AppInstanceId:         request.Fragment.AppInstanceId,
 		ZtNetworkId:           request.ZtNetworkId,
 		OrganizationName:      request.Fragment.OrganizationName,

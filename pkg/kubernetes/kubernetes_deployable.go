@@ -71,7 +71,7 @@ func NewDeployableKubernetesStage(
 	return &DeployableKubernetesStage{
 		client:              client,
 		data:                data,
-		Services:            NewDeployableService(client, data),
+		Services:            NewDeployableService(client, data, networkDecorator),
 		Deployments:         NewDeployableDeployment(client, data, networkDecorator),
 		Ingresses:           NewDeployableIngress(client, data, networkDecorator),
 		Configmaps:          NewDeployableConfigMaps(client, data),
@@ -256,7 +256,7 @@ func getServicePorts(ports []*pbApplication.Port) []apiv1.ServicePort {
 	obtained := make([]apiv1.ServicePort, 0, len(ports))
 	for _, p := range ports {
 		obtained = append(obtained, apiv1.ServicePort{
-			Name:       p.Name,
+			//Name:       p.Name,
 			Port:       p.ExposedPort,
 			TargetPort: intstr.IntOrString{IntVal: p.InternalPort},
 		})
