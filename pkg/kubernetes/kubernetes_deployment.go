@@ -175,17 +175,17 @@ func (d *DeployableDeployments) Build() error {
 
 		extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.FragmentId
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
-		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_NAME] = d.Data.OrganizationName
+		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_NAME] = common.FormatName(d.Data.OrganizationName)
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
-		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR_NAME] = d.Data.AppDescriptorName
+		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR_NAME] = common.FormatName(d.Data.AppDescriptorName)
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.Data.AppInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_APP_NAME] = d.Data.AppName
+		extendedLabels[utils.NALEJ_ANNOTATION_APP_NAME] = common.FormatName(d.Data.AppName)
 		extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = d.Data.Stage.StageId
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_NAME] = service.ServiceName
+		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_NAME] = common.FormatName(service.ServiceName)
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_NAME] = service.ServiceGroupName
+		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_NAME] = common.FormatName(service.ServiceGroupName)
 		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
 		extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
 
