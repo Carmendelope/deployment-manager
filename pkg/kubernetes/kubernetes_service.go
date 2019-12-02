@@ -82,17 +82,7 @@ func (s *DeployableServices) Build() error {
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = s.Data.OrganizationId
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = s.Data.AppDescriptorId
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = s.Data.AppInstanceId
-		/*
-		extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = s.Data.FragmentId
-		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = s.Data.OrganizationId
-		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = s.Data.AppDescriptorId
-		extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = s.Data.AppInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = s.Data.Stage.StageId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
-		*/
+
 		extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
 
 		// Labels for the selector

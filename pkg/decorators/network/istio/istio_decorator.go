@@ -31,6 +31,7 @@ import (
 	istioNetworking "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	versionedclient "istio.io/client-go/pkg/clientset/versioned"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	kubernetes2 "k8s.io/client-go/kubernetes"
@@ -76,15 +77,12 @@ func NewIstioDecorator() (executor.NetworkDecorator, derrors.Error) {
 }
 
 func (id *IstioDecorator) Build(aux executor.Deployable, args ...interface{}) derrors.Error {
-
 	switch target := aux.(type) {
 	// Process a namespace
 	case *kubernetes.DeployableNamespace:
 		return id.decorateNamespace(target)
 	case *kubernetes.DeployableDeployments:
 		return id.decorateDeployments(target)
-	//case *kubernetes.DeployableServices:
-	//	return id.decorateServices(target)
 	default:
 		// nothing to do
 		return nil
@@ -163,8 +161,16 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 		}
 		log.Debug().Msg("create additional service")
 		_, errServ := id.KClient.CoreV1().Services(target.Data.Namespace).Create(&newServ)
+
 		if errServ != nil {
-			return derrors.NewInternalError("impossible to create additional service for istio",errServ)
+			// If we have tried and it has failed, this is an error.
+			if !errors.IsAlreadyExists(errServ) {
+				log.Error().Err(errServ).Msg("error creating service for Istio decorator")
+				return derrors.NewInternalError("impossible to create additional service for istio", errServ)
+			} else {
+				log.Debug().Err(errServ).Msg("error creating service for Istio decorator found and ignored")
+				return nil
+			}
 		}
 		// Create a virtual service to redirect this
 		vs := &istioNetworking.VirtualService{
@@ -178,6 +184,7 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 					Route: []*v1alpha3.RouteDestination{
 					{
 					Destination: &v1alpha3.Destination{
+						Host: publicRule.ServiceName,
 						Port: &v1alpha3.PortSelector{Number: uint32(publicRule.TargetPort)}},
 					},
 					},
@@ -216,6 +223,8 @@ func (id *IstioDecorator) decorateDeployments(target *kubernetes.DeployableDeplo
 				if dep.Spec.Template.Annotations == nil {
 					dep.Spec.Template.Annotations = make(map[string]string, 0)
 				}
+				//TODO services exposed using the Nginx ingress + istio are assumed to only receive incoming traffic
+				//     from the ingress. Other services under the Istio network umbrella will be ignored.
 				dep.Spec.Template.Annotations["traffic.sidecar.istio.io/includeInboundPorts"] = ""
 			}
 		}
@@ -234,137 +243,7 @@ func (id *IstioDecorator) decorateNamespace(namespace *kubernetes.DeployableName
 	return nil
 }
 
-/*
-// Deploy an ingress for a service to be exposed. This is translated into a gateway entry and
-// its corresponding virtual service.
-func (id *IstioDecorator) deployIstioIngress(ingress *kubernetes.DeployableIngress) derrors.Error {
 
-    // we will generate one gateway per service
-    gateways := make(map[string]*networking.Gateway,0)
-    // we have a map of pending virtual services
-    virtualServices := make(map[string]*networking.VirtualService)
-
-    // Iterate through services and create ingresses when they require them
-    for _, publicRule := range ingress.Data.Stage.PublicRules {
-        log.Debug().Interface("rule", publicRule).Msg("Checking public rule")
-        for _, service := range ingress.Data.Stage.Services {
-            log.Debug().Interface("service", service).Msg("Checking service for istio public ingress")
-            if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
-                // create a gateway if not done yet and add as many ports as required
-                gateway, found := gateways[service.ServiceName]
-                if !found {
-                    gateway = &networking.Gateway{}
-                    gateways[service.Name] = gateway
-                }
-                // update the gateway with new information about ports following this rule
-                id.updateIstioGateway(gateway, ingress, service, publicRule)
-                gateways[service.Name] = gateway
-
-                // Every service requires an Istio virtual service connected with a gateway
-                vs := id.createIstioVirtualService(gateway, ingress, service, publicRule)
-                virtualServices[service.Name] = vs
-            }
-        }
-    }
-
-
-    // Deploy all the gateways
-    for name, gw := range gateways {
-        log.Debug().Str("namespace", gw.Namespace).Str("gateway", name).Msg("create gateway")
-        _, err := id.Client.NetworkingV1alpha3().Gateways(ingress.Data.Namespace).Create(gw)
-        if err != nil {
-            log.Error().Interface("gateway", gw).Err(err).Msg("error generating gateway")
-            return derrors.NewInternalError("impossible to generate gateway", err)
-        }
-    }
-    // Deploy all the virtual services
-    for name, vs := range virtualServices {
-        log.Debug().Str("namespace", vs.Namespace).Str("virtualservice", name).Msg("create virtualservice")
-        _, err := id.Client.NetworkingV1alpha3().VirtualServices(ingress.Data.Namespace).Create(vs)
-        if err != nil {
-            log.Error().Interface("virtualservice", vs).Err(err).Msg("error generating virtualservice")
-            return derrors.NewInternalError("impossible to generate virtual service", err)
-        }
-    }
-
-    return nil
-}
-
-
-func(id *IstioDecorator) updateIstioGateway(gateway *networking.Gateway, ingress *kubernetes.DeployableIngress,
-    service *grpc_conductor_go.ServiceInstance,
-    publicRule *grpc_conductor_go.PublicSecurityRuleInstance){
-
-    // create a gateway for the service
-
-    // get the corresponding names for this ingress
-    ingressName, serviceGroupInstPrefix, appInstPrefix, _ := id.getNamePrefixes(service, publicRule)
-
-    // the gateway was not initialized
-    if gateway.Spec.Servers == nil{
-
-        gateway.ObjectMeta = metaV1.ObjectMeta{
-            Name: service.Name,
-            Namespace: ingress.Data.Namespace,
-            Labels: id.generateLabels(ingress, service),
-        }
-
-        // Use default Istio gateway
-        gateway.Spec.Selector = map[string]string{"istio": "ingressgateway"}
-        // Initialize servers entry
-        gateway.Spec.Servers = make([]*v1alpha3.Server,0)
-    }
-
-    // Add a server following the public rule
-    newServer := v1alpha3.Server{
-        Hosts: []string{
-            fmt.Sprintf("%s.%s.%s.appcluster.%s", ingressName, serviceGroupInstPrefix, appInstPrefix, config.GetConfig().ClusterPublicHostname),
-        },
-        Port: &v1alpha3.Port{
-            Number: uint32(publicRule.TargetPort),
-            Protocol: "http",
-            Name: fmt.Sprintf("port-%d-http",publicRule.TargetPort),
-        },
-    }
-
-    gateway.Spec.Servers = append(gateway.Spec.Servers, &newServer)
-
-}
-
-func(id *IstioDecorator) createIstioVirtualService(gateway *networking.Gateway, ingress *kubernetes.DeployableIngress,
-    service *grpc_conductor_go.ServiceInstance,
-    publicRule *grpc_conductor_go.PublicSecurityRuleInstance) *networking.VirtualService {
-
-    // create a virtual service to expose the ingress
-    vs := &networking.VirtualService{
-        ObjectMeta: metaV1.ObjectMeta{
-            Name: service.Name,
-            Labels: id.generateLabels(ingress, service),
-        },
-        Spec: v1alpha3.VirtualService{
-            Gateways:[]string{gateway.Name},
-            Hosts: []string{"*"},
-            Http:[]*v1alpha3.HTTPRoute{
-                {
-                    Route: []*v1alpha3.HTTPRouteDestination{
-                        {
-                            Destination: &v1alpha3.Destination{
-                                Port: &v1alpha3.PortSelector{
-                                    Number: uint32(publicRule.TargetPort),
-                                },
-                                Host: service.Name,
-                            },
-                        },
-                    },
-                },
-                },
-            },
-        }
-
-
-    return vs
-}
-*/
 
 func (id *IstioDecorator) generateLabels(d *kubernetes.DeployableIngress,
 	service *grpc_application_go.ServiceInstance) map[string]string {
