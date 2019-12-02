@@ -160,15 +160,17 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 			},
 		}
 		log.Debug().Msg("create additional service")
-		_, errServ := id.KClient.CoreV1().Services(target.Data.Namespace).Create(&newServ)
+		foundServ, errServ := id.KClient.CoreV1().Services(target.Data.Namespace).Create(&newServ)
 
 		if errServ != nil {
 			// If we have tried and it has failed, this is an error.
 			if !errors.IsAlreadyExists(errServ) {
-				log.Error().Err(errServ).Msg("error creating service for Istio decorator")
+				log.Error().Err(errServ).Str("serviceName", newServ.Name).
+					Msg("error creating service for Istio decorator")
 				return derrors.NewInternalError("impossible to create additional service for istio", errServ)
 			} else {
-				log.Debug().Err(errServ).Msg("error creating service for Istio decorator found and ignored")
+				// The service already exists, update with other ports if required
+				id.updateServicePorts(foundServ, publicRule)
 				return nil
 			}
 		}
@@ -283,4 +285,38 @@ func (id *IstioDecorator) getNamePrefixes(service *grpc_application_go.ServiceIn
 		orgPrefix = orgPrefix[0:OrgPrefixLength]
 	}
 	return ingressName, serviceGroupInstPrefix, appInstPrefix, orgPrefix
+}
+
+// This function updates the definition of an existing port with the ports defined in an existing service and
+// tries to apply the changes to the current service.
+// params:
+//  service to be updated
+//  public rule with rules
+// return:
+//  error if any
+func (id *IstioDecorator) updateServicePorts(service *apiv1.Service, rule *grpc_conductor_go.PublicSecurityRuleInstance) derrors.Error{
+	// check if the current service has this port
+	found := false
+	for _, p := range service.Spec.Ports {
+		if p.Port == rule.TargetPort {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		service.Spec.Ports = append(service.Spec.Ports, apiv1.ServicePort{
+			Port: rule.TargetPort,
+			// TODO we have to assume that the internal port matches
+			TargetPort: intstr.IntOrString{IntVal: rule.TargetPort},
+		})
+		// update it
+		_, err := id.KClient.CoreV1().Services(service.Namespace).Update(service)
+		if err != nil {
+			log.Error().Err(err).Msg("impossible to update service by istio decorator")
+			return derrors.NewInternalError("impossible to update service by istio decorator", err)
+		}
+	}
+
+	return nil
 }

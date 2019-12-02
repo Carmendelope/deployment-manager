@@ -103,7 +103,6 @@ func (s *DeployableServices) Build() error {
 				Spec: apiv1.ServiceSpec{
 					ExternalName: common.FormatName(service.ServiceName),
 					Ports:        ports,
-					//Type:         apiv1.ServiceTypeNodePort,
 					Type:         apiv1.ServiceTypeClusterIP,
 					Selector:     selectorLabels,
 				},
