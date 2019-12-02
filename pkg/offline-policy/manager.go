@@ -54,9 +54,7 @@ func (m *Manager) RemoveAll() derrors.Error {
 
 	var finalResult derrors.Error = nil
 
-	options := metav1.ListOptions{
-		IncludeUninitialized: true,
-	}
+	options := metav1.ListOptions{}
 
 	// Get all namespaces
 	nsList, err := m.KubernetesClient.CoreV1().Namespaces().List(options)

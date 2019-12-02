@@ -23,11 +23,13 @@ import (
 	"github.com/nalej/deployment-manager/pkg/utils"
 	"github.com/rs/zerolog/log"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v12 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+//--------------------
 // Deployable Services
 //--------------------
 
@@ -45,15 +47,17 @@ type DeployableServices struct {
 	// [[ServiceId, ServiceInstanceId, Service]...]
 	Services []ServiceInfo
 	// Network decorator
-	networkDecorator *executor.NetworkDecorator
+	networkDecorator executor.NetworkDecorator
 }
 
-func NewDeployableService(client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableServices {
+func NewDeployableService(client *kubernetes.Clientset, data entities.DeploymentMetadata,
+	decorator executor.NetworkDecorator) *DeployableServices {
 
 	return &DeployableServices{
 		Client:   client.CoreV1().Services(data.Namespace),
 		Data:     data,
 		Services: make([]ServiceInfo, 0),
+		networkDecorator: decorator,
 	}
 }
 
@@ -63,19 +67,30 @@ func (d *DeployableServices) GetId() string {
 
 func (s *DeployableServices) Build() error {
 	for serviceIndex, service := range s.Data.Stage.Services {
+
+		// Check if the service already exists
+		_, err := s.Client.Get(common.FormatName(service.ServiceName),metav1.GetOptions{})
+		if !errors.IsNotFound(err)  {
+			log.Debug().Str("serviceName",service.ServiceName).Msg("the service already exists, no need to be be created")
+			continue
+		}
+
 		log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.Data.Stage.Services))
 
+
 		extendedLabels := make(map[string]string, 0)
-		extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = s.Data.FragmentId
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = s.Data.OrganizationId
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = s.Data.AppDescriptorId
 		extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = s.Data.AppInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_STAGE_ID] = s.Data.Stage.StageId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_ID] = service.ServiceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID] = service.ServiceInstanceId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID] = service.ServiceGroupId
-		extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
+
 		extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
+
+		// Labels for the selector
+		selectorLabels := map[string]string{
+			utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: s.Data.AppInstanceId,
+			utils.NALEJ_ANNOTATION_ORGANIZATION_ID: service.OrganizationId,
+			utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(service.ServiceName),
+		}
 
 		ports := getServicePorts(service.ExposedPorts)
 		if ports != nil {
@@ -88,8 +103,9 @@ func (s *DeployableServices) Build() error {
 				Spec: apiv1.ServiceSpec{
 					ExternalName: common.FormatName(service.ServiceName),
 					Ports:        ports,
-					Type:         apiv1.ServiceTypeNodePort,
-					Selector:     extendedLabels,
+					//Type:         apiv1.ServiceTypeNodePort,
+					Type:         apiv1.ServiceTypeClusterIP,
+					Selector:     selectorLabels,
 				},
 			}
 			log.Debug().Str("serviceId", service.ServiceId).Str("serviceInstanceId", service.ServiceInstanceId).
@@ -101,18 +117,35 @@ func (s *DeployableServices) Build() error {
 		}
 	}
 
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := s.networkDecorator.Build(s)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error building network components")
+		return errNetDecorator
+	}
+
 	return nil
 }
 
 func (s *DeployableServices) Deploy(controller executor.DeploymentController) error {
+	log.Debug().Int("numberServicesToDeploy", len(s.Services)).Msg("deploy deployableServices")
 
 	for _, servInfo := range s.Services {
+
+		// if the service is already there skip
+		_, err := s.Client.Get(servInfo.Service.Name,metav1.GetOptions{})
+		if !errors.IsNotFound(err) {
+			log.Debug().Str("serviceName", servInfo.Service.Name).Msg("service already deployed. Skip it")
+			continue
+		}
+
 		created, err := s.Client.Create(&servInfo.Service)
 		if err != nil {
 			log.Error().Err(err).Msgf("error creating service %s", servInfo.Service.Name)
 			return err
 		}
-		log.Debug().Str("uid", string(created.GetUID())).Str("appInstanceID", s.Data.AppInstanceId).
+		log.Debug().Str("serviceName",servInfo.Service.Name).Str("uid", string(created.GetUID())).
+			Str("appInstanceID", s.Data.AppInstanceId).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
 
 		res := entities.NewMonitoredPlatformResource(created.Labels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT], string(created.GetUID()),
@@ -122,8 +155,15 @@ func (s *DeployableServices) Deploy(controller executor.DeploymentController) er
 		controller.AddMonitoredResource(&res)
 	}
 
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := s.networkDecorator.Deploy(s)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error deploying network components")
+		return errNetDecorator
+	}
 	return nil
 }
+
 
 func (s *DeployableServices) Undeploy() error {
 	for _, servInfo := range s.Services {
@@ -132,6 +172,13 @@ func (s *DeployableServices) Undeploy() error {
 			log.Error().Err(err).Msgf("error deleting service %s", servInfo.Service.Name)
 			return err
 		}
+	}
+
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := s.networkDecorator.Undeploy(s)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error undeploying network components")
+		return errNetDecorator
 	}
 
 	return nil

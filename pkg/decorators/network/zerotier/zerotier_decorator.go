@@ -74,10 +74,12 @@ func (d *ZerotierDecorator) Build(aux executor.Deployable, args ...interface{}) 
 }
 
 func (d *ZerotierDecorator) Deploy(aux executor.Deployable, args ...interface{}) derrors.Error {
+	// Nothing to do
 	return nil
 }
 
 func (d *ZerotierDecorator) Undeploy(aux executor.Deployable, args ...interface{}) derrors.Error {
+	// Nothing to do
 	return nil
 }
 
@@ -109,7 +111,6 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 			Image: ZtAgentImageName,
 			Args: []string{
 				"run",
-				"--debug",
 			},
 			// Set the no proxy variable
 			Env: containerVars,
@@ -181,6 +182,11 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 		} else {
 			toBeExtended.Spec.Template.Spec.Volumes = append(toBeExtended.Spec.Template.Spec.Volumes, ztVolume)
 		}
+
+		// Add DNS entries
+		// Set POD DNS policies
+		toBeExtended.Spec.Template.Spec.DNSPolicy = apiv1.DNSNone
+		toBeExtended.Spec.Template.Spec.DNSConfig = &apiv1.PodDNSConfig{Nameservers: dep.Data.DNSHosts}
 
 	}
 

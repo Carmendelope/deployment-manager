@@ -18,7 +18,6 @@ package common
 
 import (
 	"fmt"
-	"math/rand"
 	"regexp"
 	"strings"
 )
@@ -53,9 +52,8 @@ var MANAGER_CLUSTER_PORT string
 //  return:
 //   associated namespace
 func GetNamespace(organizationId string, appInstanceId string, numRetry int) string {
-	// randon suffix to mitigate chances of collision
-	randomSuffix := rand.Intn(100)
-	target := fmt.Sprintf("%1d-%s-%s-%02d", numRetry, organizationId[0:18], appInstanceId, randomSuffix)
+
+	target := fmt.Sprintf("%s-%s", organizationId[0:18], appInstanceId)
 	// check if the namespace is larger than the allowed k8s namespace length
 	if len(target) > NamespaceLength {
 		return target[len(target)-NamespaceLength:]

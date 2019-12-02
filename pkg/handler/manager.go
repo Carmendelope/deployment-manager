@@ -135,7 +135,7 @@ func (m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequ
 		//Stage:
 	}
 
-	preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(metadata)
+	preDeployable, executionError := m.executor.PrepareEnvironmentForDeployment(metadata, m.networkDecorator)
 	if executionError != nil {
 		log.Error().Err(executionError).Msgf("failed environment preparation for fragment %s",
 			request.Fragment.FragmentId)
@@ -220,7 +220,7 @@ func (m *Manager) Undeploy(request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Str("appInstanceID", request.AppInstanceId).Msg("undeploy app instance with id")
 
 	// Undeploy the namespace
-	err := m.executor.UndeployNamespace(request)
+	err := m.executor.UndeployNamespace(request, m.networkDecorator)
 	// set the requested application as terminating
 	m.monitored.SetAppStatus(request.AppInstanceId, entities.FRAGMENT_TERMINATING, nil)
 
@@ -251,9 +251,9 @@ func (m *Manager) UndeployFragment(request *pbDeploymentMgr.UndeployFragmentRequ
 		AppInstanceId:  request.AppInstanceId,
 	}
 	if appStatus == nil {
-		m.executor.UndeployNamespace(undeployRequest)
+		m.executor.UndeployNamespace(undeployRequest, m.networkDecorator)
 	} else if *appStatus == entities.FRAGMENT_TERMINATING {
-		m.executor.UndeployNamespace(undeployRequest)
+		m.executor.UndeployNamespace(undeployRequest, m.networkDecorator)
 	}
 
 	return undeployErr

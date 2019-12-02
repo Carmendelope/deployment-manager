@@ -192,6 +192,13 @@ func (d *DeployableDeployments) Build() error {
 		environmentVariables := d.getEnvVariables(d.Data.NalejVariables, service.EnvironmentVariables)
 		environmentVariables = d.addDeviceGroupEnvVariables(environmentVariables, service.ServiceGroupInstanceId, service.ServiceInstanceId)
 
+		// Labels for the selector
+		selectorLabels := map[string]string{
+			utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: d.Data.AppInstanceId,
+			utils.NALEJ_ANNOTATION_ORGANIZATION_ID: service.OrganizationId,
+			utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(service.ServiceName),
+		}
+
 		deployment := appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      common.FormatName(service.ServiceName),
@@ -201,7 +208,7 @@ func (d *DeployableDeployments) Build() error {
 			Spec: appsv1.DeploymentSpec{
 				Replicas: int32Ptr(service.Specs.Replicas),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: extendedLabels,
+					MatchLabels: selectorLabels,
 				},
 				Template: apiv1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -212,11 +219,6 @@ func (d *DeployableDeployments) Build() error {
 						EnableServiceLinks: getBool(false),
 						// Do not mount any service account token
 						AutomountServiceAccountToken: getBool(false),
-						// Set POD DNS policies
-						DNSPolicy: apiv1.DNSNone,
-						DNSConfig: &apiv1.PodDNSConfig{
-							Nameservers: d.Data.DNSHosts,
-						},
 						Containers: []apiv1.Container{
 							// User defined container
 							{
@@ -248,7 +250,6 @@ func (d *DeployableDeployments) Build() error {
 		if service.Configs != nil && len(service.Configs) > 0 {
 			log.Debug().Msg("Adding config maps")
 			log.Debug().Msg("Creating volumes")
-			// NP-694. Support consolidating config maps
 			configVolumes, cmVolumeMounts := d.generateAllVolumes(service.ServiceId, service.ServiceInstanceId, service.Configs)
 			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, configVolumes...)
 			log.Debug().Msg("Linking configmap volumes")
@@ -319,8 +320,6 @@ func (d *DeployableDeployments) Deploy(controller executor.DeploymentController)
 
 		deployed, err := d.Client.Create(deployment)
 		if err != nil {
-			log.Debug().Interface("deployment", deployment).
-				Err(err).Msgf("error creating deployment %s", deployment.Name)
 			log.Error().Interface("deployment", deployment).
 				Err(err).Msgf("error creating deployment %s", deployment.Name)
 			return err
@@ -334,6 +333,13 @@ func (d *DeployableDeployments) Deploy(controller executor.DeploymentController)
 			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID],
 			deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_ID], deployed.Labels[utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID], "")
 		controller.AddMonitoredResource(&res)
+	}
+
+	// call the network decorator and modify deployments accordingly
+	errNetDecorator := d.networkDecorator.Build(d)
+	if errNetDecorator != nil {
+		log.Error().Err(errNetDecorator).Msg("error running networking decorator during deployment deploy")
+		return errNetDecorator
 	}
 
 	return nil

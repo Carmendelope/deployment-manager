@@ -64,16 +64,16 @@ type DeployableKubernetesStage struct {
 //  params:
 //   Client k8s api Client
 //   stage these resources belong to
-//   targetNamespace name of the namespace the resources will be deployed into
+//   targetNamespace name of the Namespace the resources will be deployed into
 func NewDeployableKubernetesStage(
 	client *kubernetes.Clientset, data entities.DeploymentMetadata,
 	networkDecorator executor.NetworkDecorator) *DeployableKubernetesStage {
 	return &DeployableKubernetesStage{
 		client:              client,
 		data:                data,
-		Services:            NewDeployableService(client, data),
+		Services:            NewDeployableService(client, data, networkDecorator),
 		Deployments:         NewDeployableDeployment(client, data, networkDecorator),
-		Ingresses:           NewDeployableIngress(client, data),
+		Ingresses:           NewDeployableIngress(client, data, networkDecorator),
 		Configmaps:          NewDeployableConfigMaps(client, data),
 		Secrets:             NewDeployableSecrets(client, data),
 		Storage:             NewDeployableStorage(client, data),
@@ -205,10 +205,10 @@ func (d DeployableKubernetesStage) Deploy(controller executor.DeploymentControll
 }
 
 func (d DeployableKubernetesStage) Undeploy() error {
-	// Deploying the namespace should be enough
-	// Deploy namespace
+	// Deploying the Namespace should be enough
+	// Deploy Namespace
 	/*
-	   err := d.namespace.Undeploy()
+	   err := d.Namespace.Undeploy()
 	   if err != nil {
 	       return err
 	   }
@@ -256,7 +256,7 @@ func getServicePorts(ports []*pbApplication.Port) []apiv1.ServicePort {
 	obtained := make([]apiv1.ServicePort, 0, len(ports))
 	for _, p := range ports {
 		obtained = append(obtained, apiv1.ServicePort{
-			Name:       p.Name,
+			//Name:       p.Name,
 			Port:       p.ExposedPort,
 			TargetPort: intstr.IntOrString{IntVal: p.InternalPort},
 		})

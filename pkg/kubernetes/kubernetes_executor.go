@@ -94,7 +94,7 @@ func (k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentM
 }
 
 func (k *KubernetesExecutor) GetApplicationNamespace(organizationId string, appInstanceId string, numRetry int) (string, error) {
-	// Find the namespace
+	// Find the Namespace
 	ns := k.Client.CoreV1().Namespaces()
 	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID: organizationId,
 		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: appInstanceId}}
@@ -104,46 +104,47 @@ func (k *KubernetesExecutor) GetApplicationNamespace(organizationId string, appI
 	list, err := ns.List(opts)
 	if err != nil {
 		log.Error().Err(err).Str("organizationId", organizationId).Str("appInstanceId", appInstanceId).
-			Msg("error when querying the application namespace")
+			Msg("error when querying the application Namespace")
 		return "", err
 	}
 
-	// we iterate until we find a ready namespace ignoring any terminating namespace
+	// we iterate until we find a ready Namespace ignoring any terminating Namespace
 	for _, potentialTarget := range list.Items {
 		if potentialTarget.Status.Phase == v1.NamespaceActive {
-			// this namespace is ok
+			// this Namespace is ok
 			return potentialTarget.Name, nil
 		}
 	}
 
-	// There is no namespace available return a new name
+	// There is no Namespace available return a new name
 	return common.GetNamespace(organizationId, appInstanceId, numRetry), nil
 }
 
-// Prepare the namespace for the deployment. This is a special case because all the Deployments will share a common
-// namespace. If this step cannot be done, no stage deployment will start.
-func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.DeploymentMetadata) (executor.Deployable, error) {
+// Prepare the Namespace for the deployment. This is a special case because all the Deployments will share a common
+// Namespace. If this step cannot be done, no stage deployment will start.
+func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.DeploymentMetadata,
+	networkDecorator executor.NetworkDecorator) (executor.Deployable, error) {
 	log.Debug().Str("fragmentId", metadata.FragmentId).Msg("prepare environment for deployment")
 
-	// Create a namespace
-	namespaceDeployable := NewDeployableNamespace(k.Client, metadata)
+	// Create a Namespace
+	namespaceDeployable := NewDeployableNamespace(k.Client, metadata, networkDecorator)
 	err := namespaceDeployable.Build()
 	if err != nil {
-		log.Error().Err(err).Msgf("impossible to build namespace %s", metadata.Namespace)
+		log.Error().Err(err).Msgf("impossible to build Namespace %s", metadata.Namespace)
 		return nil, err
 	}
 
 	if !namespaceDeployable.exists() {
-		log.Debug().Str("namespace", metadata.Namespace).Msg("create namespace...")
-		// TODO Check if namespace already exists...
+		log.Debug().Str("Namespace", metadata.Namespace).Msg("create Namespace...")
+		// TODO Check if Namespace already exists...
 		err = namespaceDeployable.Deploy(k.Controller)
 		if err != nil {
-			log.Error().Err(err).Msgf("impossible to deploy namespace %s", metadata.Namespace)
+			log.Error().Err(err).Msgf("impossible to deploy Namespace %s", metadata.Namespace)
 			return nil, err
 		}
-		log.Debug().Str("namespace", metadata.Namespace).Msg("namespace... created")
+		log.Debug().Str("Namespace", metadata.Namespace).Msg("Namespace... created")
 
-		// NP-766. create the nalej-public-registry on the user namespace
+		// NP-766. create the nalej-public-registry on the user Namespace
 		nalejSecret := NewDeployableNalejSecret(k.Client, metadata)
 		err = nalejSecret.Build()
 		if err != nil {
@@ -155,7 +156,7 @@ func (k *KubernetesExecutor) PrepareEnvironmentForDeployment(metadata entities.D
 			return nil, err
 		}
 	} else {
-		log.Debug().Str("namespace", metadata.Namespace).Msg("namespace already exists... skip")
+		log.Debug().Str("Namespace", metadata.Namespace).Msg("Namespace already exists... skip")
 	}
 
 	var toReturn executor.Deployable
@@ -190,7 +191,7 @@ func (k *KubernetesExecutor) UndeployStage(stage *pbConductor.DeploymentStage, t
 
 // TODO reorganize this function to use balance the code among the different deployable entities
 func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId string) error {
-	log.Info().Msgf("undeploy fragment %s in namespace %s", fragmentId, namespace)
+	log.Info().Msgf("undeploy fragment %s in Namespace %s", fragmentId, namespace)
 
 	deleteOptions := metav1.DeleteOptions{}
 	queryOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("nalej-deployment-fragment=%s", fragmentId)}
@@ -245,15 +246,16 @@ func (k *KubernetesExecutor) UndeployFragment(namespace string, fragmentId strin
 	return nil
 }
 
-func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest) error {
+func (k *KubernetesExecutor) UndeployNamespace(request *pbDeploymentMgr.UndeployRequest,
+	networkDecorator executor.NetworkDecorator) error {
 	// TODO check if this operation can remove iterative namespaces 0-XXXXX, 1-XXXXX, etc
-	// A partially filled namespace object should be enough to find the target namespace
+	// A partially filled Namespace object should be enough to find the target Namespace
 	metadata := entities.DeploymentMetadata{OrganizationId: request.OrganizationId, AppInstanceId: request.AppInstanceId}
 
-	ns := NewDeployableNamespace(k.Client, metadata)
+	ns := NewDeployableNamespace(k.Client, metadata, networkDecorator)
 	err := ns.Build()
 	if err != nil {
-		log.Error().Msgf("error building deployable namespace %s", ns.namespace.Name)
+		log.Error().Msgf("error building deployable Namespace %s", ns.Namespace.Name)
 		return err
 	}
 

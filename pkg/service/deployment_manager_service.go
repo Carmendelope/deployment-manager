@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/nalej/deployment-manager/pkg/decorators/network/istio"
 	"github.com/nalej/deployment-manager/pkg/decorators/network/zerotier"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	offline_policy "github.com/nalej/deployment-manager/pkg/offline-policy"
@@ -381,6 +382,12 @@ func getNetworkDecorator(configuration *config.Config) (executor.NetworkDecorato
 	switch configuration.NetworkType {
 	case config.NetworkTypeZt:
 		return zerotier.NewZerotierDecorator(), nil
+	case config.NetworkTypeIstio:
+		decorator, err := istio.NewIstioDecorator()
+		if err != nil {
+			return nil, err
+		}
+		return decorator, nil
 	}
 	return nil, derrors.NewInvalidArgumentError("unknown decorator type")
 }

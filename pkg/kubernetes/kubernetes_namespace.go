@@ -32,8 +32,8 @@ import (
 // Seconds for a timeout when listing namespaces
 const NamespaceListTimeout = 2
 
-// Deployable namespace
-// A namespace is associated with a fragment. This is a special case of deployable that is only intended to be
+// Deployable Namespace
+// A Namespace is associated with a fragment. This is a special case of deployable that is only intended to be
 // executed before the fragment deployment starts.
 //--------------------
 
@@ -42,15 +42,19 @@ type DeployableNamespace struct {
 	client v12.NamespaceInterface
 	// deployment Data
 	data entities.DeploymentMetadata
-	// namespace
-	namespace apiv1.Namespace
+	// Namespace
+	Namespace apiv1.Namespace
+	// network decorator object for deployments
+	networkDecorator executor.NetworkDecorator
 }
 
-func NewDeployableNamespace(client *kubernetes.Clientset, data entities.DeploymentMetadata) *DeployableNamespace {
+func NewDeployableNamespace(client *kubernetes.Clientset, data entities.DeploymentMetadata,
+	networkDecorator executor.NetworkDecorator) *DeployableNamespace {
 	return &DeployableNamespace{
 		client:    client.CoreV1().Namespaces(),
 		data:      data,
-		namespace: apiv1.Namespace{},
+		Namespace: apiv1.Namespace{},
+		networkDecorator: networkDecorator,
 	}
 }
 
@@ -71,35 +75,47 @@ func (n *DeployableNamespace) Build() error {
 			},
 		},
 	}
-	n.namespace = ns
+	n.Namespace = ns
+
+	netErr := n.networkDecorator.Build(n)
+	if netErr != nil {
+		log.Error().Err(netErr).Msg("error running network decorator during namespace building")
+	}
+
 	return nil
 }
 
 func (n *DeployableNamespace) Deploy(controller executor.DeploymentController) error {
-	retrieved, err := n.client.Get(n.data.Namespace, metav1.GetOptions{IncludeUninitialized: true})
+	retrieved, err := n.client.Get(n.data.Namespace, metav1.GetOptions{})
 
 	if retrieved.Name != "" {
-		n.namespace = *retrieved
-		log.Warn().Msgf("namespace %s already exists", n.data.Namespace)
+		n.Namespace = *retrieved
+		log.Warn().Msgf("Namespace %s already exists", n.data.Namespace)
 		return nil
 	}
-	created, err := n.client.Create(&n.namespace)
+	created, err := n.client.Create(&n.Namespace)
 	if err != nil {
 		return err
 	}
-	log.Debug().Msgf("invoked namespace with uid %s", string(created.Namespace))
-	n.namespace = *created
+	log.Debug().Msgf("invoked Namespace with uid %s", string(created.Namespace))
+	n.Namespace = *created
+
+	netErr := n.Deploy(controller)
+	if netErr != nil {
+		log.Error().Err(netErr).Msg("error running networking decorator during namespace deploy")
+	}
+
 	return err
 }
 
 func (n *DeployableNamespace) exists() bool {
-	_, err := n.client.Get(n.data.Namespace, metav1.GetOptions{IncludeUninitialized: true})
+	_, err := n.client.Get(n.data.Namespace, metav1.GetOptions{})
 	return err == nil
 }
 
 func (n *DeployableNamespace) Undeploy() error {
 
-	// Delete any namespace labelled with appinstanceid and organizationid
+	// Delete any Namespace labelled with appinstanceid and organizationid
 
 	// query existing namespaces
 	queryString := fmt.Sprintf("%s=%s,%s=%s",
@@ -107,20 +123,19 @@ func (n *DeployableNamespace) Undeploy() error {
 		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, n.data.AppInstanceId,
 	)
 	options := metav1.ListOptions{
-		IncludeUninitialized: true,
 		LabelSelector:        queryString,
 	}
 
 	list, err := n.client.List(options)
 	if err != nil {
-		return derrors.AsError(err, "impossible to undeploy namespace")
+		return derrors.AsError(err, "impossible to undeploy Namespace")
 	}
 
 	for _, l := range list.Items {
-		log.Debug().Str("namespace", l.Namespace).Msg("execute undeploy for namespace")
+		log.Debug().Str("Namespace", l.Namespace).Msg("execute undeploy for Namespace")
 		err = n.client.Delete(l.Name, metav1.NewDeleteOptions(DeleteGracePeriod))
 		if err != nil {
-			log.Error().Err(err).Msg("impossible to deploy namespace")
+			log.Error().Err(err).Msg("impossible to deploy Namespace")
 		}
 	}
 
