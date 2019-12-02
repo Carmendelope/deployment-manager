@@ -71,6 +71,12 @@ func FormatName(name string) string {
 	return aux
 }
 
+func FormatNameWithHyphen(name string) string {
+	// replace any space
+	aux := strings.Replace(name, " ", "-", -1)
+	return aux
+}
+
 // GeneratePVCName creates a name for a PVC using the serviceGroupId, serviceId and the index.
 func GeneratePVCName(groupId string, serviceId string, index string) string {
 	fullName := fmt.Sprintf("%s%s-%s", groupId, serviceId, index)
