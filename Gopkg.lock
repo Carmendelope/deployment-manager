@@ -374,6 +374,14 @@
   version = "v0.0.3"
 
 [[projects]]
+  digest = "1:18d316170b65da520a335ae2e11818ed9a481cb57d8fb6c72ee2dc437bb148c4"
+  name = "github.com/nalej/grpc-unified-logging-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "206ef6835662f9ab80271758948b247756d9284b"
+  version = "v0.0.11"
+
+[[projects]]
   digest = "1:3c48d4db5e7f6c3cda75e4fc1f9b061eb121ec26587bec82059eba37bac619be"
   name = "github.com/nalej/grpc-user-go"
   packages = ["."]
@@ -1038,6 +1046,7 @@
     "github.com/nalej/grpc-installer-go",
     "github.com/nalej/grpc-login-api-go",
     "github.com/nalej/grpc-network-go",
+    "github.com/nalej/grpc-unified-logging-go",
     "github.com/nalej/grpc-utils/pkg/conversions",
     "github.com/nalej/grpc-zt-nalej-go",
     "github.com/onsi/ginkgo",

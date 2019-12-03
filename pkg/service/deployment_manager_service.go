@@ -24,7 +24,8 @@ import (
 	"github.com/nalej/deployment-manager/pkg/decorators/network/istio"
 	"github.com/nalej/deployment-manager/pkg/decorators/network/zerotier"
 	"github.com/nalej/deployment-manager/pkg/executor"
-	offline_policy "github.com/nalej/deployment-manager/pkg/offline-policy"
+	"github.com/nalej/deployment-manager/pkg/offline-policy"
+	"github.com/nalej/grpc-unified-logging-go"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -239,16 +240,24 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
 
 	// Instantiate deployment manager service
 	log.Info().Msg("star deployment requests manager")
-	mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, requestsQueue, nalejDNSForPods, instanceMonitor,
-		cfg.PublicCredentials, networkDecorator)
-	go mgr.Run()
-	log.Info().Msg("done")
+
+	ulConn, ulErr := grpc.Dial(cfg.UnifiedLoggingAddress, grpc.WithInsecure())
+	if ulErr != nil {
+		return nil, derrors.AsError(ulErr, "cannot create connection with unified slave coordinator")
+	}
+	ulClient := grpc_unified_logging_go.NewSlaveClient(ulConn)
 
 	// Instantiate network manager service
 	k8sClient, err := kubernetes.GetKubernetesClient(cfg.Local)
 	if err != nil {
 		return nil, err
 	}
+
+	mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, requestsQueue, nalejDNSForPods, instanceMonitor,
+		cfg.PublicCredentials, networkDecorator, ulClient, k8sClient)
+	go mgr.Run()
+	log.Info().Msg("done")
+
 	net := network.NewManager(clusterAPIConn, clusterAPILoginHelper, k8sClient)
 
 	// Instantiate app network manager service

@@ -101,6 +101,8 @@ type Config struct {
 	SkipServerCertValidation bool
 	// Network type
 	NetworkType NetworkType
+	// unifiedLoggingAddress
+	UnifiedLoggingAddress string
 }
 
 func (conf *Config) envOrElse(envName string, paramValue string) string {
@@ -161,6 +163,10 @@ func (conf *Config) Validate() derrors.Error {
 	if conf.TargetPlatformName == "" {
 		return derrors.NewInvalidArgumentError("targetPlatform must be set")
 	}
+
+	if conf.UnifiedLoggingAddress == "" {
+		return derrors.NewInvalidArgumentError("UnifiedLoggingAddress must be set")
+	}
 	conf.TargetPlatform = grpc_installer_go.Platform(grpc_installer_go.Platform_value[conf.TargetPlatformName])
 
 	return nil
@@ -183,6 +189,7 @@ func (conf *Config) Print() {
 	log.Info().Str("type", conf.TargetPlatform.String()).Msg("Target platform")
 	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
 	log.Info().Interface("networkType", conf.NetworkType).Msg("Network type")
+	log.Info().Str("unifiedLoggingAddress", conf.UnifiedLoggingAddress).Msg("Unified Logging Slave Address")
 
 }
 

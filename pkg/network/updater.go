@@ -42,6 +42,8 @@ const (
 
 // NetworkUpdater interface with the operations to manage the update of network information on application pods.
 type NetworkUpdater interface {
+	// CheckIfNamespaceExists checks if the namespace where the application was deployed exists
+	CheckIfNamespaceExists(organizationID string, appInstanceID string) (bool, derrors.Error)
 	// GetTargetNamespace obtains the namespace where the application runs.
 	GetTargetNamespace(organizationID string, appInstanceID string) (string, bool, derrors.Error)
 	// GetPodsForApp returns the list of pods to be updated for a given app
@@ -76,6 +78,36 @@ type KubernetesNetworkUpdater struct {
 func NewKubernetesNetworkUpdater(client *kubernetes.Clientset) NetworkUpdater {
 	return &KubernetesNetworkUpdater{client}
 }
+
+// CheckIfNamespaceExists check if a namespace exists.
+// params:
+//  organizationID
+//  appInstanceID
+// return:
+//  a boolean whether we found it or not
+//  any found error
+func (knu *KubernetesNetworkUpdater) CheckIfNamespaceExists(organizationID string, appInstanceID string) (bool, derrors.Error) {
+	ns := knu.client.CoreV1().Namespaces()
+
+	// At this point, using the labels that we used to create the namespace does not retrieve the namespace. It may happen that K8s is doing
+	// some translation that does not happen at label selector time.
+	labelSelector := v1.LabelSelector{MatchLabels: map[string]string{utils.NALEJ_ANNOTATION_ORGANIZATION_ID: organizationID, utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: appInstanceID}}
+	opts := v1.ListOptions{
+		LabelSelector: labels.Set(labelSelector.MatchLabels).String(),
+	}
+	log.Debug().Str("organizationID", organizationID).Str("appInstanceID", appInstanceID).Interface("opts", opts).Msg("Getting target namespace")
+	list, err := ns.List(opts)
+	if err != nil {
+		return false, derrors.AsError(err, "cannot list namespaces")
+	}
+	if len(list.Items) == 0 {
+		log.Debug().Msg("no namespaces found")
+		return false, nil
+	}
+
+	return true, nil
+}
+
 
 // GetTargetNamespace obtains the namespace where the application runs.
 // params:
