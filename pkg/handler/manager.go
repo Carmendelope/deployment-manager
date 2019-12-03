@@ -17,16 +17,21 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/internal/structures"
 	"github.com/nalej/deployment-manager/internal/structures/monitor"
 	"github.com/nalej/deployment-manager/pkg/executor"
+	"github.com/nalej/deployment-manager/pkg/network"
 	"github.com/nalej/grpc-application-go"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-unified-logging-go"
+	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/rs/zerolog/log"
+	"k8s.io/client-go/kubernetes"
 	"time"
 )
 
@@ -46,6 +51,9 @@ const (
 	StageCheckTimeout = 480
 	// Time to wait between checks in the queue in milliseconds.
 	CheckQueueSleepTime = 2000
+	DefaultTimeout      = time.Minute
+	CheckSleepTime      = time.Second * 4
+	ExpireTimeout       = time.Minute * 3
 )
 
 type Manager struct {
@@ -64,6 +72,10 @@ type Manager struct {
 	PublicCredentials grpc_application_go.ImageCredentials
 	// Network decorator
 	networkDecorator executor.NetworkDecorator
+	// Unified Logging Slave address
+	unifiedLoggingClient grpc_unified_logging_go.SlaveClient
+	// Kubernetes Client
+	NetUpdater network.NetworkUpdater
 }
 
 func NewManager(
@@ -72,7 +84,10 @@ func NewManager(
 	queue structures.RequestsQueue,
 	dnsHosts []string, monitored monitor.MonitoredInstances,
 	publicCredentials grpc_application_go.ImageCredentials,
-	networkDecorator executor.NetworkDecorator) *Manager {
+	networkDecorator executor.NetworkDecorator,
+	ulClient grpc_unified_logging_go.SlaveClient,
+	K8sClient *kubernetes.Clientset) *Manager {
+	netUpdater := network.NewKubernetesNetworkUpdater(K8sClient)
 	return &Manager{
 		executor:              *executor,
 		clusterPublicHostname: clusterPublicHostname,
@@ -81,6 +96,8 @@ func NewManager(
 		queue:                 queue,
 		PublicCredentials:     publicCredentials,
 		networkDecorator:      networkDecorator,
+		unifiedLoggingClient:  ulClient,
+		NetUpdater:            netUpdater,
 	}
 }
 
@@ -216,6 +233,51 @@ func (m *Manager) Execute(request *pbDeploymentMgr.DeploymentFragmentRequest) er
 	return nil
 }
 
+// expireLogs send a message to unified-logging to expire the logs of an application
+func (m *Manager) expireLogs(organizationId string, appInstanceId string) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+	defer cancel()
+
+	_, ulErr := m.unifiedLoggingClient.Expire(ctx, &grpc_unified_logging_go.ExpirationRequest{
+		OrganizationId: organizationId,
+		AppInstanceId:  appInstanceId,
+	})
+	if ulErr != nil {
+		log.Warn().Str("error", conversions.ToDerror(ulErr).DebugReport()).Msg("error expiring logs")
+	}
+	log.Debug().Str("organizationID", organizationId).Str("instanceID", appInstanceId).Msg("logs expired")
+}
+
+// checkNamespaceToExpireLogs runs a loop to check when the application namespace is terminated
+func (m *Manager) checkNamespaceToExpireLogs(request *pbDeploymentMgr.UndeployRequest) {
+
+	sleep := time.NewTicker(CheckSleepTime)
+
+	ctxExpire, cancelExpire := context.WithTimeout(context.Background(), ExpireTimeout)
+	defer cancelExpire()
+
+	for {
+		select {
+		case <-sleep.C:
+			exists, err := m.NetUpdater.CheckIfNamespaceExists(request.OrganizationId, request.AppInstanceId)
+			if err != nil {
+				log.Warn().Str("organizationID", request.OrganizationId).Str("instanceID", request.AppInstanceId).
+					Str("error", err.DebugReport()).Msg("Unable to expire logs")
+			}
+			if !exists {
+				m.expireLogs(request.OrganizationId, request.AppInstanceId)
+				sleep.Stop()
+				return
+			}
+		case <-ctxExpire.Done():
+			log.Warn().Str("organizationID", request.OrganizationId).Str("instanceID", request.AppInstanceId).Msg("Unable to expire logs, context deadline")
+			return
+		}
+	}
+
+}
+
 func (m *Manager) Undeploy(request *pbDeploymentMgr.UndeployRequest) error {
 	log.Debug().Str("appInstanceID", request.AppInstanceId).Msg("undeploy app instance with id")
 
@@ -223,6 +285,8 @@ func (m *Manager) Undeploy(request *pbDeploymentMgr.UndeployRequest) error {
 	err := m.executor.UndeployNamespace(request, m.networkDecorator)
 	// set the requested application as terminating
 	m.monitored.SetAppStatus(request.AppInstanceId, entities.FRAGMENT_TERMINATING, nil)
+
+	go m.checkNamespaceToExpireLogs(request)
 
 	if err != nil {
 		log.Error().Err(err).Msgf("impossible to undeploy app %s", request.AppInstanceId)

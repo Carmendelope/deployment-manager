@@ -92,11 +92,11 @@ func (id *IstioDecorator) Build(aux executor.Deployable, args ...interface{}) de
 
 func (id *IstioDecorator) Deploy(aux executor.Deployable, args ...interface{}) derrors.Error {
 
-   switch target := aux.(type) {
-   case *kubernetes.DeployableServices:
-	   return id.decorateServices(target)
-   }
-   return nil
+	switch target := aux.(type) {
+	case *kubernetes.DeployableServices:
+		return id.decorateServices(target)
+	}
+	return nil
 }
 
 // Remove any unnecessary entries when a deployable element is removed.
@@ -265,8 +265,6 @@ func (id *IstioDecorator) decorateNamespace(namespace *kubernetes.DeployableName
 	namespace.Namespace.Labels[IstioLabelInjection] = "enabled"
 	return nil
 }
-
-
 
 func (id *IstioDecorator) generateLabels(d *kubernetes.DeployableIngress,
 	service *grpc_application_go.ServiceInstance) map[string]string {
