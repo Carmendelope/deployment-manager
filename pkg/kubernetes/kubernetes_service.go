@@ -54,9 +54,9 @@ func NewDeployableService(client *kubernetes.Clientset, data entities.Deployment
 	decorator executor.NetworkDecorator) *DeployableServices {
 
 	return &DeployableServices{
-		Client:   client.CoreV1().Services(data.Namespace),
-		Data:     data,
-		Services: make([]ServiceInfo, 0),
+		Client:           client.CoreV1().Services(data.Namespace),
+		Data:             data,
+		Services:         make([]ServiceInfo, 0),
 		networkDecorator: decorator,
 	}
 }
@@ -69,14 +69,13 @@ func (s *DeployableServices) Build() error {
 	for serviceIndex, service := range s.Data.Stage.Services {
 
 		// Check if the service already exists
-		_, err := s.Client.Get(common.FormatName(service.ServiceName),metav1.GetOptions{})
-		if !errors.IsNotFound(err)  {
-			log.Debug().Str("serviceName",service.ServiceName).Msg("the service already exists, no need to be be created")
+		_, err := s.Client.Get(common.FormatName(service.ServiceName), metav1.GetOptions{})
+		if !errors.IsNotFound(err) {
+			log.Debug().Str("serviceName", service.ServiceName).Msg("the service already exists, no need to be be created")
 			continue
 		}
 
 		log.Debug().Msgf("build service %s %d out of %d", service.ServiceId, serviceIndex+1, len(s.Data.Stage.Services))
-
 
 		extendedLabels := make(map[string]string, 0)
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = s.Data.OrganizationId
@@ -89,7 +88,7 @@ func (s *DeployableServices) Build() error {
 		selectorLabels := map[string]string{
 			utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: s.Data.AppInstanceId,
 			utils.NALEJ_ANNOTATION_ORGANIZATION_ID: service.OrganizationId,
-			utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(service.ServiceName),
+			utils.NALEJ_ANNOTATION_SERVICE_NAME:    common.FormatName(service.ServiceName),
 		}
 
 		ports := getServicePorts(service.ExposedPorts)
@@ -104,8 +103,8 @@ func (s *DeployableServices) Build() error {
 					ExternalName: common.FormatName(service.ServiceName),
 					Ports:        ports,
 					//Type:         apiv1.ServiceTypeNodePort,
-					Type:         apiv1.ServiceTypeClusterIP,
-					Selector:     selectorLabels,
+					Type:     apiv1.ServiceTypeClusterIP,
+					Selector: selectorLabels,
 				},
 			}
 			log.Debug().Str("serviceId", service.ServiceId).Str("serviceInstanceId", service.ServiceInstanceId).
@@ -133,7 +132,7 @@ func (s *DeployableServices) Deploy(controller executor.DeploymentController) er
 	for _, servInfo := range s.Services {
 
 		// if the service is already there skip
-		_, err := s.Client.Get(servInfo.Service.Name,metav1.GetOptions{})
+		_, err := s.Client.Get(servInfo.Service.Name, metav1.GetOptions{})
 		if !errors.IsNotFound(err) {
 			log.Debug().Str("serviceName", servInfo.Service.Name).Msg("service already deployed. Skip it")
 			continue
@@ -144,7 +143,7 @@ func (s *DeployableServices) Deploy(controller executor.DeploymentController) er
 			log.Error().Err(err).Msgf("error creating service %s", servInfo.Service.Name)
 			return err
 		}
-		log.Debug().Str("serviceName",servInfo.Service.Name).Str("uid", string(created.GetUID())).
+		log.Debug().Str("serviceName", servInfo.Service.Name).Str("uid", string(created.GetUID())).
 			Str("appInstanceID", s.Data.AppInstanceId).
 			Str("serviceID", servInfo.ServiceId).Msg("add service resource to be monitored")
 
@@ -163,7 +162,6 @@ func (s *DeployableServices) Deploy(controller executor.DeploymentController) er
 	}
 	return nil
 }
-
 
 func (s *DeployableServices) Undeploy() error {
 	for _, servInfo := range s.Services {

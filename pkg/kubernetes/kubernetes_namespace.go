@@ -51,9 +51,9 @@ type DeployableNamespace struct {
 func NewDeployableNamespace(client *kubernetes.Clientset, data entities.DeploymentMetadata,
 	networkDecorator executor.NetworkDecorator) *DeployableNamespace {
 	return &DeployableNamespace{
-		client:    client.CoreV1().Namespaces(),
-		data:      data,
-		Namespace: apiv1.Namespace{},
+		client:           client.CoreV1().Namespaces(),
+		data:             data,
+		Namespace:        apiv1.Namespace{},
 		networkDecorator: networkDecorator,
 	}
 }
@@ -123,7 +123,7 @@ func (n *DeployableNamespace) Undeploy() error {
 		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID, n.data.AppInstanceId,
 	)
 	options := metav1.ListOptions{
-		LabelSelector:        queryString,
+		LabelSelector: queryString,
 	}
 
 	list, err := n.client.List(options)

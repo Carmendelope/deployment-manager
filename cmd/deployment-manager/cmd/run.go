@@ -73,6 +73,8 @@ func init() {
 
 	runCmd.Flags().String("networkType", "zt", "Define the underlying networking type for the user apps.")
 
+	runCmd.Flags().String("unifiedLoggingAddress", "localhost:8322", "Unified Logging Slave Address")
+
 	viper.BindPFlags(runCmd.Flags())
 }
 
@@ -111,8 +113,8 @@ func Run() {
 		CACertPath:               viper.GetString("caCertPath"),
 		ClientCertPath:           viper.GetString("clientCertPath"),
 		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),
-		NetworkType: 		  netType,
-
+		NetworkType:              netType,
+		UnifiedLoggingAddress:    viper.GetString("unifiedLoggingAddress"),
 	}
 
 	log.Info().Msg("launching deployment manager...")

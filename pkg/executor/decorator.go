@@ -18,7 +18,7 @@
 package executor
 
 import (
-    "github.com/nalej/derrors"
+	"github.com/nalej/derrors"
 )
 
 // This decorator has to be implemented by any network solution that modifies existing basic or not basic
@@ -26,12 +26,12 @@ import (
 
 type NetworkDecorator interface {
 
-    // Decoratre with networking solutions entries when they are built.
-    Build(aux Deployable, args ...interface{}) derrors.Error
+	// Decoratre with networking solutions entries when they are built.
+	Build(aux Deployable, args ...interface{}) derrors.Error
 
-    // Decorate with networking solutions a deployable entry when its deployment is called.
-    Deploy(aux Deployable, args ...interface{}) derrors.Error
+	// Decorate with networking solutions a deployable entry when its deployment is called.
+	Deploy(aux Deployable, args ...interface{}) derrors.Error
 
-    // Remove any unnecessary entries when a deployable element is removed.
-    Undeploy(aux Deployable, args ...interface{}) derrors.Error
+	// Remove any unnecessary entries when a deployable element is removed.
+	Undeploy(aux Deployable, args ...interface{}) derrors.Error
 }
