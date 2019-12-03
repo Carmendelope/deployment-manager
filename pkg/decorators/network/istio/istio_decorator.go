@@ -129,80 +129,101 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 			continue
 		}
 
-
-		// Create a service for this rule
-		newServ := apiv1.Service{
-			ObjectMeta: metaV1.ObjectMeta{
-				Name:      common.FormatName(publicRule.ServiceName),
-				Namespace: target.Data.Namespace,
-				Labels: map[string]string {
-					utils.NALEJ_ANNOTATION_ORGANIZATION_ID : target.Data.OrganizationId,
-					utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : target.Data.AppDescriptorId,
-					utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : target.Data.AppInstanceId,
-					utils.NALEJ_ANNOTATION_IS_PROXY : "false",
-				},
-			},
-			Spec: apiv1.ServiceSpec{
-				ExternalName: common.FormatName(publicRule.ServiceName),
-				Ports: []apiv1.ServicePort{
-					{
-						Port: publicRule.TargetPort,
-						// TODO we have to assume that the internal port matches
-						TargetPort: intstr.IntOrString{IntVal: publicRule.TargetPort},
+		// Try to get the service and if it is there add the port for this service if not available.
+		foundServ, errServ := id.KClient.CoreV1().Services(target.Data.Namespace).
+			Get(common.FormatName(publicRule.ServiceName), metaV1.GetOptions{})
+		if errors.IsNotFound(errServ) {
+			log.Debug().Str("serviceName", common.FormatName(publicRule.ServiceName)).
+				Msg("service does not exists. Create it")
+			// Service not found for this rule, create one
+			newServ := apiv1.Service{
+				ObjectMeta: metaV1.ObjectMeta{
+					Name:      common.FormatName(publicRule.ServiceName),
+					Namespace: target.Data.Namespace,
+					Labels: map[string]string{
+						utils.NALEJ_ANNOTATION_ORGANIZATION_ID: target.Data.OrganizationId,
+						utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:  target.Data.AppDescriptorId,
+						utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: target.Data.AppInstanceId,
+						utils.NALEJ_ANNOTATION_IS_PROXY:        "false",
 					},
 				},
-				Type: apiv1.ServiceTypeClusterIP,
-				Selector: map[string]string{
-					utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: target.Data.AppInstanceId,
-					utils.NALEJ_ANNOTATION_ORGANIZATION_ID: target.Data.OrganizationId,
-					utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(publicRule.ServiceName),
+				Spec: apiv1.ServiceSpec{
+					ExternalName: common.FormatName(publicRule.ServiceName),
+					Ports: []apiv1.ServicePort{
+						{
+							Port: publicRule.TargetPort,
+							// TODO we have to assume that the internal port matches
+							TargetPort: intstr.IntOrString{IntVal: publicRule.TargetPort},
+							Name:       fmt.Sprintf("port%d", publicRule.TargetPort),
+						},
+					},
+					Type: apiv1.ServiceTypeClusterIP,
+					Selector: map[string]string{
+						utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: target.Data.AppInstanceId,
+						utils.NALEJ_ANNOTATION_ORGANIZATION_ID: target.Data.OrganizationId,
+						utils.NALEJ_ANNOTATION_SERVICE_NAME:    common.FormatName(publicRule.ServiceName),
+					},
 				},
-			},
-		}
-		log.Debug().Msg("create additional service")
-		foundServ, errServ := id.KClient.CoreV1().Services(target.Data.Namespace).Create(&newServ)
-
-		if errServ != nil {
-			// If we have tried and it has failed, this is an error.
-			if !errors.IsAlreadyExists(errServ) {
-				log.Error().Err(errServ).Str("serviceName", newServ.Name).
-					Msg("error creating service for Istio decorator")
-				return derrors.NewInternalError("impossible to create additional service for istio", errServ)
-			} else {
-				// The service already exists, update with other ports if required
-				id.updateServicePorts(foundServ, publicRule)
-				return nil
+			}
+			_, errCreateServ := id.KClient.CoreV1().Services(target.Data.Namespace).Create(&newServ)
+			if errCreateServ != nil {
+				log.Error().Err(errCreateServ).Msg("error creating service from Istio decorator")
+			}
+		} else {
+			log.Debug().Str("serviceName", common.FormatName(publicRule.ServiceName)).
+				Msg("service already exists. Update it")
+			updateServiceErr := id.updateServicePorts(foundServ, publicRule)
+			if updateServiceErr != nil {
+				log.Error().Err(updateServiceErr).
+					Msg("there was an error updating an existing service by istio decorator")
+				return updateServiceErr
 			}
 		}
-		// Create a virtual service to redirect this
-		vs := &istioNetworking.VirtualService{
-			ObjectMeta: metaV1.ObjectMeta{
-				Name: publicRule.ServiceName,
-			},
-			Spec: v1alpha3.VirtualService{
-				Hosts: []string{publicRule.ServiceName},
-				Tcp: []*v1alpha3.TCPRoute{
-				{
-					Route: []*v1alpha3.RouteDestination{
-					{
-					Destination: &v1alpha3.Destination{
-						Host: publicRule.ServiceName,
-						Port: &v1alpha3.PortSelector{Number: uint32(publicRule.TargetPort)}},
-					},
-					},
-					Match: []*v1alpha3.L4MatchAttributes {
-					{
-						Port: uint32(publicRule.TargetPort),
-					},
+
+		// Similarly, create a virtual service if it corresponds
+		// update the virtual service
+		foundVirtualServ, virtualServErr := id.Client.NetworkingV1alpha3().
+			VirtualServices(target.Data.Namespace).Get(common.FormatName(publicRule.ServiceName), metaV1.GetOptions{})
+		if errors.IsNotFound(virtualServErr) {
+			// we have to create the virtual service
+			// Create a virtual service to redirect this
+			vs := &istioNetworking.VirtualService{
+				ObjectMeta: metaV1.ObjectMeta{
+					Name: common.FormatName(publicRule.ServiceName),
+					Namespace: target.Data.Namespace,
+				},
+				Spec: v1alpha3.VirtualService{
+					Hosts: []string{publicRule.ServiceName},
+					Tcp: []*v1alpha3.TCPRoute{
+						{
+							Route: []*v1alpha3.RouteDestination{
+								{
+									Destination: &v1alpha3.Destination{
+										Host: common.FormatName(publicRule.ServiceName),
+										Port: &v1alpha3.PortSelector{Number: uint32(publicRule.TargetPort)}},
+								},
+							},
+							Match: []*v1alpha3.L4MatchAttributes {
+								{
+									Port: uint32(publicRule.TargetPort),
+								},
+							},
+						},
 					},
 				},
-				},
-			},
-		}
-		log.Debug().Msg("create virtual service")
-		_, errVS := id.Client.NetworkingV1alpha3().VirtualServices(target.Data.Namespace).Create(vs)
-		if errVS != nil {
-			return derrors.NewInternalError("impossible to generate virtual service", errVS)
+			}
+			log.Debug().Msg("create virtual service")
+			_, errVS := id.Client.NetworkingV1alpha3().VirtualServices(target.Data.Namespace).Create(vs)
+			if errVS != nil {
+				return derrors.NewInternalError("impossible to generate virtual service", errVS)
+			}
+		} else {
+			updateVirtualServiceErr := id.updateVirtualServicePorts(foundVirtualServ, publicRule)
+			if updateVirtualServiceErr != nil {
+				log.Error().Err(updateVirtualServiceErr).
+					Msg("there was an error updating a virtual service error by istio decorator")
+				return derrors.NewInternalError("there was an error updating a virtual service error by istio decorator", virtualServErr)
+			}
 		}
 	}
 
@@ -250,20 +271,20 @@ func (id *IstioDecorator) decorateNamespace(namespace *kubernetes.DeployableName
 func (id *IstioDecorator) generateLabels(d *kubernetes.DeployableIngress,
 	service *grpc_application_go.ServiceInstance) map[string]string {
 
-	extendedLabels := make(map[string]string, 0)
+	labels := make(map[string]string, 0)
 	if service.Labels != nil {
 		// users have already defined labels for this app
 		for k, v := range service.Labels {
-			extendedLabels[k] = v
+			labels[k] = v
 		}
 	}
 
-	extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
-	extendedLabels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
-	extendedLabels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.Data.AppInstanceId
-	extendedLabels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
+	labels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
+	labels[utils.NALEJ_ANNOTATION_APP_DESCRIPTOR] = d.Data.AppDescriptorId
+	labels[utils.NALEJ_ANNOTATION_APP_INSTANCE_ID] = d.Data.AppInstanceId
+	labels[utils.NALEJ_ANNOTATION_IS_PROXY] = "false"
 
-	return extendedLabels
+	return labels
 }
 
 func (id *IstioDecorator) getNamePrefixes(service *grpc_application_go.ServiceInstance,
@@ -309,13 +330,62 @@ func (id *IstioDecorator) updateServicePorts(service *apiv1.Service, rule *grpc_
 			Port: rule.TargetPort,
 			// TODO we have to assume that the internal port matches
 			TargetPort: intstr.IntOrString{IntVal: rule.TargetPort},
+			Name: fmt.Sprintf("port%d",rule.TargetPort),
 		})
 		// update it
+
 		_, err := id.KClient.CoreV1().Services(service.Namespace).Update(service)
 		if err != nil {
 			log.Error().Err(err).Msg("impossible to update service by istio decorator")
 			return derrors.NewInternalError("impossible to update service by istio decorator", err)
 		}
+	}
+
+	return nil
+}
+
+// Update an existing virtual service by adding the ports indicated in the public security rule only in case they are
+// not available there yet.
+// params:
+//  virtualService the entitity to be updated
+//  rule with the ports to be added to the service
+// return:
+//  error if any
+func (id *IstioDecorator) updateVirtualServicePorts(virtualService *istioNetworking.VirtualService,
+	rule *grpc_conductor_go.PublicSecurityRuleInstance) derrors.Error {
+
+	// Check if the virtual service has already this port
+	found := false
+	for _, tcpRule := range virtualService.Spec.Tcp{
+		if tcpRule.Match[0].Port == uint32(rule.TargetPort) {
+			found = true
+		}
+	}
+	if found{
+		return nil
+	}
+
+	// create a new tcp rule
+	newRoute := v1alpha3.TCPRoute{
+			Route: []*v1alpha3.RouteDestination{
+			{
+				Destination: &v1alpha3.Destination{
+					Host: common.FormatName(rule.ServiceName),
+					Port: &v1alpha3.PortSelector{Number: uint32(rule.TargetPort)}},
+			},
+		},
+			Match: []*v1alpha3.L4MatchAttributes {
+				{
+				Port: uint32(rule.TargetPort),
+				},
+			},
+		}
+	virtualService.Spec.Tcp = append(virtualService.Spec.Tcp, &newRoute)
+
+	_, err := id.Client.NetworkingV1alpha3().VirtualServices(virtualService.ObjectMeta.Namespace).Update(virtualService)
+	if err != nil {
+		log.Error().Err(err).Interface("virtualService", virtualService).Msg("istio decorator found a problem when updating virtual service")
+		return derrors.NewInternalError("istio decorator found a problem when updating virtual service", err)
 	}
 
 	return nil

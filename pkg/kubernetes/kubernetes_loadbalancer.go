@@ -100,6 +100,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 			ports = append(ports, apiv1.ServicePort{
 				Port:       port.ExposedPort,
 				TargetPort: intstr.FromInt(int(rule.TargetPort)),
+				Name: fmt.Sprintf("port%d",rule.TargetPort),
 			})
 
 			// Create the service
