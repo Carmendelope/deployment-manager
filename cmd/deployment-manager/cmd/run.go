@@ -73,7 +73,7 @@ func init() {
 
 	runCmd.Flags().String("networkType", "zt", "Define the underlying networking type for the user apps.")
 
-	runCmd.Flags().String("unifiedLoggingAddress", "localhost:8322", "Unified Logging Slave ∫Address")
+	runCmd.Flags().String("unifiedLoggingAddress", "localhost:8322", "Unified Logging Slave Address")
 
 	viper.BindPFlags(runCmd.Flags())
 }
