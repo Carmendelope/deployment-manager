@@ -211,16 +211,16 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_cond
 
 // TODO Check the rules to build the Ingresses.
 func (di *DeployableIngress) Build() error {
-	log.Debug().Int("number public rules", len(di.Data.Stage.PublicRules)).Msg("Building Ingresses")
+	log.Debug().Int("number public rules", len(di.Data.Stage.PublicRules)).Msg("building Ingresses")
 
 	for _, publicRule := range di.Data.Stage.PublicRules {
-		log.Debug().Interface("rule", publicRule).Msg("Checking public rule")
+		log.Debug().Interface("rule", publicRule).Msg("checking public rule")
 		for _, service := range di.Data.Stage.Services {
-			log.Debug().Interface("service", service).Msg("Checking service for public ingress")
+			log.Debug().Interface("service", service).Msg("checking service for public ingress")
 			if publicRule.TargetServiceGroupInstanceId == service.ServiceGroupInstanceId && publicRule.TargetServiceInstanceId == service.ServiceInstanceId {
 				toAdd := di.BuildIngressesForServiceWithRule(service, publicRule)
 				if toAdd != nil {
-					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.ServiceName).Msg("Adding new ingress for service")
+					log.Debug().Interface("toAdd", toAdd).Str("serviceName", service.ServiceName).Msg("adding new ingress for service")
 					di.Ingresses = append(di.Ingresses, IngressesInfo{service.ServiceId, service.ServiceInstanceId, []*v1beta1.Ingress{toAdd}})
 				}
 			}

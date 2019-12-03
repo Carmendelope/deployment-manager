@@ -17,6 +17,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	pbApplication "github.com/nalej/grpc-application-go"
@@ -259,6 +260,7 @@ func getServicePorts(ports []*pbApplication.Port) []apiv1.ServicePort {
 			//Name:       p.Name,
 			Port:       p.ExposedPort,
 			TargetPort: intstr.IntOrString{IntVal: p.InternalPort},
+			Name: fmt.Sprintf("port%d",p.ExposedPort),
 		})
 	}
 	if len(obtained) == 0 {

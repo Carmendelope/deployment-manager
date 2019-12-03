@@ -483,11 +483,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0a565f69553dd41b3de790fde3532e9237142f2637899e20cd3e7396f0c4f2f7"
+  digest = "1:ff7a5f44653e65cf1a0577bbe3f2cdaf514930348f6df581bbd687bbe35ead5b"
   name = "github.com/prometheus/client_model"
   packages = ["go"]
   pruneopts = ""
-  revision = "14fe0d1b01d4d5fc031dd4bec1823bd3ebbe8016"
+  revision = "d1d2010b5beead3fa1c5f271a5cf626e40b3ad6e"
 
 [[projects]]
   digest = "1:8904acfa3ef080005c1fc0670ed0471739d1e211be5638cfa6af536b701942ae"
@@ -587,11 +587,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c57e5a436bda4c346e7bacb57fb0cf95613bb9b74df09202c1c0b4d6c07b7972"
+  digest = "1:97fc4d7b02ee1f310bb10f8ce213ae98190119ec8ff4b8aeb928766053405be8"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = ""
-  revision = "ac88ee75c92c889b97e05591e9a39b6480c538b3"
+  revision = "86a70503ff7e82ffc18c7b0de83db35da4791e6a"
 
 [[projects]]
   branch = "master"
@@ -615,14 +615,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5dea728c174ca00e8f11af6006d614f0a093e72e713b0687a0107faa87fe1219"
+  digest = "1:44d75e002fa89506cca17f921eb07aee69526d7519bb7f1f2b0e017380c5e011"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
     "internal",
   ]
   pruneopts = ""
-  revision = "5d9234df094ce600ff541158d1491aa10d078a47"
+  revision = "858c2ad4c8b6c5d10852cb89079f6ca1c7309787"
 
 [[projects]]
   branch = "master"
@@ -698,7 +698,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a51a58f22fcdcf4238ee8b2a3a9637cbdb73320183038ce20c104f682563c640"
+  digest = "1:1b028a8d750789d0723ab886c8b2853ee2d00539da8ce19a7ef77952900936b6"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -708,7 +708,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = ""
-  revision = "83cc0476cb11ea0da33dacd4c6354ab192de6fe6"
+  revision = "049a07e0debe1a8cd87b6d392cfdb5ac558c7ddf"
 
 [[projects]]
   digest = "1:ec89356e95f2a8983928a7872f71f0f934f97932353af4fe1a76d322db5eaf7b"

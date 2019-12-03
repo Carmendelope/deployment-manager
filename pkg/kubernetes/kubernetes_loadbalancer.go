@@ -68,6 +68,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID] = service.ServiceGroupInstanceId
 	extendedLabels[utils.NALEJ_ANNOTATION_SERVICE_PURPOSE] = utils.NALEJ_ANNOTATION_VALUE_LOAD_BALANCER_SERVICE
 
+	/*
 	extendedSelectors := map[string]string{
 		utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT:       dl.data.FragmentId,
 		utils.NALEJ_ANNOTATION_ORGANIZATION_ID:           dl.data.OrganizationId,
@@ -78,6 +79,14 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 		utils.NALEJ_ANNOTATION_SERVICE_INSTANCE_ID:       service.ServiceInstanceId,
 		utils.NALEJ_ANNOTATION_SERVICE_GROUP_ID:          service.ServiceGroupId,
 		utils.NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID: service.ServiceGroupInstanceId,
+	}
+	*/
+
+	// Labels for the selector
+	selectorLabels := map[string]string{
+		utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: dl.data.AppInstanceId,
+		utils.NALEJ_ANNOTATION_ORGANIZATION_ID: service.OrganizationId,
+		utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(service.ServiceName),
 	}
 
 	found := false
@@ -91,6 +100,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 			ports = append(ports, apiv1.ServicePort{
 				Port:       port.ExposedPort,
 				TargetPort: intstr.FromInt(int(rule.TargetPort)),
+				Name: fmt.Sprintf("port%d",rule.TargetPort),
 			})
 
 			// Create the service
@@ -104,7 +114,7 @@ func (dl *DeployableLoadBalancer) BuildLoadBalancerForServiceWithRule(service *g
 					ExternalName: fmt.Sprintf("lb%s", common.FormatName(service.ServiceName)),
 					Ports:        ports,
 					Type:         apiv1.ServiceTypeLoadBalancer,
-					Selector:     extendedSelectors,
+					Selector:     selectorLabels,
 					// spec to preserve the Client source IP
 					ExternalTrafficPolicy: apiv1.ServiceExternalTrafficPolicyTypeLocal,
 				},
