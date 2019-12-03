@@ -62,9 +62,9 @@ type DeployableDeployments struct {
 func NewDeployableDeployment(
 	client *kubernetes.Clientset, data entities.DeploymentMetadata, networkDecorator executor.NetworkDecorator) *DeployableDeployments {
 	return &DeployableDeployments{
-		Client:      client.AppsV1().Deployments(data.Namespace),
-		Data:        data,
-		Deployments: make([]*appsv1.Deployment, 0),
+		Client:           client.AppsV1().Deployments(data.Namespace),
+		Data:             data,
+		Deployments:      make([]*appsv1.Deployment, 0),
 		networkDecorator: networkDecorator,
 	}
 }
@@ -172,7 +172,6 @@ func (d *DeployableDeployments) Build() error {
 			extendedLabels = make(map[string]string, 0)
 		}
 
-
 		extendedLabels[utils.NALEJ_ANNOTATION_DEPLOYMENT_FRAGMENT] = d.Data.FragmentId
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_ID] = d.Data.OrganizationId
 		extendedLabels[utils.NALEJ_ANNOTATION_ORGANIZATION_NAME] = common.FormatNameWithHyphen(d.Data.OrganizationName)
@@ -196,7 +195,7 @@ func (d *DeployableDeployments) Build() error {
 		selectorLabels := map[string]string{
 			utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: d.Data.AppInstanceId,
 			utils.NALEJ_ANNOTATION_ORGANIZATION_ID: service.OrganizationId,
-			utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(service.ServiceName),
+			utils.NALEJ_ANNOTATION_SERVICE_NAME:    common.FormatName(service.ServiceName),
 		}
 
 		deployment := appsv1.Deployment{
@@ -312,7 +311,6 @@ func (d *DeployableDeployments) Build() error {
 	return nil
 }
 
-
 func (d *DeployableDeployments) Deploy(controller executor.DeploymentController) error {
 
 	// same approach for service Deployments
@@ -416,4 +414,3 @@ func (d *DeployableDeployments) getContainerPorts(ports []*pbApplication.Port) [
 	}
 	return obtained
 }
-

@@ -140,7 +140,7 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 			},
 
 			// The proxy exposes the same ports of the deployment
-			Ports: getContainerPorts(service.ExposedPorts),
+			Ports:           getContainerPorts(service.ExposedPorts),
 			ImagePullPolicy: DefaultImagePullPolicy,
 			SecurityContext: &apiv1.SecurityContext{
 				RunAsUser:  privilegedUser,
@@ -269,7 +269,7 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 									},
 								},
 								// The proxy exposes the same ports of the deployment + the ztport
-								Ports: getContainerPorts(service.ExposedPorts),
+								Ports:           getContainerPorts(service.ExposedPorts),
 								ImagePullPolicy: DefaultImagePullPolicy,
 								SecurityContext: &apiv1.SecurityContext{
 									RunAsUser:  privilegedUser,
@@ -313,14 +313,13 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 	return nil
 }
 
-
 func generateContainerLabelsInbound(d *kubernetes.DeployableDeployments,
 	service *grpc_conductor_go.ServiceInstance) map[string]string {
 
 	extendedLabels := make(map[string]string, 0)
 	if service.Labels != nil {
 		// users have already defined labels for this app
-		for k,v := range service.Labels {
+		for k, v := range service.Labels {
 			extendedLabels[k] = v
 		}
 	}
@@ -414,7 +413,7 @@ func generateContainerVars(d *kubernetes.DeployableDeployments,
 //  return:
 //   list of ports into k8s api format
 func getContainerPorts(ports []*grpc_application_go.Port) []apiv1.ContainerPort {
-	obtained := make([]apiv1.ContainerPort,0)
+	obtained := make([]apiv1.ContainerPort, 0)
 	for _, p := range ports {
 		obtained = append(obtained, apiv1.ContainerPort{ContainerPort: p.ExposedPort, Name: p.Name})
 	}

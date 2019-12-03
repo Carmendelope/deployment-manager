@@ -33,7 +33,7 @@ type NetworkType string
 
 const (
 	NetworkTypeError = ""
-	NetworkTypeZt = "zt"
+	NetworkTypeZt    = "zt"
 	NetworkTypeIstio = "istio"
 )
 
@@ -130,7 +130,6 @@ func (conf *Config) Validate() derrors.Error {
 	if conf.MetricsPort <= 0 {
 		return derrors.NewInvalidArgumentError("metricsPort must be valid")
 	}
-
 
 	if conf.ClusterAPIHostname == "" || conf.ClusterAPIPort <= 0 {
 		return derrors.NewInvalidArgumentError("clusterAPIHostname and clusterAPIPort must me set")

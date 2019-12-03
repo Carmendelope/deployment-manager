@@ -71,11 +71,11 @@ type Manager struct {
 	// Config
 	PublicCredentials grpc_application_go.ImageCredentials
 	// Network decorator
-	networkDecorator     executor.NetworkDecorator
+	networkDecorator executor.NetworkDecorator
 	// Unified Logging Slave address
 	unifiedLoggingClient grpc_unified_logging_go.SlaveClient
 	// Kubernetes Client
-	NetUpdater           network.NetworkUpdater
+	NetUpdater network.NetworkUpdater
 }
 
 func NewManager(

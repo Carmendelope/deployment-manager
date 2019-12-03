@@ -148,11 +148,11 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_cond
 
 	// create the ingress annotations
 	annotations := map[string]string{
-		"kubernetes.io/ingress.class": "nginx",
+		"kubernetes.io/ingress.class":                  "nginx",
 		"nginx.ingress.kubernetes.io/service-upstream": "true",
-		"organizationId":              service.OrganizationId,
-		"appInstanceId":               di.Data.AppInstanceId,
-		"serviceId":                   service.ServiceId,
+		"organizationId":                               service.OrganizationId,
+		"appInstanceId":                                di.Data.AppInstanceId,
+		"serviceId":                                    service.ServiceId,
 	}
 	// Overwrite the application root path with the user specified one so that when
 	// the user accesses the endpoint through the DNS it is automatically redirected

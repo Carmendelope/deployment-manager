@@ -92,11 +92,11 @@ func (id *IstioDecorator) Build(aux executor.Deployable, args ...interface{}) de
 
 func (id *IstioDecorator) Deploy(aux executor.Deployable, args ...interface{}) derrors.Error {
 
-   switch target := aux.(type) {
-   case *kubernetes.DeployableServices:
-	   return id.decorateServices(target)
-   }
-   return nil
+	switch target := aux.(type) {
+	case *kubernetes.DeployableServices:
+		return id.decorateServices(target)
+	}
+	return nil
 }
 
 // Remove any unnecessary entries when a deployable element is removed.
@@ -129,17 +129,16 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 			continue
 		}
 
-
 		// Create a service for this rule
 		newServ := apiv1.Service{
 			ObjectMeta: metaV1.ObjectMeta{
 				Name:      common.FormatName(publicRule.ServiceName),
 				Namespace: target.Data.Namespace,
-				Labels: map[string]string {
-					utils.NALEJ_ANNOTATION_ORGANIZATION_ID : target.Data.OrganizationId,
-					utils.NALEJ_ANNOTATION_APP_DESCRIPTOR : target.Data.AppDescriptorId,
-					utils.NALEJ_ANNOTATION_APP_INSTANCE_ID : target.Data.AppInstanceId,
-					utils.NALEJ_ANNOTATION_IS_PROXY : "false",
+				Labels: map[string]string{
+					utils.NALEJ_ANNOTATION_ORGANIZATION_ID: target.Data.OrganizationId,
+					utils.NALEJ_ANNOTATION_APP_DESCRIPTOR:  target.Data.AppDescriptorId,
+					utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: target.Data.AppInstanceId,
+					utils.NALEJ_ANNOTATION_IS_PROXY:        "false",
 				},
 			},
 			Spec: apiv1.ServiceSpec{
@@ -155,7 +154,7 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 				Selector: map[string]string{
 					utils.NALEJ_ANNOTATION_APP_INSTANCE_ID: target.Data.AppInstanceId,
 					utils.NALEJ_ANNOTATION_ORGANIZATION_ID: target.Data.OrganizationId,
-					utils.NALEJ_ANNOTATION_SERVICE_NAME: common.FormatName(publicRule.ServiceName),
+					utils.NALEJ_ANNOTATION_SERVICE_NAME:    common.FormatName(publicRule.ServiceName),
 				},
 			},
 		}
@@ -180,20 +179,20 @@ func (id *IstioDecorator) decorateServices(target *kubernetes.DeployableServices
 			Spec: v1alpha3.VirtualService{
 				Hosts: []string{publicRule.ServiceName},
 				Tcp: []*v1alpha3.TCPRoute{
-				{
-					Route: []*v1alpha3.RouteDestination{
 					{
-					Destination: &v1alpha3.Destination{
-						Host: publicRule.ServiceName,
-						Port: &v1alpha3.PortSelector{Number: uint32(publicRule.TargetPort)}},
+						Route: []*v1alpha3.RouteDestination{
+							{
+								Destination: &v1alpha3.Destination{
+									Host: publicRule.ServiceName,
+									Port: &v1alpha3.PortSelector{Number: uint32(publicRule.TargetPort)}},
+							},
+						},
+						Match: []*v1alpha3.L4MatchAttributes{
+							{
+								Port: uint32(publicRule.TargetPort),
+							},
+						},
 					},
-					},
-					Match: []*v1alpha3.L4MatchAttributes {
-					{
-						Port: uint32(publicRule.TargetPort),
-					},
-					},
-				},
 				},
 			},
 		}
@@ -242,8 +241,6 @@ func (id *IstioDecorator) decorateNamespace(namespace *kubernetes.DeployableName
 	namespace.Namespace.Labels[IstioLabelInjection] = "enabled"
 	return nil
 }
-
-
 
 func (id *IstioDecorator) generateLabels(d *kubernetes.DeployableIngress,
 	service *grpc_application_go.ServiceInstance) map[string]string {

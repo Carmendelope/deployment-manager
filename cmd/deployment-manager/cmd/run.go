@@ -113,9 +113,8 @@ func Run() {
 		CACertPath:               viper.GetString("caCertPath"),
 		ClientCertPath:           viper.GetString("clientCertPath"),
 		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),
-		NetworkType: 		  netType,
-		UnifiedLoggingAddress: viper.GetString("unifiedLoggingAddress"),
-
+		NetworkType:              netType,
+		UnifiedLoggingAddress:    viper.GetString("unifiedLoggingAddress"),
 	}
 
 	log.Info().Msg("launching deployment manager...")

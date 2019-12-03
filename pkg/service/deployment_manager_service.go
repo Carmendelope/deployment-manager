@@ -386,7 +386,6 @@ func (d *DeploymentManagerService) startMetrics(httpListener net.Listener, errCh
 	return httpServer, nil
 }
 
-
 func getNetworkDecorator(configuration *config.Config) (executor.NetworkDecorator, derrors.Error) {
 	switch configuration.NetworkType {
 	case config.NetworkTypeZt:

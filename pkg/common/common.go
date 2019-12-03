@@ -122,7 +122,6 @@ func GetServiceFQDN(serviceName string, organizationId string, appInstanceId str
 //  The corresponding pointer.
 func BoolPtr(b bool) *bool { return &b }
 
-
 // Helping function for pointer conversion.
 func Int32Ptr(i int32) *int32 { return &i }
 
