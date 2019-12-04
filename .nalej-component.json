@@ -3,9 +3,13 @@
   "language_version": "1.13",
   "version": "v0.5.0",
   "application_list": [
-    "deployment-manager deployment-manager-cli"
+    "deployment-manager",
+    "deployment-manager-cli"
   ],
   "image_list": [
+    "deployment-manager"
+  ],
+  "component_list": [
     "deployment-manager"
   ],
   "tools": [
