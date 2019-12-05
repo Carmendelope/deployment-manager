@@ -25,6 +25,7 @@ import (
 	"github.com/nalej/deployment-manager/pkg/utils"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-storage-fabric-go"
 	"github.com/rs/zerolog/log"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,13 +72,13 @@ func NewKubernetesExecutor(internal bool, controller executor.DeploymentControll
 }
 
 func (k *KubernetesExecutor) BuildNativeDeployable(metadata entities.DeploymentMetadata,
-	networkDecorator executor.NetworkDecorator) (executor.Deployable, error) {
+	networkDecorator executor.NetworkDecorator, sfClient grpc_storage_fabric_go.StorageClassClient) (executor.Deployable, error) {
 
 	log.Debug().Msgf("fragment %s stage %s requested to be translated into K8s deployable",
 		metadata.FragmentId, metadata.Stage.StageId)
 
 	var resources executor.Deployable
-	k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata, networkDecorator)
+	k8sDeploy := NewDeployableKubernetesStage(k.Client, metadata, networkDecorator, sfClient)
 	resources = k8sDeploy
 
 	err := k8sDeploy.Build()

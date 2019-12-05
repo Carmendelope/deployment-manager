@@ -53,6 +53,8 @@ import (
 
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
 
+	"github.com/nalej/grpc-storage-fabric-go"
+
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -253,8 +255,14 @@ func NewDeploymentManagerService(cfg *config.Config) (*DeploymentManagerService,
 		return nil, err
 	}
 
+	sfConn, sfErr := grpc.Dial(cfg.StorageFabricAddress, grpc.WithInsecure())
+	if sfErr != nil {
+		return nil, derrors.AsError(sfErr, "cannot create connection with storage fabric")
+	}
+	sfClient := grpc_storage_fabric_go.NewStorageClassClient(sfConn)
+
 	mgr := handler.NewManager(&exec, cfg.ClusterPublicHostname, requestsQueue, nalejDNSForPods, instanceMonitor,
-		cfg.PublicCredentials, networkDecorator, ulClient, k8sClient)
+		cfg.PublicCredentials, networkDecorator, ulClient, k8sClient, sfClient)
 	go mgr.Run()
 	log.Info().Msg("done")
 

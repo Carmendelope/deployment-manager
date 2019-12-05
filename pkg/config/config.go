@@ -103,6 +103,8 @@ type Config struct {
 	NetworkType NetworkType
 	// unifiedLoggingAddress
 	UnifiedLoggingAddress string
+	// Storage Fabric Address (host:port)
+	StorageFabricAddress string
 }
 
 func (conf *Config) envOrElse(envName string, paramValue string) string {
@@ -166,6 +168,11 @@ func (conf *Config) Validate() derrors.Error {
 	if conf.UnifiedLoggingAddress == "" {
 		return derrors.NewInvalidArgumentError("UnifiedLoggingAddress must be set")
 	}
+
+	if conf.StorageFabricAddress == "" {
+		return derrors.NewInvalidArgumentError("StorageFabricAddress must be set")
+	}
+
 	conf.TargetPlatform = grpc_installer_go.Platform(grpc_installer_go.Platform_value[conf.TargetPlatformName])
 
 	return nil

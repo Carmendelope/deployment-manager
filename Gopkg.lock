@@ -230,12 +230,12 @@
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:fcc5f6f0dc144dba443741b99e11d4a537b0a549c6a98b866e861caf65365c96"
+  digest = "1:db80629ec1cb6f46cf6c92f350131811fc773fc67b5f9d5b57a84c1a01183613"
   name = "github.com/nalej/grpc-application-go"
   packages = ["."]
   pruneopts = ""
-  revision = "76e88078ddab4c0b7d0e96d5e21654c03e5be405"
-  version = "v0.0.87"
+  revision = "23d094052316a074143e6fc61c5436320c8e2fb0"
+  version = "v0.0.91"
 
 [[projects]]
   digest = "1:14935510a150a010a7cb713d816fe04abc36fca1130778c36d1f0be7b15cc9e0"
@@ -372,6 +372,14 @@
   pruneopts = ""
   revision = "e4e5c1fb72cc23bdc744a04659c41d937b1eed31"
   version = "v0.0.3"
+
+[[projects]]
+  digest = "1:d1d0daa33b4a749310ca18c7c1eb462971a80f642a589e59c38c32730188a38d"
+  name = "github.com/nalej/grpc-storage-fabric-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "4a1b5348ff9f89718de5858e7fed183235ec8f93"
+  version = "v0.0.1"
 
 [[projects]]
   digest = "1:18d316170b65da520a335ae2e11818ed9a481cb57d8fb6c72ee2dc437bb148c4"
@@ -595,7 +603,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f58e146d19d1af39792c0b599b24b13de51f75b073ba52c1aa658fe535be9120"
+  digest = "1:03e60ff96fcef15b255431bf7c9122e266a3355b8d130d6e2f0d0c399570993a"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -611,7 +619,7 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "ef20fe5d793301b553005db740f730d87993f778"
+  revision = "5ee1b9f4859acd2e99987ef94ec7a58427c53bef"
 
 [[projects]]
   branch = "master"
@@ -626,14 +634,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6530ff3e6639af9bab7d2cf1e141c348e63af92058fa64d0660a6e8817d41640"
+  digest = "1:37766ea00675c25129361a0519c178d47e373bc144d4fad349c285e20e32d5e8"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = ""
-  revision = "6d18c012aee9febd81bbf9806760c8c4480e870d"
+  revision = "ce4227a45e2eb77e5c847278dcc6a626742e2945"
 
 [[projects]]
   digest = "1:740b51a55815493a8d0f2b1e0d0ae48fe48953bf7eaf3fcc4198823bf67768c0"
@@ -698,7 +706,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1b028a8d750789d0723ab886c8b2853ee2d00539da8ce19a7ef77952900936b6"
+  digest = "1:46eb383c079b79b4dc249421ebf6db29def0757a3b3a1941f62dc553345ed464"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -708,7 +716,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = ""
-  revision = "049a07e0debe1a8cd87b6d392cfdb5ac558c7ddf"
+  revision = "3fa9dbf08042c806feeb0b21b23e07587714c143"
 
 [[projects]]
   digest = "1:ec89356e95f2a8983928a7872f71f0f934f97932353af4fe1a76d322db5eaf7b"
@@ -1046,6 +1054,7 @@
     "github.com/nalej/grpc-installer-go",
     "github.com/nalej/grpc-login-api-go",
     "github.com/nalej/grpc-network-go",
+    "github.com/nalej/grpc-storage-fabric-go",
     "github.com/nalej/grpc-unified-logging-go",
     "github.com/nalej/grpc-utils/pkg/conversions",
     "github.com/nalej/grpc-zt-nalej-go",

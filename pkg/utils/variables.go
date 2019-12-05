@@ -61,6 +61,9 @@ const (
 	// Annotation for metadata to identify the group service
 	NALEJ_ANNOTATION_SERVICE_GROUP_INSTANCE_ID = "nalej-service-group-instance-id"
 
+	// Annotation for Storage Type
+	NALEJ_ANNOTATION_STORAGE_TYPE = "nalej-storage-type"
+
 	// Annotation for metadata to identify endpoints for ingress
 	NALEJ_ANNOTATION_INGRESS_ENDPOINT = "nalej-endpoint"
 	// Annotation for metadata to identify the security rule.
