@@ -10,7 +10,7 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-      ref: refs/tags/v1.0.4
+      ref: refs/tags/v1.0.5
 
 stages:
 - stage: 'SlackStart'
@@ -48,6 +48,17 @@ stages:
     steps:
     - template: misc/nalej-component.yaml@ci_templates 
     - template: steps/docker-main.yaml@ci_templates
+
+- stage: 'AssetPublish'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  dependsOn: 'ImageBuild'
+  jobs:
+  - job: 
+    pool:
+      vmImage: 'ubuntu-latest'  
+    steps:
+    - template: misc/nalej-component.yaml@ci_templates
+    - template: steps/assets-main.yaml@ci_templates
 
 - stage: 'SlackFinish'
   condition: always()
