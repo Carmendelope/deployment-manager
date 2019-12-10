@@ -49,6 +49,7 @@ spec:
         - "--clientCertPath=/nalej/tls-client-certificate/"
         - "--skipServerCertValidation=false"
         - "--unifiedLoggingAddress=unified-logging-slave._NPH_NAMESPACE:8322"
+        - "--storageFabricAddress=storage-fabric._NPH_NAMESPACE:9010"
         env:
         - name: MANAGEMENT_HOST
           valueFrom:

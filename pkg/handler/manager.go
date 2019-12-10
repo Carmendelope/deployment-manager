@@ -28,6 +28,7 @@ import (
 	"github.com/nalej/grpc-application-go"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-storage-fabric-go"
 	"github.com/nalej/grpc-unified-logging-go"
 	"github.com/nalej/grpc-utils/pkg/conversions"
 	"github.com/rs/zerolog/log"
@@ -76,6 +77,8 @@ type Manager struct {
 	unifiedLoggingClient grpc_unified_logging_go.SlaveClient
 	// Kubernetes Client
 	NetUpdater network.NetworkUpdater
+	// Storage Client
+	sfClient grpc_storage_fabric_go.StorageClassClient
 }
 
 func NewManager(
@@ -86,7 +89,8 @@ func NewManager(
 	publicCredentials grpc_application_go.ImageCredentials,
 	networkDecorator executor.NetworkDecorator,
 	ulClient grpc_unified_logging_go.SlaveClient,
-	K8sClient *kubernetes.Clientset) *Manager {
+	K8sClient *kubernetes.Clientset,
+	sfClient grpc_storage_fabric_go.StorageClassClient) *Manager {
 	netUpdater := network.NewKubernetesNetworkUpdater(K8sClient)
 	return &Manager{
 		executor:              *executor,
@@ -98,6 +102,7 @@ func NewManager(
 		networkDecorator:      networkDecorator,
 		unifiedLoggingClient:  ulClient,
 		NetUpdater:            netUpdater,
+		sfClient:              sfClient,
 	}
 }
 
@@ -179,7 +184,7 @@ func (m *Manager) processRequest(request *pbDeploymentMgr.DeploymentFragmentRequ
 		// fill the stage specific information
 		metadata.Stage = *stage
 
-		deployable, executionError := m.executor.BuildNativeDeployable(metadata, m.networkDecorator)
+		deployable, executionError := m.executor.BuildNativeDeployable(metadata, m.networkDecorator, m.sfClient)
 
 		if executionError != nil {
 			log.Error().Err(executionError).Msgf("impossible to build deployment for fragment %s", request.Fragment.FragmentId)

@@ -21,6 +21,7 @@ import (
 	"github.com/nalej/deployment-manager/internal/entities"
 	"github.com/nalej/deployment-manager/pkg/executor"
 	pbApplication "github.com/nalej/grpc-application-go"
+	"github.com/nalej/grpc-storage-fabric-go"
 	"github.com/rs/zerolog/log"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -68,7 +69,8 @@ type DeployableKubernetesStage struct {
 //   targetNamespace name of the Namespace the resources will be deployed into
 func NewDeployableKubernetesStage(
 	client *kubernetes.Clientset, data entities.DeploymentMetadata,
-	networkDecorator executor.NetworkDecorator) *DeployableKubernetesStage {
+	networkDecorator executor.NetworkDecorator,
+	sfClient grpc_storage_fabric_go.StorageClassClient) *DeployableKubernetesStage {
 	return &DeployableKubernetesStage{
 		client:              client,
 		data:                data,
@@ -77,7 +79,7 @@ func NewDeployableKubernetesStage(
 		Ingresses:           NewDeployableIngress(client, data, networkDecorator),
 		Configmaps:          NewDeployableConfigMaps(client, data),
 		Secrets:             NewDeployableSecrets(client, data),
-		Storage:             NewDeployableStorage(client, data),
+		Storage:             NewDeployableStorage(client, data, sfClient),
 		DeviceGroupServices: NewDeployableDeviceGroups(client, data),
 		LoadBalancers:       NewDeployableLoadBalancer(client, data),
 	}

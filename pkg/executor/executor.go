@@ -20,6 +20,7 @@ import (
 	"github.com/nalej/deployment-manager/internal/entities"
 	pbConductor "github.com/nalej/grpc-conductor-go"
 	pbDeploymentMgr "github.com/nalej/grpc-deployment-manager-go"
+	"github.com/nalej/grpc-storage-fabric-go"
 )
 
 // A executor is a middleware that transforms a deployment plan into an executable plan for the given
@@ -51,7 +52,7 @@ type Executor interface {
 	//   networkDecorator additional processes required to set deployment networking
 	//  return:
 	//   deployable entity or error if any
-	BuildNativeDeployable(data entities.DeploymentMetadata, networkDecorator NetworkDecorator) (Deployable, error)
+	BuildNativeDeployable(data entities.DeploymentMetadata, networkDecorator NetworkDecorator, sfClient grpc_storage_fabric_go.StorageClassClient) (Deployable, error)
 
 	// Execute a deployment stage for the current platform.
 	//  params:
