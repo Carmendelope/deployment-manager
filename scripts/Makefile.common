@@ -12,6 +12,7 @@ DOCKER_VERSION=${VERSION}
 COMMIT=$(shell git rev-parse HEAD)
 APPS=$(shell jq -r '.application_list[]' .nalej-component.json)
 IMGS=$(shell jq -r '.image_list[]' .nalej-component.json)
+COMPONENTS=$(shell jq -r '.component_list[]' .nalej-component.json)
 
 # Docker variables
 ENVIRONMENT:=development
