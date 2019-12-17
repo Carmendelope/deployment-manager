@@ -10,7 +10,8 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-      ref: refs/tags/v1.0.6
+      #ref: refs/tags/v1.0.6
+      ref: refs/heads/feature/NP-2504_ComponentDeploy
 
 stages:
 - stage: 'SlackStart'
@@ -28,48 +29,115 @@ stages:
         buildUrl: $(buildUrl)$(Build.BuildId)
         slackWebhook: $(slackBuilds)
 
-- stage: 'BinaryBuild'
+# - stage: 'BinaryBuild'
+#   dependsOn: 'SlackStart'
+#   jobs:
+#   - job: 
+#     pool:
+#       vmImage: 'ubuntu-latest'  
+#     steps:
+#     - template: misc/nalej-component.yaml@ci_templates 
+#     - template: steps/go-main.yaml@ci_templates
+
+# - stage: 'CLIPublish'
+#   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#   dependsOn: 'BinaryBuild'
+#   jobs:
+#   - job: 
+#     pool:
+#       vmImage: 'ubuntu-latest'  
+#     steps:
+#     - template: misc/nalej-component.yaml@ci_templates 
+#     - template: steps/cli-publish-main.yaml@ci_templates
+
+# - stage: 'ImageBuild'
+#   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#   dependsOn: 'CLIPublish'
+#   jobs:
+#   - job: 
+#     pool:
+#       vmImage: 'ubuntu-latest'  
+#     steps:
+#     - template: misc/nalej-component.yaml@ci_templates 
+#     - template: steps/docker-main.yaml@ci_templates
+
+- stage: 'ComponentDeploy'
+  #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  #dependsOn: 'ImageBuild'
   dependsOn: 'SlackStart'
   jobs:
   - job: 
     pool:
       vmImage: 'ubuntu-latest'  
     steps:
-    - template: misc/nalej-component.yaml@ci_templates 
-    - template: steps/go-main.yaml@ci_templates
-
-- stage: 'CLIPublish'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-  dependsOn: 'BinaryBuild'
-  jobs:
-  - job: 
-    pool:
-      vmImage: 'ubuntu-latest'  
-    steps:
-    - template: misc/nalej-component.yaml@ci_templates 
-    - template: steps/cli-publish-main.yaml@ci_templates
-
-- stage: 'ImageBuild'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-  dependsOn: 'CLIPublish'
-  jobs:
-  - job: 
-    pool:
-      vmImage: 'ubuntu-latest'  
-    steps:
-    - template: misc/nalej-component.yaml@ci_templates 
-    - template: steps/docker-main.yaml@ci_templates
-
-- stage: 'AssetPublish'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-  dependsOn: 'ImageBuild'
-  jobs:
-  - job: 
-    pool:
-      vmImage: 'ubuntu-latest'  
-    steps:
     - template: misc/nalej-component.yaml@ci_templates
-    - template: steps/assets-main.yaml@ci_templates
+
+    - template: k8s/yaml/render.yaml@ci_templates
+      parameters:
+        namespace: "__NPH_NAMESPACE"
+        componentList: $(componentList)
+        environment: "staging"
+        version: edge
+
+    - template: k8s/configmaps/cluster-config.yaml@ci_templates
+
+    - template: k8s/yaml/namespace.yaml@ci_templates
+      parameters:
+        namespace: $(namespace)
+        yamlPath: dist/yaml/staging
+
+    - task: DownloadSecureFile@1
+      name: ci_kubeconfig
+      inputs:
+        secureFile: ci_kubeconfig.yaml
+      displayName: "Get K8S configuration file"
+
+    - template: k8s/ns/create.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
+
+    - template: certificates/letsencrypt/ca-certificate.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
+
+    - template: certificates/letsencrypt/tls-client-certificate.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
+
+    - template: k8s/resources/create.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        platform: appcluster
+        environment: "staging"
+
+    # - template: templates/verify_deploy.yaml
+    #   parameters:
+    #     kubeconfig: $(kubeconfig)
+    #     namespace: $(namespace)
+
+    - template: k8s/custom/delete-clusterrolebinding.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        component: "deployment-manager"
+
+    - template: k8s/ns/delete.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
+
+# - stage: 'AssetPublish'
+#   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#   dependsOn: 'ImageBuild'
+#   jobs:
+#   - job: 
+#     pool:
+#       vmImage: 'ubuntu-latest'  
+#     steps:
+#     - template: misc/nalej-component.yaml@ci_templates
+#     - template: steps/assets-main.yaml@ci_templates
 
 - stage: 'SlackFinish'
   condition: always()
