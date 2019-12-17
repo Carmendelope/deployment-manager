@@ -113,10 +113,10 @@ stages:
         platform: appcluster
         environment: "staging"
 
-    # - template: templates/verify_deploy.yaml
-    #   parameters:
-    #     kubeconfig: $(kubeconfig)
-    #     namespace: $(namespace)
+    - template: templates/verify_deploy.yaml
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
 
     - template: k8s/custom/delete-clusterrolebinding.yaml@ci_templates
       parameters:
