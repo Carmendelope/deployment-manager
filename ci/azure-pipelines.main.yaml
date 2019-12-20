@@ -71,10 +71,15 @@ stages:
     steps:
     - template: misc/nalej-component.yaml@ci_templates
 
+    - script: |  
+        mkdir assets/installer/mngtcluster
+        az storage blob download-batch -d assets/installer/mngtcluster/ -s "edge" --pattern assets/installer/mngtcluster/cluster-api*.yaml --account-name $(accountname) --account-key $(accountkey)        
+      displayName: "Download Cluster API assets"
+
     - template: k8s/yaml/render.yaml@ci_templates
       parameters:
         namespace: "__NPH_NAMESPACE"
-        componentList: "$(componentList) cluster-api"
+        componentList: $(componentList)
         environment: "staging"
         version: edge
 
@@ -82,7 +87,6 @@ stages:
       parameters:
         yamlPath: dist/yaml/staging
         kubeconfig: $(kubeconfig)
-
 
     #This is for cluster api
     - template: k8s/secrets/authx-secret.yaml@ci_templates
