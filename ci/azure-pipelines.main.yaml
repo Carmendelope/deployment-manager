@@ -71,6 +71,14 @@ stages:
     steps:
     - template: misc/nalej-component.yaml@ci_templates
 
+
+- template: k8s/yaml/render.yaml@ci_templates
+      parameters:
+        namespace: "__NPH_NAMESPACE"
+        componentList: "$(componentList) cluster-api"
+        environment: "staging"
+        version: edge
+
     - template: k8s/yaml/download-cdr.yaml@ci_templates
       parameters:
         yamlPath: dist/yaml/staging
@@ -79,9 +87,12 @@ stages:
     - template: k8s/yaml/render.yaml@ci_templates
       parameters:
         namespace: "__NPH_NAMESPACE"
-        componentList: $(componentList)
+        componentList: "$(componentList) cluster-api"
         environment: "staging"
         version: edge
+
+    #This is for cluster api
+    - template: k8s/secrets/authx-secret.yaml@ci_templates
 
     - template: k8s/secrets/cluster-user-credentials.yaml@ci_templates
 
@@ -99,6 +110,12 @@ stages:
       displayName: "Get K8S configuration file"
 
     - template: k8s/ns/create.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
+
+    #This is for cluster-api
+    - template: certificates/letsencrypt/mngt-ca-cert.yaml@ci_templates
       parameters:
         kubeconfig: $(kubeconfig)
         namespace: $(namespace)
