@@ -71,6 +71,11 @@ stages:
     steps:
     - template: misc/nalej-component.yaml@ci_templates
 
+    - template: k8s/yaml/download-cdr.yaml@ci_templates
+      parameters:
+        yamlPath: dist/yaml/staging
+        kubeconfig: $(kubeconfig)
+
     - template: k8s/yaml/render.yaml@ci_templates
       parameters:
         namespace: "__NPH_NAMESPACE"
@@ -123,6 +128,8 @@ stages:
       parameters:
         kubeconfig: $(kubeconfig)
         component: "deployment-manager"
+
+    - template: k8s/custom/delete-cdr-main.yaml@ci_templates
 
     - template: k8s/ns/delete.yaml@ci_templates
       parameters:
