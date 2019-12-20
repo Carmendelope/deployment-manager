@@ -71,8 +71,7 @@ stages:
     steps:
     - template: misc/nalej-component.yaml@ci_templates
 
-
-- template: k8s/yaml/render.yaml@ci_templates
+    - template: k8s/yaml/render.yaml@ci_templates
       parameters:
         namespace: "__NPH_NAMESPACE"
         componentList: "$(componentList) cluster-api"
@@ -84,12 +83,6 @@ stages:
         yamlPath: dist/yaml/staging
         kubeconfig: $(kubeconfig)
 
-    - template: k8s/yaml/render.yaml@ci_templates
-      parameters:
-        namespace: "__NPH_NAMESPACE"
-        componentList: "$(componentList) cluster-api"
-        environment: "staging"
-        version: edge
 
     #This is for cluster api
     - template: k8s/secrets/authx-secret.yaml@ci_templates
