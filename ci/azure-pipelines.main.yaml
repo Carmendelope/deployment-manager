@@ -96,13 +96,6 @@ stages:
         yamlPath: dist/yaml/staging
         kubeconfig: $(kubeconfig)
 
-    - script: |
-        echo $(ls)
-        echo $(ls dist/yaml/staging/)
-        echo $(ls dist/yaml/staging/mngtcluster)
-        echo $(ls dist/yaml/staging/appcluster)
-      displayName: "showing folders"
-
     #This is for cluster api
     #- template: k8s/secrets/authx-secret.yaml@ci_templates
 
@@ -141,6 +134,13 @@ stages:
       parameters:
         kubeconfig: $(kubeconfig)
         namespace: $(namespace)
+
+    - script: |
+        echo $(ls)
+        echo $(ls dist/yaml/staging/)
+        echo $(ls dist/yaml/staging/mngtcluster)
+        echo $(ls dist/yaml/staging/appcluster)
+      displayName: "showing folders"
 
     - template: k8s/resources/create.yaml@ci_templates
       parameters:
