@@ -75,6 +75,8 @@ stages:
         mkdir -p assets/installer/mngtcluster
         az storage blob download-batch -d . -s "edge" --pattern assets/installer/mngtcluster/cluster-api*.yaml --account-name $(accountname) --account-key $(accountkey)        
         mkdir -p dist/yaml/staging/mngtcluster
+        cd dist/yaml/staging/mngtcluster
+        echo $(pwd)
         mv assets/installer/mngtcluster/cluster-api*.yaml dist/yaml/staging/mngtcluster/
       displayName: "Download Cluster API assets"
 
@@ -92,9 +94,9 @@ stages:
 
     - script: |
         echo $(ls)
-        echo $(ls assets/installer)
-        echo $(ls assets/installer/mngtcluster)
-        echo $(ls assets/installer/appcluster)
+        echo $(ls dist/yaml/staging/)
+        echo $(ls dist/yaml/staging/mngtcluster)
+        echo $(ls dist/yaml/staging/appcluster)
       displayName: "showing folders"
 
     #This is for cluster api
