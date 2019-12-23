@@ -108,6 +108,13 @@ stages:
         namespace: $(namespace)
         yamlPath: dist/yaml/staging
 
+    - script: |
+        cd /home/vsts/work/1/s/dist/yaml/staging/mngtcluster/
+        for file in *.yaml; do
+          sed -i -e "s/nalej/$(namespace)/g" $file && 
+        done
+      displayName: "render namespace"
+
     - task: DownloadSecureFile@1
       name: ci_kubeconfig
       inputs:
