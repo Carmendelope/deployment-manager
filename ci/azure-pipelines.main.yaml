@@ -81,6 +81,7 @@ stages:
         echo $(pwd)
         mv /home/vsts/work/1/s/assets/installer/mngtcluster/cluster-api*.yaml /home/vsts/work/1/s/dist/yaml/staging/mngtcluster/
         echo $(ls)
+        cd /home/vsts/work/1/s/
       displayName: "Download Cluster API assets"
 
     - template: k8s/yaml/render.yaml@ci_templates
