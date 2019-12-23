@@ -73,7 +73,7 @@ stages:
 
     - script: |  
         mkdir -p assets/installer/mngtcluster
-        az storage blob download-batch -d assets/installer/mngtcluster/ -s "edge" --pattern assets/installer/mngtcluster/cluster-api*.yaml --account-name $(accountname) --account-key $(accountkey)        
+        az storage blob download-batch -d . -s "edge" --pattern assets/installer/mngtcluster/cluster-api*.yaml --account-name $(accountname) --account-key $(accountkey)        
       displayName: "Download Cluster API assets"
 
     - template: k8s/yaml/render.yaml@ci_templates
@@ -92,13 +92,13 @@ stages:
         echo $(ls)
         echo $(ls assets/installer)
         echo $(ls assets/installer/mngtcluster)
-        echo $(ls assets/installer/appluster)
+        echo $(ls assets/installer/appcluster)
       displayName: "showing folders"
 
     #This is for cluster api
     #- template: k8s/secrets/authx-secret.yaml@ci_templates
 
-    #- template: k8s/secrets/cluster-user-credentials.yaml@ci_templates
+    - template: k8s/secrets/cluster-user-credentials.yaml@ci_templates
 
     - template: k8s/configmaps/cluster-config.yaml@ci_templates
 
@@ -133,6 +133,12 @@ stages:
       parameters:
         kubeconfig: $(kubeconfig)
         namespace: $(namespace)
+
+    - template: k8s/resources/create.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        platform: mngtcluster
+        environment: "staging"
 
     - template: k8s/resources/create.yaml@ci_templates
       parameters:
