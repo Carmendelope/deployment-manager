@@ -113,6 +113,11 @@ stages:
         for file in *.yaml 
         do
           sed -i -e "s/namespace: nalej/namespace: $(namespace)/g" $file 
+          sed -i -e "s/network-manager.__NPH_NAMESPACE/network-manager.$(namespace)/g" $file 
+          sed -i -e "s/conductor.__NPH_NAMESPACE/conductor.$(namespace)/g" $file 
+          sed -i -e "s/authx.__NPH_NAMESPACE/authx.$(namespace)/g" $file 
+          sed -i -e "s/broker.__NPH_NAMESPACE/broker.$(namespace)/g" $file 
+          sed -i -e "s/cluster-watcher.__NPH_NAMESPACE/cluster-watcher.$(namespace)/g" $file 
         done
       displayName: "render namespace"
 
