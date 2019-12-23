@@ -112,7 +112,7 @@ stages:
         cd /home/vsts/work/1/s/dist/yaml/staging/mngtcluster/
         for file in *.yaml 
         do
-          sed -i -e "s/nalej/$(namespace)/g" $file && 
+          sed -i -e "s/nalej/$(namespace)/g" $file 
         done
       displayName: "render namespace"
 
