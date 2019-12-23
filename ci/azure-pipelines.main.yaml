@@ -71,6 +71,13 @@ stages:
     steps:
     - template: misc/nalej-component.yaml@ci_templates
 
+    - template: k8s/yaml/render.yaml@ci_templates
+      parameters:
+        namespace: "__NPH_NAMESPACE"
+        componentList: $(componentList)
+        environment: "staging"
+        version: edge
+
     - script: |  
         mkdir -p assets/installer/mngtcluster
         az storage blob download-batch -d . -s "edge" --pattern assets/installer/mngtcluster/cluster-api*.yaml --account-name $(accountname) --account-key $(accountkey)        
@@ -83,13 +90,6 @@ stages:
         echo $(ls)
         cd /home/vsts/work/1/s/
       displayName: "Download Cluster API assets"
-
-    - template: k8s/yaml/render.yaml@ci_templates
-      parameters:
-        namespace: "__NPH_NAMESPACE"
-        componentList: $(componentList)
-        environment: "staging"
-        version: edge
 
     - template: k8s/yaml/download-cdr.yaml@ci_templates
       parameters:
