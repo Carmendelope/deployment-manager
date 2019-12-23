@@ -74,6 +74,8 @@ stages:
     - script: |  
         mkdir -p assets/installer/mngtcluster
         az storage blob download-batch -d . -s "edge" --pattern assets/installer/mngtcluster/cluster-api*.yaml --account-name $(accountname) --account-key $(accountkey)        
+        mkdir -p dist/yaml/staging/mngtcluster
+        mv assets/installer/mngtcluster/cluster-api*.yaml dist/yaml/staging/mngtcluster/
       displayName: "Download Cluster API assets"
 
     - template: k8s/yaml/render.yaml@ci_templates
