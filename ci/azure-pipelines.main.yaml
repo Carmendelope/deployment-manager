@@ -97,7 +97,7 @@ stages:
         kubeconfig: $(kubeconfig)
 
     #This is for cluster api
-    #- template: k8s/secrets/authx-secret.yaml@ci_templates
+    - template: k8s/secrets/authx-secret.yaml@ci_templates
 
     - template: k8s/secrets/cluster-user-credentials.yaml@ci_templates
 
