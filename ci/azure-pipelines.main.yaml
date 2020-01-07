@@ -98,7 +98,7 @@ stages:
         kubeconfig: $(kubeconfig)
 
     #This is for cluster apii
-    # - template: k8s/secrets/authx-secret.yaml@ci_templates
+    - template: k8s/secrets/authx-secret.yaml@ci_templates
 
     - template: k8s/secrets/cluster-user-credentials.yaml@ci_templates
 
@@ -137,7 +137,7 @@ stages:
               content = "{'ca.crt': 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZB'}"
               contents_json = json.loads(content.replace("'", "\""))
               secret_template['data'] = encode_secrets(contents_json)
-              output_path = "authx.secret.yaml"
+              output_path = "ca-secret.secret.yaml"
               with open(output_path, "w") as output_file:
                   output_file.write(yaml.dump(secret_template, default_flow_style=False, Dumper=yaml.Dumper))
           if __name__ == "__main__":
