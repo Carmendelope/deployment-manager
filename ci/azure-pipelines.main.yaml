@@ -173,6 +173,11 @@ stages:
         kubeconfig: $(kubeconfig)
         namespace: $(namespace)
 
+    - template: k8s/logs/archive.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)  
+
     - template: k8s/custom/delete-clusterrolebinding.yaml@ci_templates
       parameters:
         kubeconfig: $(kubeconfig)
