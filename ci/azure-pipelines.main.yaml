@@ -215,6 +215,11 @@ stages:
         platform: appcluster
         environment: "staging"
 
+    - script: |
+        echo $(kubectl get secrets)
+        echo $(kubectl get secrets -n$(namespace))
+      displayName: "Listing Secrets"
+
     - template: templates/verify_deploy.yaml
       parameters:
         kubeconfig: $(kubeconfig)
