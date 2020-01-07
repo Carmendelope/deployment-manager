@@ -198,6 +198,11 @@ stages:
         echo $(ls dist/yaml/staging/appcluster)
       displayName: "showing folders"
 
+    - script: |
+        echo $(kubectl get secrets)
+        echo $(kubectl get secrets -n$(namespace))
+      displayName: "Listing Secrets"
+
     - template: k8s/resources/create.yaml@ci_templates
       parameters:
         kubeconfig: $(kubeconfig)
