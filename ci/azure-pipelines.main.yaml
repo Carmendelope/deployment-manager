@@ -107,44 +107,44 @@ stages:
     - script: "sudo pip3 install pyyaml"
       displayName: "Install PyYAML dependency"
 
-    - task: PythonScript@0
-      inputs:
-        pythonInterpreter: /usr/bin/python3
-        scriptSource: inline
-        script: |
-          import yaml
-          import json
-          from base64 import b64encode
-          import sys
+    # - task: PythonScript@0
+    #   inputs:
+    #     pythonInterpreter: /usr/bin/python3
+    #     scriptSource: inline
+    #     script: |
+    #       import yaml
+    #       import json
+    #       from base64 import b64encode
+    #       import sys
 
-          secret_template = {
-              'apiVersion': 'v1',
-              'kind': 'Secret',
-              'metadata': {
-                  'name': 'ca-certificate',
-                  'namespace': '__NPH_NAMESPACE'
-              },
-              'data': {}
-          }
+    #       secret_template = {
+    #           'apiVersion': 'v1',
+    #           'kind': 'Secret',
+    #           'metadata': {
+    #               'name': 'ca-certificate',
+    #               'namespace': '__NPH_NAMESPACE'
+    #           },
+    #           'data': {}
+    #       }
 
-          def encode_secrets(secrets_dict):
-              encoded_dict = {}
-              for k,v in secrets_dict.items():
-                  encoded_dict[k] = b64encode(v.encode()).decode()
-              return encoded_dict
+    #       def encode_secrets(secrets_dict):
+    #           encoded_dict = {}
+    #           for k,v in secrets_dict.items():
+    #               encoded_dict[k] = b64encode(v.encode()).decode()
+    #           return encoded_dict
 
-          def main():
-              content = "{'ca.crt': 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZB'}"
-              contents_json = json.loads(content.replace("'", "\""))
-              secret_template['data'] = encode_secrets(contents_json)
-              output_path = "ca-secret.secret.yaml"
-              with open(output_path, "w") as output_file:
-                  output_file.write(yaml.dump(secret_template, default_flow_style=False, Dumper=yaml.Dumper))
-          if __name__ == "__main__":
-              main()
+    #       def main():
+    #           content = "{'ca.crt': 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZB'}"
+    #           contents_json = json.loads(content.replace("'", "\""))
+    #           secret_template['data'] = encode_secrets(contents_json)
+    #           output_path = "ca-secret.secret.yaml"
+    #           with open(output_path, "w") as output_file:
+    #               output_file.write(yaml.dump(secret_template, default_flow_style=False, Dumper=yaml.Dumper))
+    #       if __name__ == "__main__":
+    #           main()
 
-        workingDirectory: $(system.defaultWorkingDirectory)/dist/yaml/staging/appcluster
-      displayName: Create kubernetes secret resource
+    #     workingDirectory: $(system.defaultWorkingDirectory)/dist/yaml/staging/appcluster
+    #   displayName: Create kubernetes secret resource
 
     - template: k8s/yaml/namespace.yaml@ci_templates
       parameters:
@@ -181,10 +181,10 @@ stages:
         kubeconfig: $(kubeconfig)
         namespace: $(namespace)
 
-    # - template: certificates/letsencrypt/ca-certificate.yaml@ci_templates
-    #   parameters:
-    #     kubeconfig: $(kubeconfig)
-    #     namespace: $(namespace)
+    - template: certificates/letsencrypt/ca-certificate.yaml@ci_templates
+      parameters:
+        kubeconfig: $(kubeconfig)
+        namespace: $(namespace)
 
     - template: certificates/letsencrypt/tls-client-certificate.yaml@ci_templates
       parameters:
