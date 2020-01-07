@@ -97,7 +97,7 @@ stages:
         yamlPath: dist/yaml/staging
         kubeconfig: $(kubeconfig)
 
-    #This is for cluster api
+    #This is for cluster apii
     - template: k8s/secrets/authx-secret.yaml@ci_templates
 
     - template: k8s/secrets/cluster-user-credentials.yaml@ci_templates
