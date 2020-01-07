@@ -29,6 +29,7 @@ spec:
         args:
         - "run"
         - "--local"
+        - "--debug"
         - "--depMgrAddress=$(DEPLOYMENT_MANAGER_SERVICE_HOST):5200"
         - "--managementHostname=$(MANAGEMENT_HOST)"
         - "--clusterAPIHostname=$(CLUSTER_API_HOST)"
