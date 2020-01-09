@@ -102,9 +102,13 @@ func (di *DeployableIngress) getNamePrefixes(service *grpc_conductor_go.ServiceI
 
 func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_conductor_go.ServiceInstance, rule *grpc_conductor_go.PublicSecurityRuleInstance) *v1beta1.Ingress {
 
+	log.Debug().Interface("service", service).Msg("BuildIngressesForServiceWithRule")
 	paths := make([]v1beta1.HTTPIngressPath, 0)
 
 	annotationPath := ""
+
+	hostHeaderRules := make([]v1beta1.IngressRule, 0)
+	clientAnnotation := ""
 
 	found := false
 	for portIndex := 0; portIndex < len(service.ExposedPorts) && !found; portIndex++ {
@@ -124,10 +128,27 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_cond
 					}
 					paths = append(paths, toAdd)
 					found = true
+
+					// include new ingress host configuration
+					for key, value := range endpoint.Options {
+						if key == grpc_application_go.EndpointOptions_HOST_HEADER_CONFIGURATION.String() {
+							hostHeaderRules = append(hostHeaderRules, v1beta1.IngressRule{
+								Host: value,
+								IngressRuleValue: v1beta1.IngressRuleValue{
+									HTTP: &v1beta1.HTTPIngressRuleValue{
+										Paths: paths,
+									},
+								},
+							})
+						} else if key == grpc_application_go.EndpointOptions_CLIENT_MAX_BODY_SIZE.String() {
+							clientAnnotation = value
+						}
+					}
 				}
 			}
 		}
 	}
+	log.Debug().Interface("hostHeader", hostHeaderRules).Msg("host headers")
 
 	if !found {
 		log.Warn().Str("serviceId", service.ServiceId).Msg("rule mismatch for ingress definition")
@@ -154,10 +175,38 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_cond
 		"appInstanceId":                                di.Data.AppInstanceId,
 		"serviceId":                                    service.ServiceId,
 	}
+	if clientAnnotation != "" {
+		annotations["nginx.ingress.kubernetes.io/proxy-body-size"] = clientAnnotation
+	}
 	// Overwrite the application root path with the user specified one so that when
 	// the user accesses the endpoint through the DNS it is automatically redirected
 	if annotationPath != "" {
 		annotations[ANNOTATION_PATH] = annotationPath
+	}
+
+	// hostHeaderRules,
+	rules := []v1beta1.IngressRule{
+		// Ingress hostname with the DNS entry pointing to the application cluster.
+		{
+			Host: ingressHostname,
+			IngressRuleValue: v1beta1.IngressRuleValue{
+				HTTP: &v1beta1.HTTPIngressRuleValue{
+					Paths: paths,
+				},
+			},
+		},
+		// Ingress hostname with the DNS entry pointing to the global fqdn.
+		{
+			Host: ingressGlobalFqdn,
+			IngressRuleValue: v1beta1.IngressRuleValue{
+				HTTP: &v1beta1.HTTPIngressRuleValue{
+					Paths: paths,
+				},
+			},
+		},
+	}
+	if len(hostHeaderRules) > 0 {
+		rules = append(rules, hostHeaderRules[0])
 	}
 
 	return &v1beta1.Ingress{
@@ -185,26 +234,7 @@ func (di *DeployableIngress) BuildIngressesForServiceWithRule(service *grpc_cond
 			Annotations: annotations,
 		},
 		Spec: v1beta1.IngressSpec{
-			Rules: []v1beta1.IngressRule{
-				// Ingress hostname with the DNS entry pointing to the application cluster.
-				{
-					Host: ingressHostname,
-					IngressRuleValue: v1beta1.IngressRuleValue{
-						HTTP: &v1beta1.HTTPIngressRuleValue{
-							Paths: paths,
-						},
-					},
-				},
-				// Ingress hostname with the DNS entry pointing to the global fqdn.
-				{
-					Host: ingressGlobalFqdn,
-					IngressRuleValue: v1beta1.IngressRuleValue{
-						HTTP: &v1beta1.HTTPIngressRuleValue{
-							Paths: paths,
-						},
-					},
-				},
-			},
+			Rules: rules,
 		},
 	}
 }
