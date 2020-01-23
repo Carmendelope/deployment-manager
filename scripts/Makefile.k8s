@@ -4,10 +4,10 @@
 define yaml-render-recipe
 @for comp in $(1); do \
 	if [ -d components/$$comp/$(2) ]; then \
-		cp components/$$comp/$(2)/*.yaml $(TARGET)/yaml/$(2)/. ; \
-		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_VERSION/$(DOCKER_VERSION)/g' && cd - > /dev/null ; \
-		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - > /dev/null ; \
-		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPOSITORY)/g' && cd - > /dev/null ; \
+		cp components/$$comp/$(2)/*.yaml* $(TARGET)/yaml/$(2)/. ; \
+		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml*' | xargs sed -i '' 's/__NPH_VERSION/$(DOCKER_VERSION)/g' && cd - > /dev/null ; \
+		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml*' | xargs sed -i '' 's/__NPH_NAMESPACE/nalej/g' && cd - > /dev/null ; \
+		cd $(TARGET)/yaml/$(2) && find . -type f -name '*.yaml*' | xargs sed -i '' 's/__NPH_REGISTRY_NAMESPACE/$(DOCKER_REPOSITORY)/g' && cd - > /dev/null ; \
 	fi ; \
 done
 endef
