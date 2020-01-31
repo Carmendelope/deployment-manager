@@ -67,6 +67,7 @@ func init() {
 	runCmd.Flags().String("publicRegistryPassword", "", "Password to download internal images from the public docker registry. Alternatively you may use PUBLIC_REGISTRY_PASSWORD")
 	runCmd.Flags().String("publicRegistryURL", "", "URL of the public docker registry. Alternatively you may use PUBLIC_REGISTRY_URL")
 	runCmd.Flags().Uint32("ztSidecarPort", network.ZtRedirectorPort, "Port where the ZT sidecar expects route updates")
+	runCmd.Flags().String("ztNalejImage", "nalej/zt-agent:edge", "zt-Nalej image used in the deployments")
 	runCmd.Flags().String("caCertPath", "", "Path for the CA certificate")
 	runCmd.Flags().String("clientCertPath", "", "Path for the client certificate")
 	runCmd.Flags().Bool("skipServerCertValidation", true, "Skip CA authentication validation")
@@ -111,6 +112,7 @@ func Run() {
 			DockerRepository: viper.GetString("publicRegistryURL"),
 		},
 		ZTSidecarPort:            uint32(viper.GetInt32("ztSidecarPort")),
+		ZTNalejImage:             viper.GetString("ztNalejImage"),
 		CACertPath:               viper.GetString("caCertPath"),
 		ClientCertPath:           viper.GetString("clientCertPath"),
 		SkipServerCertValidation: viper.GetBool("skipServerCertValidation"),

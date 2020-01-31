@@ -397,7 +397,7 @@ func (d *DeploymentManagerService) startMetrics(httpListener net.Listener, errCh
 func getNetworkDecorator(configuration *config.Config) (executor.NetworkDecorator, derrors.Error) {
 	switch configuration.NetworkType {
 	case config.NetworkTypeZt:
-		return zerotier.NewZerotierDecorator(), nil
+		return zerotier.NewZerotierDecorator(configuration.ZTNalejImage), nil
 	case config.NetworkTypeIstio:
 		decorator, err := istio.NewIstioDecorator()
 		if err != nil {

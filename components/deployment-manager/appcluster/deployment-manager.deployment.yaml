@@ -50,6 +50,7 @@ spec:
         - "--skipServerCertValidation=false"
         - "--unifiedLoggingAddress=unified-logging-slave.__NPH_NAMESPACE:8322"
         - "--storageFabricAddress=storage-fabric.__NPH_NAMESPACE:9010"
+        - "--ztNalejImage=nalej/zt-agent:edge"
         env:
         - name: MANAGEMENT_HOST
           valueFrom:

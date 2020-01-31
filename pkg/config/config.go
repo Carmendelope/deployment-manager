@@ -93,6 +93,8 @@ type Config struct {
 	// ZTSidecarPort with the ZT sidecar port listening for route updates
 	// TODO change this to 1576
 	ZTSidecarPort uint32
+	// ZTNalejIMage with the zt-nalej image to be deployed
+	ZTNalejImage string
 	// Path for the certificate of the CA
 	CACertPath string
 	// Client Cert Path
@@ -173,6 +175,9 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("StorageFabricAddress must be set")
 	}
 
+	if conf.ZTNalejImage == "" {
+		return derrors.NewInvalidArgumentError("ZTNalejImage must be set")
+	}
 	conf.TargetPlatform = grpc_installer_go.Platform(grpc_installer_go.Platform_value[conf.TargetPlatformName])
 
 	return nil
@@ -185,6 +190,7 @@ func (conf *Config) Print() {
 	log.Info().Uint32("port", conf.MetricsPort).Msg("metrics port")
 	log.Info().Str("Id", conf.ClusterId).Msg("Cluster info")
 	log.Info().Str("URL", conf.DeploymentMgrAddress).Msg("Deployment manager")
+	log.Info().Str("URL", conf.StorageFabricAddress).Msg("Storage Fabric Address")
 	log.Info().Bool("local", conf.Local).Msg("Kubernetes is local")
 	log.Info().Str("URL", conf.ClusterAPIHostname).Uint32("port", conf.ClusterAPIPort).Bool("TLS", conf.UseTLSForClusterAPI).Msg("Cluster API on management cluster")
 	log.Info().Str("URL", conf.LoginHostname).Uint32("port", conf.LoginPort).Bool("TLS", conf.UseTLSForLogin).Msg("Login API on management cluster")
@@ -196,6 +202,7 @@ func (conf *Config) Print() {
 	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
 	log.Info().Interface("networkType", conf.NetworkType).Msg("Network type")
 	log.Info().Str("unifiedLoggingAddress", conf.UnifiedLoggingAddress).Msg("Unified Logging Slave Address")
+	log.Info().Str("ZTNalejImage", conf.ZTNalejImage).Msg("ZT-Nalej image")
 
 }
 
