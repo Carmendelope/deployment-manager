@@ -2,7 +2,6 @@ variables:
   - template: variables/global.yaml@ci_templates
   - template: variables/go.yaml@ci_templates
   - template: variables/k8s.yaml@ci_templates
-  - template: variables/git.yaml@ci_templates
 
 resources:
   repositories:
@@ -10,7 +9,7 @@ resources:
       type: github
       name: nalej/ci-templates
       endpoint: nalej
-      ref: refs/tags/v1.1.2
+      ref: refs/tags/v1.2.1
 
 stages:
 - stage: 'MainPipeline'
@@ -19,6 +18,7 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
+    - template: git/author.yaml@ci_templates
     - template: slack/build/start.yaml@ci_templates
       parameters:
         author: $(authorName)
