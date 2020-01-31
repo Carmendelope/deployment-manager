@@ -175,7 +175,8 @@ func (conf *Config) Validate() derrors.Error {
 		return derrors.NewInvalidArgumentError("StorageFabricAddress must be set")
 	}
 
-	if conf.ZTNalejImage == "" {
+	// the zt-nalej image is needed only if the network is zero tier
+	if conf.NetworkType == NetworkTypeZt &&  conf.ZTNalejImage == "" {
 		return derrors.NewInvalidArgumentError("ZTNalejImage must be set")
 	}
 	conf.TargetPlatform = grpc_installer_go.Platform(grpc_installer_go.Platform_value[conf.TargetPlatformName])
@@ -202,7 +203,10 @@ func (conf *Config) Print() {
 	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
 	log.Info().Interface("networkType", conf.NetworkType).Msg("Network type")
 	log.Info().Str("unifiedLoggingAddress", conf.UnifiedLoggingAddress).Msg("Unified Logging Slave Address")
-	log.Info().Str("ZTNalejImage", conf.ZTNalejImage).Msg("ZT-Nalej image")
+	// if the type of the network is Zero Tier, the image is needed
+	if conf.NetworkType == NetworkTypeZt {
+		log.Info().Str("ZTNalejImage", conf.ZTNalejImage).Msg("ZT-Nalej image")
+	}
 
 }
 
