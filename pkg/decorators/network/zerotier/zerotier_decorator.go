@@ -33,8 +33,6 @@ import (
 )
 
 const (
-	// Name of the Docker ZT agent image
-	//ZtAgentImageName = "cdelope/zt-agent:v0.5.0"
 	// Default imagePullPolicy
 	DefaultImagePullPolicy = apiv1.PullAlways
 	// ZtSidecarImageName
