@@ -202,11 +202,11 @@ func (conf *Config) Print() {
 	log.Info().Str("type", conf.TargetPlatform.String()).Msg("Target platform")
 	log.Info().Uint32("port", conf.ZTSidecarPort).Msg("ZT sidecar config")
 	log.Info().Interface("networkType", conf.NetworkType).Msg("Network type")
-	log.Info().Str("unifiedLoggingAddress", conf.UnifiedLoggingAddress).Msg("Unified Logging Slave Address")
 	// if the type of the network is Zero Tier, the image is needed
 	if conf.NetworkType == NetworkTypeZt {
 		log.Info().Str("ZTNalejImage", conf.ZTNalejImage).Msg("ZT-Nalej image")
 	}
+	log.Info().Str("unifiedLoggingAddress", conf.UnifiedLoggingAddress).Msg("Unified Logging Slave Address")
 
 }
 
