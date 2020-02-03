@@ -33,8 +33,6 @@ import (
 )
 
 const (
-	// Name of the Docker ZT agent image
-	ZtAgentImageName = "nalej/zt-agent:v0.4.0"
 	// Default imagePullPolicy
 	DefaultImagePullPolicy = apiv1.PullAlways
 	// ZtSidecarImageName
@@ -46,11 +44,12 @@ const (
 )
 
 type ZerotierDecorator struct {
-	// Empty
+	// Name of the Docker ZT agent image
+	ZtAgentImageName string
 }
 
-func NewZerotierDecorator() executor.NetworkDecorator {
-	return &ZerotierDecorator{}
+func NewZerotierDecorator(ztNalejImage string) executor.NetworkDecorator {
+	return &ZerotierDecorator{ZtAgentImageName:ztNalejImage}
 }
 
 func (d *ZerotierDecorator) Build(aux executor.Deployable, args ...interface{}) derrors.Error {
@@ -108,7 +107,7 @@ func (d *ZerotierDecorator) createSidecars(dep *kubernetes.DeployableDeployments
 
 		ztContainer := apiv1.Container{
 			Name:  ZtSidecarImageName,
-			Image: ZtAgentImageName,
+			Image: d.ZtAgentImageName,
 			Args: []string{
 				"run",
 			},
@@ -238,7 +237,7 @@ func (d *ZerotierDecorator) createInbounds(dep *kubernetes.DeployableDeployments
 							// zero-tier sidecar
 							{
 								Name:  ztAgentName,
-								Image: ZtAgentImageName,
+								Image: d.ZtAgentImageName,
 								Args: []string{
 									"run",
 									"--debug",
