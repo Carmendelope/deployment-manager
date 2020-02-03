@@ -4,13 +4,13 @@ Deployment manager is in charge of controlling application deployments at a clus
 
 ## Getting Started
 
-This component will be deployed on the `App Cluster` and will receive requests mainly from `conductor` related to deploying or undeploying of user applications. It will also send requests to the `network-manager` regarding network creation, member authorization to join a network, etc.
-Every communication with the `Mngt Cluster` will be done, as usual, via `cluster-api`.
+This component will be deployed on the app cluster and will receive requests related to deploying or undeploying of user applications (mainly from `conductor`). It will also send requests to the `network-manager` regarding network creation, member authorization to join a network, etc.
+Every communication with the management cluster will be done, as usual, via `cluster-api`.
 
 ### Prerequisites
 
-* login-api
-* cluster-api
+* [login-api](https://github.com/nalej/login-api)
+* [cluster-api](https://github.com/nalej/cluster-api)
 
 ### Build and compile
 
@@ -20,8 +20,8 @@ In order to build and compile this repository use the provided Makefile:
 make all
 ```
 
-This operation generates the binaries for this repo, download dependencies,
-run existing tests and generate ready-to-deploy Kubernetes files.
+This operation generates the binaries for this repo, downloads the required dependencies, runs existing tests and generates ready-to-deploy Kubernetes files.
+
 
 ### Run tests
 
@@ -48,7 +48,7 @@ dep ensure -update -v
 
 ## User client interface
 
-For testing reasons, it is possible to manually undeploy an application using the `deployment-manager-cli with the command:
+For testing reasons, it is possible to manually undeploy an application using the `deployment-manager-cli`, with the command:
 
 ```
 deployment-manager-cli undeploy --orgId <organization id> --appId <app instance id>
@@ -65,7 +65,7 @@ Please read [contributing.md](contributing.md) for details on our code of conduc
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/nalej/deployment-manager/tags). 
+We use [SemVer](http://semver.org/) for versioning. For the available versions, see the [tags on this repository](https://github.com/nalej/deployment-manager/tags). 
 
 ## Authors
 
